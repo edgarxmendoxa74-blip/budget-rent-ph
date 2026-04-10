@@ -1,10 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { Search, MapPin, Bed, Bath, Wifi, Shield, Star, Menu, X, Heart, MessageCircle, Phone, LogOut, Building2, User, Loader2, ClipboardList, Mail } from 'lucide-react';
+import { Search, MapPin, Bed, Bath, Wifi, Shield, Star, Menu, X, Heart, MessageCircle, Phone, LogOut, Building2, User, Loader2, ClipboardList, Mail, BadgeCheck, Headset, ArrowLeft, Home, Navigation } from 'lucide-react';
 import { supabase } from './lib/supabase';
 import Auth from './components/Auth';
 import PropertyForm from './components/PropertyForm';
 import ProfileModal from './components/ProfileModal';
 import EditListings from './components/EditListings';
+import VerificationPage from './components/VerificationPage';
+import CustomerSupportPage from './components/CustomerSupportPage';
+import FindNearbyPage from './components/FindNearbyPage';
 import './App.css';
 
 const LISTINGS = [
@@ -69,7 +72,11 @@ function App() {
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedProperty, setSelectedProperty] = useState(null);
-  const [favorites, setFavorites] = useState([]);
+  const [favorites, setFavorites] = useState(() => {
+    const saved = localStorage.getItem('budgetrent_favorites');
+    return saved ? JSON.parse(saved) : [];
+  });
+  const [activeTab, setActiveTab] = useState('home'); // 'home' or 'saved'
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -86,6 +93,10 @@ function App() {
 
     return () => subscription.unsubscribe();
   }, []);
+
+  useEffect(() => {
+    localStorage.setItem('budgetrent_favorites', JSON.stringify(favorites));
+  }, [favorites]);
 
   const fetchProperties = async () => {
     try {
@@ -114,7 +125,9 @@ function App() {
     const matchesCategory = selectedCategory === "All" || item.type === selectedCategory;
     const matchesSearch = (item.name || item.title || "").toLowerCase().includes(searchQuery.toLowerCase()) || 
                           item.location.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesCategory && matchesSearch;
+    const matchesSaved = activeTab === 'saved' ? favorites.includes(item.id) : true;
+    const matchesMyListings = activeTab === 'mylistings' ? item.user_id === session?.user?.id : true;
+    return matchesCategory && matchesSearch && matchesSaved && matchesMyListings;
   });
 
   const toggleFavorite = (id) => {
@@ -158,10 +171,10 @@ function App() {
             <div className="menu-items">
               {isGuest && (
                 <>
-                  <button className="menu-link" onClick={() => setIsMenuOpen(false)}>
-                    <Search size={20} /> Explore Homes
+                  <button className="menu-link" onClick={() => { setIsMenuOpen(false); setActiveTab('explore'); }}>
+                    <Navigation size={20} /> Find Rentals Near You
                   </button>
-                  <button className="menu-link" onClick={() => setIsMenuOpen(false)}>
+                  <button className="menu-link" onClick={() => { setIsMenuOpen(false); setActiveTab('saved'); }}>
                     <Heart size={20} /> Saved Listings
                   </button>
                 </>
@@ -171,17 +184,29 @@ function App() {
                   <button className="menu-link highlight" onClick={() => { setIsMenuOpen(false); setIsPropertyFormOpen(true); }}>
                     <Shield size={20} /> List your property
                   </button>
-                  <button className="menu-link" onClick={() => { setIsMenuOpen(false); setIsEditListingsOpen(true); }}>
-                    <ClipboardList size={20} /> Edit Listings
+                  <button className="menu-link" onClick={() => { setIsMenuOpen(false); setActiveTab('mylistings'); }}>
+                    <ClipboardList size={20} /> My Listings
                   </button>
                   <button className="menu-link" onClick={() => { setIsMenuOpen(false); setIsProfileEditing(true); setIsProfileModalOpen(true); }}>
                     <User size={20} /> Contact & Profile
+                  </button>
+                  <button className="menu-link" onClick={() => { setIsMenuOpen(false); setActiveTab('verified'); }}>
+                    <BadgeCheck size={20} className="text-secondary" /> Get Verified
                   </button>
                 </>
               )}
               
               <div className="menu-divider"></div>
               
+              <button className="menu-link" onClick={() => { setIsMenuOpen(false); setActiveTab('about'); }}>
+                <Building2 size={20} /> About Us
+              </button>
+              <button className="menu-link" onClick={() => { setIsMenuOpen(false); setActiveTab('terms'); }}>
+                <Shield size={20} /> Terms & Policies
+              </button>
+              <button className="menu-link" onClick={() => { setIsMenuOpen(false); setActiveTab('support'); }}>
+                <Headset size={20} /> Chat Customer Support
+              </button>
               <button className="menu-link logout" onClick={handleLogout}>
                 <LogOut size={20} /> Sign Out
               </button>
@@ -198,86 +223,302 @@ function App() {
         </div>
       )}
 
-      {/* Hero / Search */}
-      <header className="hero">
-        <div className="hero-content">
-          <h2>Find your next home</h2>
-          <p>Affordable rentals across the Philippines</p>
-          <div className="search-bar">
-            <Search className="search-icon" size={20} />
-            <input 
-              type="text" 
-              placeholder="Search by city or area..." 
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </div>
-        </div>
-      </header>
-
-      {/* Categories */}
-      <div className="category-scroll">
-        {CATEGORIES.map(cat => (
-          <button 
-            key={cat} 
-            className={`category-chip ${selectedCategory === cat ? 'active' : ''}`}
-            onClick={() => setSelectedCategory(cat)}
-          >
-            {cat}
-          </button>
-        ))}
-      </div>
-
-      {/* Listing Grid */}
-      <main className="listings">
-        <div className="section-header">
-          <h3>Local Listings</h3>
-          <span>{filteredListings.length} results</span>
-        </div>
-        
-        {loading ? (
-          <div className="text-center py-10"><Loader2 className="animate-spin" size={32} /> Loading...</div>
-        ) : (
-          <div className="listing-grid">
-            {filteredListings.map(item => (
-              <div 
-                key={item.id} 
-                className="listing-card animate-slide-up"
-                onClick={() => setSelectedProperty(item)}
-              >
-                <div className="image-container">
-                  <img src={item.image || '/placeholder.png'} alt={item.name || item.title} />
-                  <button 
-                    className={`fav-btn ${favorites.includes(item.id) ? 'active' : ''}`}
-                    onClick={(e) => { e.stopPropagation(); toggleFavorite(item.id); }}
-                  >
-                    <Heart size={18} fill={favorites.includes(item.id) ? "currentColor" : "none"} />
-                  </button>
-                  <div className="rating-tag">
-                    <Star size={12} fill="currentColor" /> {item.rating || 4.5}
-                  </div>
-                </div>
-                <div className="card-info">
-                  <h4>{item.name || item.title}</h4>
-                  <p className="card-desc">{item.description}</p>
-                  <div className="price">
-                    ₱{item.price?.toLocaleString() || 0}<span>/month</span>
-                  </div>
-                  <div className="location">
-                    <MapPin size={14} /> {item.location}
-                  </div>
-                  <div className="property-specs">
-                    <span><Wifi size={12} /> {item.wifi || 'No'}</span>
-                    <span><Building2 size={12} /> {item.rooms || 1} Room</span>
-                    <span><Star size={12} /> {item.cr || 'Shared'}</span>
-                  </div>
-                  <button className="inquire-btn">Inquire Now</button>
-                </div>
+      {/* Main Content Area based on Active Tab */}
+      
+      {activeTab === 'home' && (
+        <>
+          <header className={`hero ${activeTab === 'saved' ? 'saved-hero' : ''}`}>
+            <div className="hero-content">
+              <h2>Find your next home</h2>
+              <p>Affordable rentals across the Philippines</p>
+              <div className="search-bar">
+                <Search className="search-icon" size={20} />
+                <input 
+                  type="text" 
+                  placeholder="Search by city or area..." 
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
               </div>
+            </div>
+          </header>
+
+          <div className="category-scroll">
+            {CATEGORIES.map(cat => (
+              <button 
+                key={cat} 
+                className={`category-chip ${selectedCategory === cat ? 'active' : ''}`}
+                onClick={() => setSelectedCategory(cat)}
+              >
+                {cat}
+              </button>
             ))}
           </div>
-        )}
-      </main>
+
+          <main className="listings">
+            <div className="section-header">
+              <h3>Local Listings</h3>
+              <span>{filteredListings.length} results</span>
+            </div>
+            
+            {loading ? (
+              <div className="text-center py-10"><Loader2 className="animate-spin" size={32} /> Loading...</div>
+            ) : (
+              <div className="listing-grid">
+                {filteredListings.map(item => (
+                  <div 
+                    key={item.id} 
+                    className="listing-card animate-slide-up"
+                    onClick={() => setSelectedProperty(item)}
+                  >
+                    <div className="image-container">
+                      <img src={item.image || '/placeholder.png'} alt={item.name || item.title} />
+                      <button 
+                        className={`fav-btn ${favorites.includes(item.id) ? 'active' : ''}`}
+                        onClick={(e) => { e.stopPropagation(); toggleFavorite(item.id); }}
+                      >
+                        <Heart size={18} fill={favorites.includes(item.id) ? "currentColor" : "none"} />
+                      </button>
+                      <div className="rating-tag">
+                        <Star size={12} fill="currentColor" /> {item.rating || 4.5}
+                      </div>
+                    </div>
+                    <div className="card-info">
+                      <h4>{item.name || item.title}</h4>
+                      <p className="card-desc">{item.description}</p>
+                      <div className="price">
+                        ₱{item.price?.toLocaleString() || 0}<span>/month</span>
+                      </div>
+                      <div className="location">
+                        <MapPin size={14} /> {item.location}
+                      </div>
+                      <div className="property-specs">
+                        <span><Wifi size={12} /> {item.wifi || 'No'}</span>
+                        <span><Building2 size={12} /> {item.rooms || 1} Room</span>
+                        <span><Star size={12} /> {item.cr || 'Shared'}</span>
+                      </div>
+                      <button className="inquire-btn">Inquire Now</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </main>
+        </>
+      )}
+
+      {activeTab === 'explore' && (
+        <FindNearbyPage 
+          listings={filteredListings}
+          favorites={favorites}
+          toggleFavorite={toggleFavorite}
+          onSelectProperty={setSelectedProperty}
+          onBack={() => setActiveTab('home')}
+        />
+      )}
+
+      {activeTab === 'saved' && (
+        <>
+          <header className={`hero saved-hero`} style={{ position: 'relative' }}>
+            <button 
+              onClick={() => setActiveTab('explore')} 
+              style={{ position: 'absolute', top: '16px', left: '16px', color: 'var(--primary)', background: 'rgba(255,255,255,0.8)', border: 'none', borderRadius: '50%', width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', backdropFilter: 'blur(4px)' }}
+            >
+              <ArrowLeft size={24} />
+            </button>
+            <div className="hero-content">
+              <h2>Your Saved Listings</h2>
+              <p>Keep track of the places you love</p>
+            </div>
+          </header>
+          <main className="listings pt-6">
+            <div className="section-header">
+              <h3>Saved Properties</h3>
+              <span>{filteredListings.length} saved</span>
+            </div>
+            {loading ? (
+              <div className="text-center py-10"><Loader2 className="animate-spin" size={32} /> Loading...</div>
+            ) : (
+              <div className="listing-grid">
+                {filteredListings.map(item => (
+                  <div 
+                    key={item.id} 
+                    className="listing-card animate-slide-up"
+                    onClick={() => setSelectedProperty(item)}
+                  >
+                    <div className="image-container">
+                      <img src={item.image || '/placeholder.png'} alt={item.name || item.title} />
+                      <button 
+                        className={`fav-btn ${favorites.includes(item.id) ? 'active' : ''}`}
+                        onClick={(e) => { e.stopPropagation(); toggleFavorite(item.id); }}
+                      >
+                        <Heart size={18} fill={favorites.includes(item.id) ? "currentColor" : "none"} />
+                      </button>
+                      <div className="rating-tag">
+                        <Star size={12} fill="currentColor" /> {item.rating || 4.5}
+                      </div>
+                    </div>
+                    <div className="card-info">
+                      <h4>{item.name || item.title}</h4>
+                      <p className="card-desc">{item.description}</p>
+                      <div className="price">
+                        ₱{item.price?.toLocaleString() || 0}<span>/month</span>
+                      </div>
+                      <div className="location">
+                        <MapPin size={14} /> {item.location}
+                      </div>
+                      <div className="property-specs">
+                        <span><Wifi size={12} /> {item.wifi || 'No'}</span>
+                        <span><Building2 size={12} /> {item.rooms || 1} Room</span>
+                        <span><Star size={12} /> {item.cr || 'Shared'}</span>
+                      </div>
+                      <button className="inquire-btn">Inquire Now</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </main>
+        </>
+      )}
+
+      {activeTab === 'mylistings' && (
+        <>
+          <header className={`hero saved-hero`} style={{ position: 'relative' }}>
+            <button 
+              onClick={() => setActiveTab('explore')} 
+              style={{ position: 'absolute', top: '16px', left: '16px', color: 'var(--primary)', background: 'rgba(255,255,255,0.8)', border: 'none', borderRadius: '50%', width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', backdropFilter: 'blur(4px)' }}
+            >
+              <ArrowLeft size={24} />
+            </button>
+            <div className="hero-content">
+              <h2>My Properties</h2>
+              <p>View properties you've listed on our platform</p>
+            </div>
+          </header>
+          <main className="listings pt-6">
+            <div className="section-header">
+              <h3>Your Listings</h3>
+              <span>{filteredListings.length} properties</span>
+            </div>
+            {loading ? (
+              <div className="text-center py-10"><Loader2 className="animate-spin" size={32} /> Loading...</div>
+            ) : filteredListings.length === 0 ? (
+              <div className="text-center py-10" style={{ color: 'var(--text-muted)' }}>
+                You haven't listed any properties yet. Use the "List your property" button to start!
+              </div>
+            ) : (
+              <div className="listing-grid">
+                {filteredListings.map(item => (
+                  <div 
+                    key={item.id} 
+                    className="listing-card animate-slide-up"
+                    onClick={() => { setIsEditListingsOpen(true); }}
+                  >
+                    <div className="image-container">
+                      <img src={item.image || '/placeholder.png'} alt={item.name || item.title} />
+                      <div className="rating-tag" style={{ background: 'var(--primary)', color: 'white' }}>
+                        Manage Listing
+                      </div>
+                    </div>
+                    <div className="card-info">
+                      <h4>{item.name || item.title}</h4>
+                      <p className="card-desc">{item.description}</p>
+                      <div className="price">
+                        ₱{item.price?.toLocaleString() || 0}<span>/month</span>
+                      </div>
+                      <div className="location">
+                        <MapPin size={14} /> {item.location}
+                      </div>
+                      <button className="inquire-btn" onClick={(e) => { e.stopPropagation(); setIsEditListingsOpen(true); }}>
+                        Edit Details
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </main>
+        </>
+      )}
+
+      {activeTab === 'about' && (
+        <div className="page-section animate-fade-in">
+          <header className="hero" style={{ position: 'relative' }}>
+            <button 
+              onClick={() => setActiveTab('explore')} 
+              style={{ position: 'absolute', top: '16px', left: '16px', color: 'white', background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: '50%', width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', backdropFilter: 'blur(4px)' }}
+            >
+              <ArrowLeft size={24} />
+            </button>
+            <div className="hero-content">
+              <h2>About BudgetRentPH</h2>
+              <p>Your partner in finding affordable housing</p>
+            </div>
+          </header>
+          <main className="info-page-container">
+            <div className="info-section">
+              <p><strong>BudgetRentPH</strong> is the Philippines' premier platform for finding affordable, safe, and convenient housing solutions.</p>
+              <p>Our mission is to bridge the gap between property owners and house-seekers, making the search for boarding houses, bedspaces, and apartments as seamless as possible for every Filipino student and professional.</p>
+            </div>
+            <div className="info-grid">
+              <div className="info-card">
+                <Shield size={32} />
+                <h4>Verified Owners</h4>
+                <p>We work with trusted landlords to ensure your safety and peace of mind.</p>
+              </div>
+              <div className="info-card">
+                <Star size={32} />
+                <h4>Quality Picks</h4>
+                <p>Curated listings that meet our standards for comfort and accessibility.</p>
+              </div>
+            </div>
+          </main>
+        </div>
+      )}
+
+      {activeTab === 'terms' && (
+        <div className="page-section animate-fade-in">
+          <header className="hero" style={{ position: 'relative' }}>
+            <button 
+              onClick={() => setActiveTab('explore')} 
+              style={{ position: 'absolute', top: '16px', left: '16px', color: 'white', background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: '50%', width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', backdropFilter: 'blur(4px)' }}
+            >
+              <ArrowLeft size={24} />
+            </button>
+            <div className="hero-content">
+              <h2>Terms & Policies</h2>
+              <p>Our guidelines and agreements</p>
+            </div>
+          </header>
+          <main className="info-page-container terms-body">
+            <section>
+              <h3>1. Introduction</h3>
+              <p>Welcome to BudgetRentPH. By using our services, you agree to these terms. Please read them carefully.</p>
+            </section>
+            <section>
+              <h3>2. For Tenants</h3>
+              <p>Tenants can browse listings for free. All inquiries are direct between the tenant and the property owner. BudgetRentPH does not handle payments between parties.</p>
+            </section>
+            <section>
+              <h3>3. For Landlords</h3>
+              <p>Landlords are responsible for providing accurate information about their properties. False representation may lead to account suspension.</p>
+            </section>
+            <section>
+              <h3>4. Privacy Policy</h3>
+              <p>We respect your privacy. Contact information is only shared when you explicitly choose to inquire or list a property.</p>
+            </section>
+          </main>
+        </div>
+      )}
+
+      {activeTab === 'verified' && (
+        <VerificationPage onDone={() => setActiveTab('explore')} />
+      )}
+
+      {activeTab === 'support' && (
+        <CustomerSupportPage onDone={() => setActiveTab('explore')} />
+      )}
 
       {/* Property Modal */}
       {selectedProperty && (
@@ -364,15 +605,31 @@ function App() {
         {!isGuest ? (
           /* Landlord Navigation */
           <>
-            <button className="nav-item"><MessageCircle size={24} /> <span>Chats</span></button>
+            <button className={`nav-item ${activeTab === 'mylistings' ? 'active' : ''}`} onClick={() => setActiveTab('mylistings')}><ClipboardList size={24} /> <span>My Listings</span></button>
             <button className="nav-item circle-plus" onClick={() => setIsPropertyFormOpen(true)}>+</button>
-            <button className="nav-item" onClick={() => { setIsProfileEditing(false); setIsProfileModalOpen(true); }}><Shield size={24} /> <span>Account</span></button>
+            <button className="nav-item" onClick={() => { setIsProfileEditing(false); setIsProfileModalOpen(true); }}><User size={24} /> <span>Account</span></button>
           </>
         ) : (
           /* Tenant Navigation */
           <>
-            <button className="nav-item active"><Search size={24} /> <span>Explore</span></button>
-            <button className="nav-item"><Heart size={24} /> <span>Saved</span></button>
+            <button 
+              className={`nav-item ${activeTab === 'explore' ? 'active' : ''}`}
+              onClick={() => setActiveTab('explore')}
+            >
+              <Navigation size={24} /> <span>Near Me</span>
+            </button>
+            <button 
+              className={`nav-item ${activeTab === 'home' || (activeTab !== 'explore' && activeTab !== 'saved' && activeTab !== 'mylistings') ? 'active' : ''}`}
+              onClick={() => setActiveTab('home')}
+            >
+              <Home size={24} /> <span>Home</span>
+            </button>
+            <button 
+              className={`nav-item ${activeTab === 'saved' ? 'active' : ''}`}
+              onClick={() => setActiveTab('saved')}
+            >
+              <Heart size={24} /> <span>Saved</span>
+            </button>
           </>
         )}
       </div>
@@ -399,6 +656,7 @@ function App() {
           onListingUpdated={fetchProperties} 
         />
       )}
+
     </div>
   );
 }

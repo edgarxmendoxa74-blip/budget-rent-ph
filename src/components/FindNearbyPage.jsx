@@ -1,0 +1,116 @@
+import React, { useState } from 'react';
+import { Navigation, Loader2, ArrowLeft, MapPin, Heart, Wifi, Building2, Star } from 'lucide-react';
+
+const FindNearbyPage = ({ listings, favorites, toggleFavorite, onSelectProperty, onBack }) => {
+  const [locating, setLocating] = useState(false);
+  const [locationFound, setLocationFound] = useState(false);
+  const [nearListings, setNearListings] = useState([]);
+
+  const handleFindNearby = () => {
+    setLocating(true);
+    // Simulate GPS fetch
+    if ("geolocation" in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setTimeout(() => {
+            setLocating(false);
+            setLocationFound(true);
+            // Mock nearby algorithm (just shuffle or slice for demo)
+            setNearListings(listings.slice(0, 3)); 
+          }, 1500);
+        },
+        (error) => {
+          alert('Please enable Location Services to find nearby rentals.');
+          setLocating(false);
+        }
+      );
+    } else {
+      alert("Geolocation is not supported by your browser.");
+      setLocating(false);
+    }
+  };
+
+  return (
+    <div className="page-section animate-fade-in" style={{ paddingBottom: '80px', background: 'white' }}>
+      <header className="hero" style={{ position: 'relative', background: 'white', color: 'var(--text-color)', borderBottom: '1px solid var(--border)', paddingBottom: '32px' }}>
+        <button 
+          onClick={onBack} 
+          style={{ position: 'absolute', top: '16px', left: '16px', color: 'var(--primary)', background: 'rgba(0,0,0,0.05)', border: 'none', borderRadius: '50%', width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', backdropFilter: 'blur(4px)' }}
+        >
+          <ArrowLeft size={24} />
+        </button>
+        <div className="hero-content">
+          <h2 style={{ color: 'var(--text-color)' }}>Find Rentals Near You</h2>
+          <p style={{ color: 'var(--text-muted)' }}>Discover affordable housing in your immediate area</p>
+        </div>
+      </header>
+
+      <main className="info-page-container" style={{ width: '100%', maxWidth: '800px', padding: '24px' }}>
+        {!locationFound ? (
+          <div style={{ textAlign: 'center', padding: '40px 20px', borderRadius: '16px' }}>
+            <Navigation size={64} style={{ color: 'var(--primary)', margin: '0 auto 24px', opacity: 0.9 }} />
+            <h3 style={{ marginBottom: '12px', fontSize: '1.2rem', color: 'var(--primary)' }}>Allow Location Access</h3>
+            <p style={{ color: 'var(--text-muted)', marginBottom: '32px', fontSize: '0.95rem' }}>We need your device's GPS to find the best boarding houses and apartments right around your current location.</p>
+            
+            <button 
+              onClick={handleFindNearby}
+              disabled={locating}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: 'var(--primary)', color: 'white', padding: '16px 32px', borderRadius: '30px', border: 'none', fontSize: '1rem', fontWeight: 'bold', cursor: 'pointer', boxShadow: '0 4px 12px rgba(37, 99, 235, 0.3)' }}
+            >
+              {locating ? <><Loader2 size={20} className="animate-spin"/> Locating...</> : <><Navigation size={20}/> Find Rentals Near Me</>}
+            </button>
+          </div>
+        ) : (
+          <div className="listings">
+            <div className="section-header">
+              <h3>Nearby Properties</h3>
+              <span>{nearListings.length} found near you</span>
+            </div>
+            
+            <div className="listing-grid">
+              {nearListings.map(item => (
+                <div 
+                  key={item.id} 
+                  className="listing-card animate-slide-up"
+                  onClick={() => onSelectProperty(item)}
+                >
+                  <div className="image-container">
+                    <img src={item.image || '/placeholder.png'} alt={item.name || item.title} />
+                    <button 
+                      className={`fav-btn ${favorites.includes(item.id) ? 'active' : ''}`}
+                      onClick={(e) => { e.stopPropagation(); toggleFavorite(item.id); }}
+                    >
+                      <Heart size={18} fill={favorites.includes(item.id) ? "currentColor" : "none"} />
+                    </button>
+                    <div className="rating-tag" style={{ background: '#16a34a' }}>
+                      <Navigation size={12} style={{ display: 'inline', marginRight: '4px' }} />
+                      Within 2 km
+                    </div>
+                  </div>
+                  <div className="card-info">
+                    <h4>{item.name || item.title}</h4>
+                    <p className="card-desc">{item.description}</p>
+                    <div className="price">
+                      ₱{item.price?.toLocaleString() || 0}<span>/month</span>
+                    </div>
+                    <div className="location">
+                      <MapPin size={14} /> {item.location}
+                    </div>
+                    <div className="property-specs">
+                      <span><Wifi size={12} /> {item.wifi || 'No'}</span>
+                      <span><Building2 size={12} /> {item.rooms || 1} Room</span>
+                      <span><Star size={12} /> {item.cr || 'Shared'}</span>
+                    </div>
+                    <button className="inquire-btn">Inquire Now</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </main>
+    </div>
+  );
+};
+
+export default FindNearbyPage;

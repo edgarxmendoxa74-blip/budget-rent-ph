@@ -691,3 +691,88 @@ h3 {
   color: var(--text-muted);
   line-height: 1.6;
 }
+
+/* Info Pages (About & Terms) */
+.page-section {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background: white;
+  padding-bottom: 100px;
+}
+
+.info-page-container {
+  padding: 24px;
+  max-width: 600px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.info-section {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.info-logo {
+  width: 64px;
+  height: 64px;
+  margin-bottom: 16px;
+  object-fit: contain;
+}
+
+.info-section p {
+  line-height: 1.6;
+  margin-bottom: 12px !important;
+  color: var(--text-main) !important;
+}
+
+.info-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.info-card {
+  background: var(--background);
+  padding: 16px;
+  border-radius: 16px;
+  text-align: center;
+}
+
+.info-card svg {
+  color: var(--secondary);
+  margin-bottom: 12px;
+}
+
+.info-card h4 {
+  color: var(--primary);
+  margin-bottom: 8px;
+  font-size: 0.95rem;
+}
+
+.info-card p {
+  font-size: 0.8rem !important;
+  margin: 0 !important;
+}
+
+.terms-body section {
+  margin-bottom: 24px;
+}
+
+.terms-body h3 {
+  color: var(--primary);
+  font-size: 1.05rem;
+  margin-bottom: 8px;
+}
+
+.terms-body p {
+  line-height: 1.5;
+  font-size: 0.9rem;
+  margin-bottom: 0 !important;
+}
+
+.saved-hero {
+  background: linear-gradient(to right, #e2f1ff, #f0f7ff);
+}
+
+

@@ -8,6 +8,7 @@ const Auth = ({ onAuthSuccess }) => {
   const [isLogin, setIsLogin] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [termsAgreed, setTermsAgreed] = useState(false);
   
   const [formData, setFormData] = useState({
     email: '',
@@ -32,6 +33,9 @@ const Auth = ({ onAuthSuccess }) => {
         });
         if (error) throw error;
       } else {
+        if (!termsAgreed) {
+          throw new Error('You must agree to the Terms and Policies to register.');
+        }
         const { error } = await supabase.auth.signUp({
           email: formData.email,
           password: formData.password,
@@ -184,6 +188,21 @@ const Auth = ({ onAuthSuccess }) => {
               onChange={handleInputChange}
             />
           </div>
+
+          {!isLogin && (
+            <div className="terms-checkbox-group" style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: '8px 0 16px', textAlign: 'left', fontSize: '0.85rem' }}>
+              <input 
+                type="checkbox" 
+                id="termsAgreed" 
+                checked={termsAgreed}
+                onChange={(e) => setTermsAgreed(e.target.checked)}
+                required
+              />
+              <label htmlFor="termsAgreed" style={{ color: 'var(--text-muted)' }}>
+                I agree to the <strong style={{ color: 'var(--primary)' }}>Terms and Policies</strong>
+              </label>
+            </div>
+          )}
 
           {error && <div className="auth-error">{error}</div>}
 
