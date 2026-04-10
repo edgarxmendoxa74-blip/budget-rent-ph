@@ -426,18 +426,6 @@ function App() {
       {activeTab === 'mylistings' && (
         <>
           <header className={`hero saved-hero`} style={{ position: 'relative' }}>
-            <button 
-              onClick={() => {
-                if (!isGuest && session?.user?.user_metadata?.user_role === 'landlord') {
-                  setActiveTab('mylistings');
-                } else {
-                  setActiveTab('home');
-                }
-              }} 
-              style={{ position: 'absolute', top: '16px', left: '16px', color: 'var(--primary)', background: 'rgba(255,255,255,0.8)', border: 'none', borderRadius: '50%', width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', backdropFilter: 'blur(4px)' }}
-            >
-              <ArrowLeft size={24} />
-            </button>
             <div className="hero-content">
               <h2>My Properties</h2>
               <p>View properties you've listed on our platform</p>
