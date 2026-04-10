@@ -1,0 +1,338 @@
+.edit-listings-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.edit-listings-modal {
+  width: 100%;
+  max-width: 500px;
+  max-height: 90vh;
+  overflow-y: auto;
+  background: white;
+  border-radius: 24px;
+  padding: 0;
+  position: relative;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+.edit-listings-top {
+  position: sticky;
+  top: 0;
+  background: white;
+  z-index: 5;
+  padding: 24px 24px 16px;
+  border-bottom: 1px solid var(--border);
+  border-radius: 24px 24px 0 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.edit-listings-top .close-edit-btn {
+  background: var(--background);
+  border: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.edit-listings-header h2 {
+  font-size: 1.3rem;
+  color: var(--primary);
+  margin: 0;
+}
+
+.edit-listings-header p {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  margin: 4px 0 0;
+}
+
+.edit-listings-body {
+  padding: 16px 24px 24px;
+}
+
+.edit-loading, .edit-empty {
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--text-muted);
+}
+
+.edit-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+/* Listing Items */
+.my-listings-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.my-listing-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--background);
+  border-radius: 14px;
+  padding: 12px;
+  transition: all 0.2s;
+}
+
+.my-listing-img {
+  width: 70px;
+  height: 70px;
+  border-radius: 10px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.my-listing-img img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.my-listing-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.my-listing-info h4 {
+  font-size: 0.95rem;
+  margin: 0 0 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.my-listing-type {
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: var(--primary);
+  background: rgba(0, 51, 102, 0.08);
+  padding: 2px 8px;
+  border-radius: 100px;
+  text-transform: uppercase;
+}
+
+.my-listing-meta {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
+.my-listing-price {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--primary);
+  margin-top: 2px;
+}
+
+.my-listing-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.edit-action-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.edit-action-btn.edit {
+  background: rgba(0, 51, 102, 0.1);
+  color: var(--primary);
+}
+
+.edit-action-btn.edit:hover {
+  background: var(--primary);
+  color: white;
+}
+
+.edit-action-btn.delete {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+}
+
+.edit-action-btn.delete:hover {
+  background: #ef4444;
+  color: white;
+}
+
+/* Edit Form Overlay */
+.edit-form-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.edit-form-content {
+  background: white;
+  width: 100%;
+  max-width: 500px;
+  max-height: 85vh;
+  overflow-y: auto;
+  border-radius: 24px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+.edit-form-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 20px 0;
+}
+
+.edit-form-header h3 {
+  font-size: 1.2rem;
+  color: var(--primary);
+}
+
+.edit-form-header button {
+  background: var(--background);
+  border: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.edit-form-body {
+  padding: 16px 20px 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.edit-form-image {
+  text-align: center;
+}
+
+.edit-form-image img {
+  width: 100%;
+  max-height: 160px;
+  object-fit: cover;
+  border-radius: 12px;
+  margin-bottom: 8px;
+}
+
+.change-image-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #22c55e;
+  color: white;
+  padding: 6px 16px;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.change-image-btn:hover {
+  background: #16a34a;
+}
+
+.edit-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.edit-form-group label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
+.edit-form-group input,
+.edit-form-group select,
+.edit-form-group textarea {
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-family: inherit;
+  font-size: 0.9rem;
+  background: white;
+  transition: border-color 0.2s;
+}
+
+.edit-form-group input:focus,
+.edit-form-group select:focus,
+.edit-form-group textarea:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+
+.edit-form-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+  gap: 10px;
+}
+
+.save-edit-btn {
+  background: var(--primary);
+  color: white;
+  border: none;
+  padding: 14px;
+  border-radius: 12px;
+  font-weight: 700;
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: all 0.3s;
+  margin-top: 8px;
+}
+
+.save-edit-btn:hover {
+  background: #002347;
+  transform: translateY(-2px);
+}
+
+.save-edit-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
