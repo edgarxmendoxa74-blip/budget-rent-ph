@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { Navigation, Loader2, ArrowLeft, MapPin, Heart, Wifi, Building2, Star } from 'lucide-react';
+import { Navigation, Loader2, MapPin, Heart, Wifi, Building2, Star } from 'lucide-react';
 
-const FindNearbyPage = ({ listings, favorites, toggleFavorite, onSelectProperty, onViewLandlord, onBack, isLandlord }) => {
+const FindNearbyPage = ({ listings, favorites, toggleFavorite, onSelectProperty, onViewLandlord, isLandlord }) => {
   const [locating, setLocating] = useState(false);
   const [locationFound, setLocationFound] = useState(false);
   const [nearListings, setNearListings] = useState([]);
@@ -33,12 +33,6 @@ const FindNearbyPage = ({ listings, favorites, toggleFavorite, onSelectProperty,
   return (
     <div className="page-section animate-fade-in" style={{ paddingBottom: '80px', background: 'white' }}>
       <header className="hero" style={{ position: 'relative', background: 'white', color: 'var(--text-color)', borderBottom: '1px solid var(--border)', paddingBottom: '32px' }}>
-        <button 
-          onClick={onBack} 
-          style={{ position: 'absolute', top: '16px', left: '16px', color: 'var(--primary)', background: 'rgba(0,0,0,0.05)', border: 'none', borderRadius: '50%', width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', backdropFilter: 'blur(4px)' }}
-        >
-          <ArrowLeft size={24} />
-        </button>
         <div className="hero-content">
           {!isLandlord && (
             <>
