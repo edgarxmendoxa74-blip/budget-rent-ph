@@ -72,6 +72,7 @@ function App() {
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedProperty, setSelectedProperty] = useState(null);
+  const [viewingLandlord, setViewingLandlord] = useState(null);
   const [favorites, setFavorites] = useState(() => {
     const saved = localStorage.getItem('budgetrent_favorites');
     return saved ? JSON.parse(saved) : [];
@@ -297,6 +298,19 @@ function App() {
                         <span><Building2 size={12} /> {item.rooms || 1} Room</span>
                         <span><Star size={12} /> {item.cr || 'Shared'}</span>
                       </div>
+                      <div 
+                        style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: '8px 0', cursor: 'pointer' }}
+                        onClick={(e) => { e.stopPropagation(); setViewingLandlord(item); }}
+                      >
+                        {item.owner_avatar ? (
+                          <img src={item.owner_avatar} alt="" style={{ width: '28px', height: '28px', borderRadius: '50%', objectFit: 'cover', border: '1.5px solid var(--primary)' }} />
+                        ) : (
+                          <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'var(--primary)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: 'bold' }}>
+                            {(item.owner_name || 'L').charAt(0).toUpperCase()}
+                          </div>
+                        )}
+                        <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{item.owner_name || 'Landlord'}</span>
+                      </div>
                       <button className="inquire-btn">Inquire Now</button>
                     </div>
                   </div>
@@ -371,6 +385,19 @@ function App() {
                         <span><Wifi size={12} /> {item.wifi || 'No'}</span>
                         <span><Building2 size={12} /> {item.rooms || 1} Room</span>
                         <span><Star size={12} /> {item.cr || 'Shared'}</span>
+                      </div>
+                      <div 
+                        style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: '8px 0', cursor: 'pointer' }}
+                        onClick={(e) => { e.stopPropagation(); setViewingLandlord(item); }}
+                      >
+                        {item.owner_avatar ? (
+                          <img src={item.owner_avatar} alt="" style={{ width: '28px', height: '28px', borderRadius: '50%', objectFit: 'cover', border: '1.5px solid var(--primary)' }} />
+                        ) : (
+                          <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'var(--primary)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: 'bold' }}>
+                            {(item.owner_name || 'L').charAt(0).toUpperCase()}
+                          </div>
+                        )}
+                        <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{item.owner_name || 'Landlord'}</span>
                       </div>
                       <button className="inquire-btn">Inquire Now</button>
                     </div>
@@ -542,6 +569,30 @@ function App() {
               <h3>Description</h3>
               <p>{selectedProperty.description}</p>
 
+              {/* Owner Profile */}
+              <div className="divider"></div>
+              <div 
+                className="owner-profile-card clickable" 
+                onClick={() => setViewingLandlord(selectedProperty)}
+                style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', background: 'var(--bg-secondary, #f8fafc)', borderRadius: '12px', marginBottom: '8px', cursor: 'pointer', border: '1.5px solid transparent', transition: 'all 0.2s' }}
+              >
+                {selectedProperty.owner_avatar ? (
+                  <img src={selectedProperty.owner_avatar} alt="Owner" style={{ width: '48px', height: '48px', borderRadius: '50%', objectFit: 'cover', border: '2px solid var(--primary)' }} />
+                ) : (
+                  <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'var(--primary)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', fontWeight: 'bold' }}>
+                    {(selectedProperty.owner_name || 'L').charAt(0).toUpperCase()}
+                  </div>
+                )}
+                <div style={{ flex: 1 }}>
+                  <p style={{ fontWeight: '600', margin: 0, fontSize: '1rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    {selectedProperty.owner_name || 'Landlord'}
+                    <BadgeCheck size={14} className="text-secondary" />
+                  </p>
+                  <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Tap to view full profile</span>
+                </div>
+                <Navigation size={16} className="text-muted" />
+              </div>
+
               <h3>Listing Details</h3>
               <div className="amenities-list">
                 <div className="amenity-item">
@@ -655,6 +706,79 @@ function App() {
           onClose={() => setIsEditListingsOpen(false)} 
           onListingUpdated={fetchProperties} 
         />
+      )}
+
+      {/* Public Landlord Profile Modal */}
+      {viewingLandlord && (
+        <div className="modal-overlay" onClick={() => setViewingLandlord(null)} style={{ zIndex: 2001 }}>
+          <div className="modal-content profile-modal animate-slide-up" onClick={e => e.stopPropagation()}>
+            <button className="close-btn" onClick={() => setViewingLandlord(null)}><X size={24} /></button>
+            
+            <div className="profile-header">
+              <div className="profile-avatar">
+                {viewingLandlord.owner_avatar ? (
+                  <img src={viewingLandlord.owner_avatar} alt="Avatar" className="avatar-img" />
+                ) : (
+                  <div className="avatar-placeholder">
+                    {viewingLandlord.owner_name ? viewingLandlord.owner_name.charAt(0).toUpperCase() : <User />}
+                  </div>
+                )}
+              </div>
+              <span className="role-badge landlord">VERIFIED OWNER</span>
+              <h2>{viewingLandlord.owner_name || 'Landlord'}</h2>
+              <a href={`mailto:${viewingLandlord.email}`} className="profile-email">{viewingLandlord.email}</a>
+            </div>
+
+            <div className="profile-details">
+              <div className="info-group">
+                <Phone size={18} />
+                <div className="info-content">
+                  <label>Contact Number</label>
+                  <p>{viewingLandlord.contact || 'Not provided'}</p>
+                </div>
+              </div>
+              
+              {(viewingLandlord.owner_business_name || viewingLandlord.property_name) && (
+                <div className="info-group">
+                  <Building2 size={18} />
+                  <div className="info-content">
+                    <label>Business / Property Name</label>
+                    <p>{viewingLandlord.owner_business_name || viewingLandlord.property_name}</p>
+                  </div>
+                </div>
+              )}
+
+              <div className="info-grid">
+                <div className="info-group">
+                  <Globe size={18} />
+                  <div className="info-content">
+                    <label>Facebook / Social</label>
+                    <p>{viewingLandlord.owner_facebook || 'Search on Facebook'}</p>
+                  </div>
+                </div>
+              </div>
+
+              {viewingLandlord.owner_whatsapp && (
+                <div className="info-group" style={{marginTop: '12px'}}>
+                  <MessageCircle size={18} />
+                  <div className="info-content">
+                    <label>WhatsApp</label>
+                    <p>{viewingLandlord.owner_whatsapp}</p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="modal-actions" style={{ padding: '0 24px 24px', position: 'static', background: 'transparent' }}>
+               <a href={`tel:${viewingLandlord.contact}`} className="contact-btn call">
+                  <Phone size={20} /> Call Now
+               </a>
+               <a href={`mailto:${viewingLandlord.email}`} className="contact-btn email">
+                  <Mail size={20} /> Message
+               </a>
+            </div>
+          </div>
+        </div>
       )}
 
     </div>

@@ -20,7 +20,10 @@ const PropertyForm = ({ onClose, session, onListingAdded }) => {
     rooms: '1',
     secured: 'Yes',
     kitchen: '0',
-    email: session?.user?.user_metadata?.business_email || session?.user?.email || ''
+    email: session?.user?.user_metadata?.business_email || session?.user?.email || '',
+    ownerBusinessName: session?.user?.user_metadata?.property_name || '',
+    ownerFacebook: session?.user?.user_metadata?.facebook || '',
+    ownerWhatsapp: session?.user?.user_metadata?.whatsapp || ''
   });
   const [image, setImage] = useState(null);
 
@@ -30,7 +33,10 @@ const PropertyForm = ({ onClose, session, onListingAdded }) => {
       setFormData(prev => ({
         ...prev,
         contact: prev.contact || session.user.user_metadata.phone || '',
-        email: prev.email || session.user.user_metadata.business_email || session.user.email || ''
+        email: prev.email || session.user.user_metadata.business_email || session.user.email || '',
+        ownerBusinessName: prev.ownerBusinessName || session.user.user_metadata.property_name || '',
+        ownerFacebook: prev.ownerFacebook || session.user.user_metadata.facebook || '',
+        ownerWhatsapp: prev.ownerWhatsapp || session.user.user_metadata.whatsapp || ''
       }));
     }
   }, [session]);
@@ -98,7 +104,12 @@ const PropertyForm = ({ onClose, session, onListingAdded }) => {
           kitchen: parseInt(formData.kitchen),
           email: formData.email,
           amenities: amenities,
-          user_id: session.user.id
+          user_id: session.user.id,
+          owner_name: session.user.user_metadata?.full_name || 'Landlord',
+          owner_avatar: session.user.user_metadata?.avatar_url || '',
+          owner_business_name: formData.ownerBusinessName,
+          owner_facebook: formData.ownerFacebook,
+          owner_whatsapp: formData.ownerWhatsapp
         });
 
       if (error) throw error;
