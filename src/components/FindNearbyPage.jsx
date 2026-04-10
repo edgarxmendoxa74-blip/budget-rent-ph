@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Navigation, Loader2, ArrowLeft, MapPin, Heart, Wifi, Building2, Star } from 'lucide-react';
 
-const FindNearbyPage = ({ listings, favorites, toggleFavorite, onSelectProperty, onBack }) => {
+const FindNearbyPage = ({ listings, favorites, toggleFavorite, onSelectProperty, onViewLandlord, onBack }) => {
   const [locating, setLocating] = useState(false);
   const [locationFound, setLocationFound] = useState(false);
   const [nearListings, setNearListings] = useState([]);
@@ -100,6 +100,19 @@ const FindNearbyPage = ({ listings, favorites, toggleFavorite, onSelectProperty,
                       <span><Wifi size={12} /> {item.wifi || 'No'}</span>
                       <span><Building2 size={12} /> {item.rooms || 1} Room</span>
                       <span><Star size={12} /> {item.cr || 'Shared'}</span>
+                    </div>
+                    <div 
+                      style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: '8px 0', cursor: 'pointer' }}
+                      onClick={(e) => { e.stopPropagation(); onViewLandlord && onViewLandlord(item); }}
+                    >
+                      {item.owner_avatar ? (
+                        <img src={item.owner_avatar} alt="" style={{ width: '28px', height: '28px', borderRadius: '50%', objectFit: 'cover', border: '1.5px solid var(--primary)' }} />
+                      ) : (
+                        <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'var(--primary)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: 'bold' }}>
+                          {(item.owner_name || 'L').charAt(0).toUpperCase()}
+                        </div>
+                      )}
+                      <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{item.owner_name || 'Landlord'}</span>
                     </div>
                     <button className="inquire-btn">Inquire Now</button>
                   </div>

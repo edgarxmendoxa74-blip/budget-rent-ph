@@ -327,6 +327,7 @@ function App() {
           favorites={favorites}
           toggleFavorite={toggleFavorite}
           onSelectProperty={setSelectedProperty}
+          onViewLandlord={setViewingLandlord}
           onBack={() => setActiveTab('home')}
         />
       )}
