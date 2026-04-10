@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, MapPin, Bed, Bath, Wifi, Shield, Star, Menu, X, Heart, MessageCircle, Phone, LogOut, Building2, User, Loader2, ClipboardList, Mail, BadgeCheck, Headset, ArrowLeft, Home, Navigation } from 'lucide-react';
+import { Search, MapPin, Bed, Bath, Wifi, Shield, Star, Menu, X, Heart, MessageCircle, Phone, LogOut, Building2, User, Loader2, ClipboardList, Mail, BadgeCheck, Headset, ArrowLeft, Home, Navigation, Globe } from 'lucide-react';
 import { supabase } from './lib/supabase';
 import Auth from './components/Auth';
 import PropertyForm from './components/PropertyForm';

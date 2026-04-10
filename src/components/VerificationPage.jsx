@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Upload, ShieldCheck, CheckCircle2, ArrowLeft } from 'lucide-react';
+import { Upload, ShieldCheck, CheckCircle2, ArrowLeft, Send, Loader2 } from 'lucide-react';
 
 const VerificationPage = ({ onDone }) => {
   const [step, setStep] = useState(1);
@@ -56,8 +56,8 @@ const VerificationPage = ({ onDone }) => {
               <div className="input-group" style={{ marginBottom: '16px' }}>
                 <textarea placeholder="Additional Information (Optional)" rows={4} value={formData.message} onChange={e => setFormData({...formData, message: e.target.value})} style={{ width: '100%', padding: '12px', borderRadius: '12px', border: '1px solid var(--border)', fontFamily: 'inherit', outline: 'none' }}></textarea>
               </div>
-              <button type="submit" className="submit-btn" disabled={loading} style={{marginTop: '8px', width: '100%'}}>
-                {loading ? 'Opening Email...' : 'Send Verification Email'}
+              <button type="submit" className="submit-btn" disabled={loading} style={{marginTop: '8px', width: '100%', padding: '14px', borderRadius: '12px', fontSize: '1.05rem', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', background: 'var(--primary)', color: 'white', border: 'none', cursor: 'pointer', transition: 'all 0.3s ease', boxShadow: '0 4px 15px rgba(0, 51, 102, 0.2)'}}>
+                {loading ? <><Loader2 size={20} className="animate-spin" /> Opening Email...</> : <><Send size={20} /> Send Verification Email</>}
               </button>
             </form>
           </>
