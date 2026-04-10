@@ -63,7 +63,9 @@ const CustomerSupportPage = ({ onDone }) => {
             <CheckCircle2 size={64} className="text-secondary" style={{ margin: '0 auto 16px', display: 'block' }} />
             <h3>Request Sent!</h3>
             <p>Your email client was opened to send the support ticket. We will respond to your query shortly.</p>
-            <button className="submit-btn" onClick={onDone} style={{marginTop: '16px', width: '100%'}}>Return Home</button>
+            <button className="submit-btn" onClick={onDone} style={{marginTop: '16px', width: '100%', padding: '14px', borderRadius: '12px', fontSize: '1.05rem', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', background: 'var(--secondary)', color: 'var(--primary)', border: 'none', cursor: 'pointer', transition: 'all 0.3s ease', boxShadow: '0 4px 15px rgba(255, 215, 0, 0.2)'}}>
+              <CheckCircle2 size={20} /> Return Home
+            </button>
           </div>
         )}
       </main>

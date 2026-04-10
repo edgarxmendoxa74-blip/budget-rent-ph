@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Navigation, Loader2, ArrowLeft, MapPin, Heart, Wifi, Building2, Star } from 'lucide-react';
 
-const FindNearbyPage = ({ listings, favorites, toggleFavorite, onSelectProperty, onViewLandlord, onBack }) => {
+const FindNearbyPage = ({ listings, favorites, toggleFavorite, onSelectProperty, onViewLandlord, onBack, isLandlord }) => {
   const [locating, setLocating] = useState(false);
   const [locationFound, setLocationFound] = useState(false);
   const [nearListings, setNearListings] = useState([]);
@@ -40,8 +40,12 @@ const FindNearbyPage = ({ listings, favorites, toggleFavorite, onSelectProperty,
           <ArrowLeft size={24} />
         </button>
         <div className="hero-content">
-          <h2 style={{ color: 'var(--text-color)' }}>Find Rentals Near You</h2>
-          <p style={{ color: 'var(--text-muted)' }}>Discover affordable housing in your immediate area</p>
+          {!isLandlord && (
+            <>
+              <h2 style={{ color: 'var(--text-color)' }}>Find Rentals Near You</h2>
+              <p style={{ color: 'var(--text-muted)' }}>Discover affordable housing in your immediate area</p>
+            </>
+          )}
         </div>
       </header>
 

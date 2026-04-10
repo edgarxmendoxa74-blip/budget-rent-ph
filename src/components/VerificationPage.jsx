@@ -66,7 +66,9 @@ const VerificationPage = ({ onDone }) => {
             <CheckCircle2 size={64} className="text-secondary" style={{ margin: '0 auto 16px', display: 'block' }} />
             <h3>Submission Successful!</h3>
             <p>Our team will review your documents within 24-48 hours. You will receive an email once your account is verified.</p>
-            <button className="submit-btn" onClick={onDone} style={{marginTop: '16px', width: '100%'}}>Done</button>
+            <button className="submit-btn" onClick={onDone} style={{marginTop: '16px', width: '100%', padding: '14px', borderRadius: '12px', fontSize: '1.05rem', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', background: 'var(--secondary)', color: 'var(--primary)', border: 'none', cursor: 'pointer', transition: 'all 0.3s ease', boxShadow: '0 4px 15px rgba(255, 215, 0, 0.2)'}}>
+              <CheckCircle2 size={20} /> Done
+            </button>
           </div>
         )}
       </main>

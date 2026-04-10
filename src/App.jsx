@@ -328,7 +328,14 @@ function App() {
           toggleFavorite={toggleFavorite}
           onSelectProperty={setSelectedProperty}
           onViewLandlord={setViewingLandlord}
-          onBack={() => setActiveTab('home')}
+          isLandlord={!isGuest && session?.user?.user_metadata?.user_role === 'landlord'}
+          onBack={() => {
+            if (!isGuest && session?.user?.user_metadata?.user_role === 'landlord') {
+              setActiveTab('mylistings');
+            } else {
+              setActiveTab('home');
+            }
+          }}
         />
       )}
 
@@ -336,7 +343,13 @@ function App() {
         <>
           <header className={`hero saved-hero`} style={{ position: 'relative' }}>
             <button 
-              onClick={() => setActiveTab('explore')} 
+              onClick={() => {
+                if (!isGuest && session?.user?.user_metadata?.user_role === 'landlord') {
+                  setActiveTab('mylistings');
+                } else {
+                  setActiveTab('home');
+                }
+              }} 
               style={{ position: 'absolute', top: '16px', left: '16px', color: 'var(--primary)', background: 'rgba(255,255,255,0.8)', border: 'none', borderRadius: '50%', width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', backdropFilter: 'blur(4px)' }}
             >
               <ArrowLeft size={24} />
@@ -414,7 +427,13 @@ function App() {
         <>
           <header className={`hero saved-hero`} style={{ position: 'relative' }}>
             <button 
-              onClick={() => setActiveTab('explore')} 
+              onClick={() => {
+                if (!isGuest && session?.user?.user_metadata?.user_role === 'landlord') {
+                  setActiveTab('mylistings');
+                } else {
+                  setActiveTab('home');
+                }
+              }} 
               style={{ position: 'absolute', top: '16px', left: '16px', color: 'var(--primary)', background: 'rgba(255,255,255,0.8)', border: 'none', borderRadius: '50%', width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', backdropFilter: 'blur(4px)' }}
             >
               <ArrowLeft size={24} />
@@ -474,7 +493,13 @@ function App() {
         <div className="page-section animate-fade-in">
           <header className="hero" style={{ position: 'relative' }}>
             <button 
-              onClick={() => setActiveTab('explore')} 
+              onClick={() => {
+                if (!isGuest && session?.user?.user_metadata?.user_role === 'landlord') {
+                  setActiveTab('mylistings');
+                } else {
+                  setActiveTab('home');
+                }
+              }} 
               style={{ position: 'absolute', top: '16px', left: '16px', color: 'white', background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: '50%', width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', backdropFilter: 'blur(4px)' }}
             >
               <ArrowLeft size={24} />
@@ -509,7 +534,13 @@ function App() {
         <div className="page-section animate-fade-in">
           <header className="hero" style={{ position: 'relative' }}>
             <button 
-              onClick={() => setActiveTab('explore')} 
+              onClick={() => {
+                if (!isGuest && session?.user?.user_metadata?.user_role === 'landlord') {
+                  setActiveTab('mylistings');
+                } else {
+                  setActiveTab('home');
+                }
+              }} 
               style={{ position: 'absolute', top: '16px', left: '16px', color: 'white', background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: '50%', width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', backdropFilter: 'blur(4px)' }}
             >
               <ArrowLeft size={24} />
@@ -541,11 +572,17 @@ function App() {
       )}
 
       {activeTab === 'verified' && (
-        <VerificationPage onDone={() => setActiveTab('explore')} />
+        <VerificationPage onDone={() => setActiveTab('mylistings')} />
       )}
 
       {activeTab === 'support' && (
-        <CustomerSupportPage onDone={() => setActiveTab('explore')} />
+        <CustomerSupportPage onDone={() => {
+          if (!isGuest && session?.user?.user_metadata?.user_role === 'landlord') {
+            setActiveTab('mylistings');
+          } else {
+            setActiveTab('home');
+          }
+        }} />
       )}
 
       {/* Property Modal */}
