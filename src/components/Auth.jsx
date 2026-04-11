@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { supabase } from '../lib/supabase';
-import { Mail, Lock, User, ArrowRight, Loader2, Building2, Users, Phone, MessageCircle, Globe } from 'lucide-react';
+import { Mail, Lock, User, ArrowRight, Loader2, Building2, Users, Phone, MessageCircle, Globe, X, Heart } from 'lucide-react';
 import './Auth.css';
 
 const Auth = ({ onAuthSuccess }) => {
@@ -9,6 +9,8 @@ const Auth = ({ onAuthSuccess }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [termsAgreed, setTermsAgreed] = useState(false);
+  const [isHowToUseOpen, setIsHowToUseOpen] = useState(false);
+  const [howToUseTab, setHowToUseTab] = useState('tenant');
   
   const [formData, setFormData] = useState({
     email: '',
@@ -87,7 +89,56 @@ const Auth = ({ onAuthSuccess }) => {
 
           <div className="auth-footer">
             <p>Simpleng paghahanap, mabilis na matutuluyan.</p>
+            <button 
+              className="how-to-use-btn" 
+              onClick={() => setIsHowToUseOpen(true)}
+              style={{ marginTop: '16px', width: '100%', padding: '12px', borderRadius: '12px', border: '1.5px solid var(--primary)', background: 'transparent', color: 'var(--primary)', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+            >
+              <Users size={18} /> Paano Gamitin?
+            </button>
           </div>
+
+          {isHowToUseOpen && (
+            <div className="modal-overlay" style={{ zIndex: 1000 }} onClick={() => setIsHowToUseOpen(false)}>
+              <div className="modal-content animate-slide-up" style={{ padding: '24px', maxWidth: '400px' }} onClick={e => e.stopPropagation()}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                  <h3 style={{ margin: 0, color: 'var(--primary)' }}>Paano Gamitin?</h3>
+                  <button onClick={() => setIsHowToUseOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}><X size={24} /></button>
+                </div>
+
+                <div className="how-to-use-tabs" style={{ display: 'flex', gap: '8px', marginBottom: '20px', background: '#f1f5f9', padding: '4px', borderRadius: '12px' }}>
+                  <button 
+                    style={{ flex: 1, padding: '10px', borderRadius: '8px', border: 'none', background: howToUseTab === 'tenant' ? 'white' : 'transparent', fontWeight: 'bold', color: howToUseTab === 'tenant' ? 'var(--primary)' : 'var(--text-muted)', cursor: 'pointer', boxShadow: howToUseTab === 'tenant' ? '0 2px 4px rgba(0,0,0,0.05)' : 'none' }}
+                    onClick={() => setHowToUseTab('tenant')}
+                  >
+                    Tenant
+                  </button>
+                  <button 
+                    style={{ flex: 1, padding: '10px', borderRadius: '8px', border: 'none', background: howToUseTab === 'landlord' ? 'white' : 'transparent', fontWeight: 'bold', color: howToUseTab === 'landlord' ? 'var(--primary)' : 'var(--text-muted)', cursor: 'pointer', boxShadow: howToUseTab === 'landlord' ? '0 2px 4px rgba(0,0,0,0.05)' : 'none' }}
+                    onClick={() => setHowToUseTab('landlord')}
+                  >
+                    Landlord
+                  </button>
+                </div>
+
+                {howToUseTab === 'tenant' ? (
+                  <ul style={{ paddingLeft: '20px', fontSize: '0.9rem', color: 'var(--text-muted)', lineHeight: '1.8' }}>
+                    <li>Mag-browse ng mga abot-kayang boarding house at bedspace.</li>
+                    <li>Gamitin ang search bar para sa lokasyon.</li>
+                    <li>I-click ang <strong>"Inquire Now"</strong> para makita ang contact details ng owner.</li>
+                    <li>I-save ang mga paboritong listing gamit ang <Heart size={14} style={{ display: 'inline' }} /> icon.</li>
+                  </ul>
+                ) : (
+                  <ul style={{ paddingLeft: '20px', fontSize: '0.9rem', color: 'var(--text-muted)', lineHeight: '1.8' }}>
+                    <li>Mag-register bilang <strong>Landlord</strong> gamit ang iyong email.</li>
+                    <li>I-post ang iyong property gamit ang <strong>(+)</strong> button.</li>
+                    <li>I-manage ang iyong mga listings sa <strong>"My Listings"</strong> tab.</li>
+                    <li>Kumuha ng <strong>Verified Badge</strong> sa menu para mas pagkatiwalaan ng tenants.</li>
+                  </ul>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     );

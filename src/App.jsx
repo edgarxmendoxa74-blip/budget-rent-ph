@@ -8,6 +8,8 @@ import EditListings from './components/EditListings';
 import VerificationPage from './components/VerificationPage';
 import CustomerSupportPage from './components/CustomerSupportPage';
 import FindNearbyPage from './components/FindNearbyPage';
+import AdminPanel from './components/AdminPanel';
+import AdminLogin from './components/AdminLogin';
 import './App.css';
 
 const LISTINGS = [
@@ -73,11 +75,10 @@ function App() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedProperty, setSelectedProperty] = useState(null);
   const [viewingLandlord, setViewingLandlord] = useState(null);
-  const [favorites, setFavorites] = useState(() => {
-    const saved = localStorage.getItem('budgetrent_favorites');
-    return saved ? JSON.parse(saved) : [];
-  });
-  const [activeTab, setActiveTab] = useState('home'); // 'home' or 'saved'
+  const [activeTab, setActiveTab] = useState('home'); // 'home' or 'explore'
+  const isOwner = session?.user?.email === 'admin@budgetrent.ph' || localStorage.getItem('budgetrent_admin_bypass') === 'true';
+
+
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -92,12 +93,13 @@ function App() {
 
     fetchProperties(); // Initial fetch
 
+    // Check for /admin route
+    if (window.location.pathname === '/admin') {
+      setActiveTab('admin');
+    }
+
     return () => subscription.unsubscribe();
   }, []);
-
-  useEffect(() => {
-    localStorage.setItem('budgetrent_favorites', JSON.stringify(favorites));
-  }, [favorites]);
 
   const fetchProperties = async () => {
     try {
@@ -118,25 +120,39 @@ function App() {
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
+    localStorage.removeItem('budgetrent_admin_bypass');
     setIsGuest(false);
     setIsMenuOpen(false);
+    if (window.location.pathname === '/admin') {
+      window.location.href = '/';
+    }
   };
 
   const filteredListings = properties.filter(item => {
     const matchesCategory = selectedCategory === "All" || item.type === selectedCategory;
     const matchesSearch = (item.name || item.title || "").toLowerCase().includes(searchQuery.toLowerCase()) || 
                           item.location.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesSaved = activeTab === 'saved' ? favorites.includes(item.id) : true;
     const matchesMyListings = activeTab === 'mylistings' ? item.user_id === session?.user?.id : true;
-    return matchesCategory && matchesSearch && matchesSaved && matchesMyListings;
+    return matchesCategory && matchesSearch && matchesMyListings;
   });
 
-  const toggleFavorite = (id) => {
-    setFavorites(prev => prev.includes(id) ? prev.filter(f => f !== id) : [...prev, id]);
-  };
 
-  if (!session && !isGuest) {
+
+  if (!session && !isGuest && window.location.pathname !== '/admin') {
     return <Auth onAuthSuccess={() => setIsGuest(true)} />;
+  }
+
+  // If visiting /admin specifically, override rendering to show AdminPanel if authorized (or AdminLogin if not)
+  if (window.location.pathname === '/admin') {
+    if (!isOwner) {
+      return (
+        <AdminLogin 
+          onLoginSuccess={() => window.location.reload()} 
+          onBack={() => window.location.href = '/'} 
+        />
+      );
+    }
+    return <AdminPanel onBack={() => window.location.pathname = '/'} onLogout={handleLogout} />;
   }
 
   return (
@@ -149,7 +165,6 @@ function App() {
             <h1 className="brand-name">BudgetRent<span>PH</span></h1>
           </div>
           <div className="nav-actions">
-            {!isGuest && <button className="list-property-btn desktop-only" onClick={() => setIsPropertyFormOpen(true)}>List your property</button>}
             <button className="menu-btn" onClick={() => setIsMenuOpen(true)}>
               <Menu size={24} />
             </button>
@@ -173,29 +188,28 @@ function App() {
               {isGuest && (
                 <>
                   <button className="menu-link" onClick={() => { setIsMenuOpen(false); setActiveTab('explore'); }}>
-                    <Navigation size={20} /> Find Rentals Near You
-                  </button>
-                  <button className="menu-link" onClick={() => { setIsMenuOpen(false); setActiveTab('saved'); }}>
-                    <Heart size={20} /> Saved Listings
+                    <div className="icon-container-mini"><Navigation size={18} /></div> Phone Location
                   </button>
                 </>
               )}
               {!isGuest && (
                 <>
                   <button className="menu-link highlight" onClick={() => { setIsMenuOpen(false); setIsPropertyFormOpen(true); }}>
-                    <Shield size={20} /> List your property
+                    <div className="icon-container-mini"><Shield size={18} /></div> List your property
                   </button>
                   <button className="menu-link" onClick={() => { setIsMenuOpen(false); setActiveTab('mylistings'); }}>
-                    <ClipboardList size={20} /> My Listings
+                    <div className="icon-container-mini"><ClipboardList size={18} /></div> My Listings
                   </button>
                   <button className="menu-link" onClick={() => { setIsMenuOpen(false); setIsProfileEditing(true); setIsProfileModalOpen(true); }}>
-                    <User size={20} /> Contact & Profile
+                    <div className="icon-container-mini"><User size={18} /></div> Contact & Profile
                   </button>
                   <button className="menu-link" onClick={() => { setIsMenuOpen(false); setActiveTab('verified'); }}>
-                    <BadgeCheck size={20} className="text-secondary" /> Get Verified
+                    <div className="icon-container-mini secondary-icon"><BadgeCheck size={18} /></div> Get Verified
                   </button>
                 </>
               )}
+
+
               
               <div className="menu-divider"></div>
               
@@ -206,10 +220,10 @@ function App() {
                 <Shield size={20} /> Terms & Policies
               </button>
               <button className="menu-link" onClick={() => { setIsMenuOpen(false); setActiveTab('support'); }}>
-                <Headset size={20} /> Chat Customer Support
+                <div className="icon-container-mini"><Headset size={18} /></div> Chat Customer Support
               </button>
               <button className="menu-link logout" onClick={handleLogout}>
-                <LogOut size={20} /> Sign Out
+                <div className="icon-container-mini logout-icon"><LogOut size={18} /></div> Sign Out
               </button>
             </div>
 
@@ -274,12 +288,6 @@ function App() {
                   >
                     <div className="image-container">
                       <img src={item.image || '/placeholder.png'} alt={item.name || item.title} />
-                      <button 
-                        className={`fav-btn ${favorites.includes(item.id) ? 'active' : ''}`}
-                        onClick={(e) => { e.stopPropagation(); toggleFavorite(item.id); }}
-                      >
-                        <Heart size={18} fill={favorites.includes(item.id) ? "currentColor" : "none"} />
-                      </button>
                       <div className="rating-tag">
                         <Star size={12} fill="currentColor" /> {item.rating || 4.5}
                       </div>
@@ -294,9 +302,9 @@ function App() {
                         <MapPin size={14} /> {item.location}
                       </div>
                       <div className="property-specs">
-                        <span><Wifi size={12} /> {item.wifi || 'No'}</span>
-                        <span><Building2 size={12} /> {item.rooms || 1} Room</span>
-                        <span><Star size={12} /> {item.cr || 'Shared'}</span>
+                        <span><div className="spec-icon"><Wifi size={10} /></div> {item.wifi || 'No'}</span>
+                        <span><div className="spec-icon"><Building2 size={10} /></div> {item.rooms || 1} Room</span>
+                        <span><div className="spec-icon"><Star size={10} /></div> {item.cr || 'Shared'}</span>
                       </div>
                       <div 
                         style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: '8px 0', cursor: 'pointer' }}
@@ -309,7 +317,10 @@ function App() {
                             {(item.owner_name || 'L').charAt(0).toUpperCase()}
                           </div>
                         )}
-                        <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{item.owner_name || 'Landlord'}</span>
+                        <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          {item.owner_name || 'Landlord'}
+                          {item.is_verified && <BadgeCheck size={14} className="verified-badge" />}
+                        </span>
                       </div>
                       <button className="inquire-btn">Inquire Now</button>
                     </div>
@@ -324,8 +335,6 @@ function App() {
       {activeTab === 'explore' && (
         <FindNearbyPage 
           listings={filteredListings}
-          favorites={favorites}
-          toggleFavorite={toggleFavorite}
           onSelectProperty={setSelectedProperty}
           onViewLandlord={setViewingLandlord}
           isLandlord={!isGuest && session?.user?.user_metadata?.user_role === 'landlord'}
@@ -339,89 +348,7 @@ function App() {
         />
       )}
 
-      {activeTab === 'saved' && (
-        <>
-          <header className={`hero saved-hero`} style={{ position: 'relative' }}>
-            <button 
-              onClick={() => {
-                if (!isGuest && session?.user?.user_metadata?.user_role === 'landlord') {
-                  setActiveTab('mylistings');
-                } else {
-                  setActiveTab('home');
-                }
-              }} 
-              style={{ position: 'absolute', top: '16px', left: '16px', color: 'var(--primary)', background: 'rgba(255,255,255,0.8)', border: 'none', borderRadius: '50%', width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', backdropFilter: 'blur(4px)' }}
-            >
-              <ArrowLeft size={24} />
-            </button>
-            <div className="hero-content">
-              <h2>Your Saved Listings</h2>
-              <p>Keep track of the places you love</p>
-            </div>
-          </header>
-          <main className="listings pt-6">
-            <div className="section-header">
-              <h3>Saved Properties</h3>
-              <span>{filteredListings.length} saved</span>
-            </div>
-            {loading ? (
-              <div className="text-center py-10"><Loader2 className="animate-spin" size={32} /> Loading...</div>
-            ) : (
-              <div className="listing-grid">
-                {filteredListings.map(item => (
-                  <div 
-                    key={item.id} 
-                    className="listing-card animate-slide-up"
-                    onClick={() => setSelectedProperty(item)}
-                  >
-                    <div className="image-container">
-                      <img src={item.image || '/placeholder.png'} alt={item.name || item.title} />
-                      <button 
-                        className={`fav-btn ${favorites.includes(item.id) ? 'active' : ''}`}
-                        onClick={(e) => { e.stopPropagation(); toggleFavorite(item.id); }}
-                      >
-                        <Heart size={18} fill={favorites.includes(item.id) ? "currentColor" : "none"} />
-                      </button>
-                      <div className="rating-tag">
-                        <Star size={12} fill="currentColor" /> {item.rating || 4.5}
-                      </div>
-                    </div>
-                    <div className="card-info">
-                      <h4>{item.name || item.title}</h4>
-                      <p className="card-desc">{item.description}</p>
-                      <div className="price">
-                        ₱{item.price?.toLocaleString() || 0}<span>/month</span>
-                      </div>
-                      <div className="location">
-                        <MapPin size={14} /> {item.location}
-                      </div>
-                      <div className="property-specs">
-                        <span><Wifi size={12} /> {item.wifi || 'No'}</span>
-                        <span><Building2 size={12} /> {item.rooms || 1} Room</span>
-                        <span><Star size={12} /> {item.cr || 'Shared'}</span>
-                      </div>
-                      <div 
-                        style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: '8px 0', cursor: 'pointer' }}
-                        onClick={(e) => { e.stopPropagation(); setViewingLandlord(item); }}
-                      >
-                        {item.owner_avatar ? (
-                          <img src={item.owner_avatar} alt="" style={{ width: '28px', height: '28px', borderRadius: '50%', objectFit: 'cover', border: '1.5px solid var(--primary)' }} />
-                        ) : (
-                          <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'var(--primary)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: 'bold' }}>
-                            {(item.owner_name || 'L').charAt(0).toUpperCase()}
-                          </div>
-                        )}
-                        <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{item.owner_name || 'Landlord'}</span>
-                      </div>
-                      <button className="inquire-btn">Inquire Now</button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </main>
-        </>
-      )}
+
 
       {activeTab === 'mylistings' && (
         <>
@@ -560,7 +487,7 @@ function App() {
       )}
 
       {activeTab === 'verified' && (
-        <VerificationPage onDone={() => setActiveTab('mylistings')} />
+        <VerificationPage session={session} onDone={() => setActiveTab('mylistings')} />
       )}
 
       {activeTab === 'support' && (
@@ -571,6 +498,10 @@ function App() {
             setActiveTab('home');
           }
         }} />
+      )}
+
+      {activeTab === 'admin' && isOwner && (
+        <AdminPanel onBack={() => setActiveTab('home')} onLogout={handleLogout} />
       )}
 
       {/* Property Modal */}
@@ -612,7 +543,7 @@ function App() {
                 <div style={{ flex: 1 }}>
                   <p style={{ fontWeight: '600', margin: 0, fontSize: '1rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
                     {selectedProperty.owner_name || 'Landlord'}
-                    <BadgeCheck size={14} className="text-secondary" />
+                    {selectedProperty.is_verified && <BadgeCheck size={16} className="verified-badge" />}
                   </p>
                   <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Tap to view full profile</span>
                 </div>
@@ -622,28 +553,28 @@ function App() {
               <h3>Listing Details</h3>
               <div className="amenities-list">
                 <div className="amenity-item">
-                  <Wifi size={18} /> 
+                  <div className="circle-icon"><Wifi size={16} /></div> 
                   <div>
                     <label>WiFi</label>
                     <p>{selectedProperty.wifi || 'No'}</p>
                   </div>
                 </div>
                 <div className="amenity-item">
-                  <Building2 size={18} /> 
+                  <div className="circle-icon"><Building2 size={16} /></div> 
                   <div>
                     <label>Total Rooms</label>
                     <p>{selectedProperty.rooms || 1} Room(s)</p>
                   </div>
                 </div>
                 <div className="amenity-item">
-                  <Star size={18} /> 
+                  <div className="circle-icon"><Star size={16} /></div> 
                   <div>
                     <label>CR / Bathroom</label>
                     <p>{selectedProperty.cr || 'Shared'}</p>
                   </div>
                 </div>
                 <div className="amenity-item">
-                  <Shield size={18} /> 
+                  <div className="circle-icon"><Shield size={16} /></div> 
                   <div>
                     <label>Secured / Gated</label>
                     <p>{selectedProperty.secured || 'No'}</p>
@@ -678,38 +609,36 @@ function App() {
       )}
 
       {/* Navigation Bar */}
-      <div className="bottom-nav glass">
-        {!isGuest ? (
-          /* Landlord Navigation */
-          <>
-            <button className={`nav-item ${activeTab === 'mylistings' ? 'active' : ''}`} onClick={() => setActiveTab('mylistings')}><ClipboardList size={24} /> <span>My Listings</span></button>
-            <button className="nav-item circle-plus" onClick={() => setIsPropertyFormOpen(true)}>+</button>
-            <button className="nav-item" onClick={() => { setIsProfileEditing(false); setIsProfileModalOpen(true); }}><User size={24} /> <span>Account</span></button>
-          </>
-        ) : (
-          /* Tenant Navigation */
-          <>
-            <button 
-              className={`nav-item ${activeTab === 'explore' ? 'active' : ''}`}
-              onClick={() => setActiveTab('explore')}
-            >
-              <Navigation size={24} /> <span>Near Me</span>
-            </button>
-            <button 
-              className={`nav-item ${activeTab === 'home' || (activeTab !== 'explore' && activeTab !== 'saved' && activeTab !== 'mylistings') ? 'active' : ''}`}
-              onClick={() => setActiveTab('home')}
-            >
-              <Home size={24} /> <span>Home</span>
-            </button>
-            <button 
-              className={`nav-item ${activeTab === 'saved' ? 'active' : ''}`}
-              onClick={() => setActiveTab('saved')}
-            >
-              <Heart size={24} /> <span>Saved</span>
-            </button>
-          </>
-        )}
-      </div>
+      {(!isOwner || activeTab !== 'admin') && (
+        <div className="bottom-nav glass">
+          {!isGuest ? (
+            /* Landlord Navigation */
+            <>
+              <button className={`nav-item ${activeTab === 'mylistings' ? 'active' : ''}`} onClick={() => setActiveTab('mylistings')}><ClipboardList size={24} /> <span>My Listings</span></button>
+              <button className="nav-item circle-plus" onClick={() => setIsPropertyFormOpen(true)}>+</button>
+              <button className="nav-item" onClick={() => { setIsProfileEditing(false); setIsProfileModalOpen(true); }}><User size={24} /> <span>Account</span></button>
+            </>
+          ) : (
+            /* Tenant Navigation */
+            <>
+              <button 
+                className={`nav-item ${activeTab === 'explore' ? 'active' : ''}`}
+                onClick={() => setActiveTab('explore')}
+              >
+                <div className={`nav-icon-box ${activeTab === 'explore' ? 'active' : ''}`}><Navigation size={22} /></div>
+                <span>Nearby</span>
+              </button>
+              <button 
+                className={`nav-item ${activeTab === 'home' || activeTab !== 'explore' ? 'active' : ''}`}
+                onClick={() => setActiveTab('home')}
+              >
+                <div className={`nav-icon-box ${activeTab === 'home' ? 'active' : ''}`}><Home size={22} /></div>
+                <span>Home</span>
+              </button>
+            </>
+          )}
+        </div>
+      )}
 
       {/* Property Listing Form Modal */}
       {isPropertyFormOpen && (
@@ -750,9 +679,14 @@ function App() {
                   </div>
                 )}
               </div>
-              <span className="role-badge landlord">VERIFIED OWNER</span>
-              <h2>{viewingLandlord.owner_name || 'Landlord'}</h2>
-              <a href={`mailto:${viewingLandlord.email}`} className="profile-email">{viewingLandlord.email}</a>
+               <span className={`role-badge ${viewingLandlord.is_verified ? 'verified' : 'landlord'}`}>
+                 {viewingLandlord.is_verified ? 'VERIFIED OWNER' : 'LANDLORD'}
+               </span>
+               <h2 style={{ display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'center' }}>
+                 {viewingLandlord.owner_name || 'Landlord'}
+                 {viewingLandlord.is_verified && <BadgeCheck size={24} className="verified-badge" />}
+               </h2>
+               <a href={`mailto:${viewingLandlord.email}`} className="profile-email">{viewingLandlord.email}</a>
             </div>
 
             <div className="profile-details">

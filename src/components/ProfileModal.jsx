@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { X, User, Save, Loader2, CheckCircle, Camera, Phone, MessageCircle, Building2, Globe } from 'lucide-react';
+import { X, User, Save, Loader2, CheckCircle, Camera, Phone, MessageCircle, Building2, Globe, BadgeCheck } from 'lucide-react';
 import './ProfileModal.css';
 
 const ProfileModal = ({ session, onClose, isEditingInitial = false }) => {
@@ -8,6 +8,29 @@ const ProfileModal = ({ session, onClose, isEditingInitial = false }) => {
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [isVerified, setIsVerified] = useState(false);
+
+  useEffect(() => {
+    checkVerification();
+  }, [session]);
+
+  const checkVerification = async () => {
+    if (!session?.user?.id) return;
+    try {
+      const { data, error } = await supabase
+        .from('properties')
+        .select('is_verified')
+        .eq('user_id', session.user.id)
+        .eq('is_verified', true)
+        .limit(1);
+      
+      if (data && data.length > 0) {
+        setIsVerified(true);
+      }
+    } catch (err) {
+      console.error('Error checking verification:', err);
+    }
+  };
   const [formData, setFormData] = useState({
     fullName: session?.user?.user_metadata?.full_name || '',
     email: session?.user?.email || '',
@@ -108,8 +131,13 @@ const ProfileModal = ({ session, onClose, isEditingInitial = false }) => {
             <input type="file" id="avatar-upload" hidden accept="image/*" onChange={handleFileUpload} />
             <label htmlFor="avatar-upload" className="change-photo" title="Upload Photo"><Camera size={16} /></label>
           </div>
-          <span className={`role-badge ${userRole}`}>{userRole.toUpperCase()}</span>
-          <h2>{isEditing ? 'Edit Profile' : 'Account Details'}</h2>
+          <span className={`role-badge ${isVerified ? 'verified' : userRole}`}>
+            {isVerified ? 'VERIFIED OWNER' : userRole.toUpperCase()}
+          </span>
+          <h2 style={{ display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'center' }}>
+            {isEditing ? 'Edit Profile' : 'Account Details'}
+            {isVerified && <BadgeCheck size={20} className="verified-badge" />}
+          </h2>
           <a href={`mailto:${formData.email}`} className="profile-email">{formData.email}</a>
         </div>
 

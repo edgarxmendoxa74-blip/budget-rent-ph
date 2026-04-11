@@ -1,24 +1,45 @@
 import React, { useState } from 'react';
+import { supabase } from '../lib/supabase';
 import { Upload, ShieldCheck, CheckCircle2, ArrowLeft, Send, Loader2 } from 'lucide-react';
 
-const VerificationPage = ({ onDone }) => {
+const VerificationPage = ({ onDone, session }) => {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({ fullName: '', propertyName: '', phone: '', message: '' });
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     
-    // Create mailto link
-    const subject = encodeURIComponent('Landlord Verification Request');
-    const body = encodeURIComponent(`Name: ${formData.fullName}\nProperty Name: ${formData.propertyName}\nContact Number: ${formData.phone}\nMessage: ${formData.message}`);
-    window.location.href = `mailto:edgarmendoxa74@gmail.com?subject=${subject}&body=${body}`;
+    try {
+      const { error } = await supabase
+        .from('verification_requests')
+        .insert([
+          {
+            user_id: session?.user?.id,
+            full_name: formData.fullName,
+            property_name: formData.propertyName,
+            contact_number: formData.phone,
+            message: formData.message,
+            status: 'pending',
+            email: session?.user?.email
+          }
+        ]);
 
-    setTimeout(() => {
-      setLoading(false);
+      if (error) throw error;
+      
+      // Also open email as backup/fallback if user wants
+      const subject = encodeURIComponent('Landlord Verification Request');
+      const body = encodeURIComponent(`Name: ${formData.fullName}\nProperty Name: ${formData.propertyName}\nContact Number: ${formData.phone}\nMessage: ${formData.message}`);
+      // window.location.href = `mailto:edgarmendoxa74@gmail.com?subject=${subject}&body=${body}`;
+
       setStep(2);
-    }, 1000);
+    } catch (error) {
+      console.error('Error submitting verification:', error);
+      alert(`Error: ${error.message || 'Please make sure verification_requests table exists in your Supabase database.'}`);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -57,7 +78,7 @@ const VerificationPage = ({ onDone }) => {
                 <textarea placeholder="Additional Information (Optional)" rows={4} value={formData.message} onChange={e => setFormData({...formData, message: e.target.value})} style={{ width: '100%', padding: '12px', borderRadius: '12px', border: '1px solid var(--border)', fontFamily: 'inherit', outline: 'none' }}></textarea>
               </div>
               <button type="submit" className="submit-btn" disabled={loading} style={{marginTop: '8px', width: '100%', padding: '14px', borderRadius: '12px', fontSize: '1.05rem', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', background: 'var(--primary)', color: 'white', border: 'none', cursor: 'pointer', transition: 'all 0.3s ease', boxShadow: '0 4px 15px rgba(0, 51, 102, 0.2)'}}>
-                {loading ? <><Loader2 size={20} className="animate-spin" /> Opening Email...</> : <><Send size={20} /> Send Verification Email</>}
+                {loading ? <><Loader2 size={20} className="animate-spin" /> Submitting...</> : <><Send size={20} /> Submit</>}
               </button>
             </form>
           </>

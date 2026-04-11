@@ -1,14 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Navigation, Loader2, MapPin, Heart, Wifi, Building2, Star } from 'lucide-react';
 
-const FindNearbyPage = ({ listings, favorites, toggleFavorite, onSelectProperty, onViewLandlord, isLandlord }) => {
+const FindNearbyPage = ({ listings, onSelectProperty, onViewLandlord, isLandlord }) => {
   const [locating, setLocating] = useState(false);
   const [locationFound, setLocationFound] = useState(false);
   const [nearListings, setNearListings] = useState([]);
 
   const handleFindNearby = () => {
     setLocating(true);
-    // Simulate GPS fetch
+    // Simulate phone location fetch
     if ("geolocation" in navigator) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
@@ -48,14 +48,14 @@ const FindNearbyPage = ({ listings, favorites, toggleFavorite, onSelectProperty,
           <div style={{ textAlign: 'center', padding: '40px 20px', borderRadius: '16px' }}>
             <Navigation size={64} style={{ color: 'var(--primary)', margin: '0 auto 24px', opacity: 0.9 }} />
             <h3 style={{ marginBottom: '12px', fontSize: '1.2rem', color: 'var(--primary)' }}>Allow Location Access</h3>
-            <p style={{ color: 'var(--text-muted)', marginBottom: '32px', fontSize: '0.95rem' }}>We need your device's GPS to find the best boarding houses and apartments right around your current location.</p>
+            <p style={{ color: 'var(--text-muted)', marginBottom: '32px', fontSize: '0.95rem' }}>We need your phone location to find the best boarding houses and apartments right around your current area.</p>
             
             <button 
               onClick={handleFindNearby}
               disabled={locating}
               style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: 'var(--primary)', color: 'white', padding: '16px 32px', borderRadius: '30px', border: 'none', fontSize: '1rem', fontWeight: 'bold', cursor: 'pointer', boxShadow: '0 4px 12px rgba(37, 99, 235, 0.3)' }}
             >
-              {locating ? <><Loader2 size={20} className="animate-spin"/> Locating...</> : <><Navigation size={20}/> Find Rentals Near Me</>}
+              {locating ? <><Loader2 size={20} className="animate-spin"/> Locating...</> : <><Navigation size={20}/> Use Phone Location</>}
             </button>
           </div>
         ) : (
@@ -74,12 +74,6 @@ const FindNearbyPage = ({ listings, favorites, toggleFavorite, onSelectProperty,
                 >
                   <div className="image-container">
                     <img src={item.image || '/placeholder.png'} alt={item.name || item.title} />
-                    <button 
-                      className={`fav-btn ${favorites.includes(item.id) ? 'active' : ''}`}
-                      onClick={(e) => { e.stopPropagation(); toggleFavorite(item.id); }}
-                    >
-                      <Heart size={18} fill={favorites.includes(item.id) ? "currentColor" : "none"} />
-                    </button>
                     <div className="rating-tag" style={{ background: '#16a34a' }}>
                       <Navigation size={12} style={{ display: 'inline', marginRight: '4px' }} />
                       Within 2 km
@@ -95,9 +89,9 @@ const FindNearbyPage = ({ listings, favorites, toggleFavorite, onSelectProperty,
                       <MapPin size={14} /> {item.location}
                     </div>
                     <div className="property-specs">
-                      <span><Wifi size={12} /> {item.wifi || 'No'}</span>
-                      <span><Building2 size={12} /> {item.rooms || 1} Room</span>
-                      <span><Star size={12} /> {item.cr || 'Shared'}</span>
+                      <span><div className="spec-icon"><Wifi size={10} /></div> {item.wifi || 'No'}</span>
+                      <span><div className="spec-icon"><Building2 size={10} /></div> {item.rooms || 1} Room</span>
+                      <span><div className="spec-icon"><Star size={10} /></div> {item.cr || 'Shared'}</span>
                     </div>
                     <div 
                       style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: '8px 0', cursor: 'pointer' }}
