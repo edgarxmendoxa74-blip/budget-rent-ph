@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { supabase } from '../lib/supabase';
-import { Mail, Lock, User, ArrowRight, Loader2, Building2, Users, Phone, MessageCircle, Globe, X, Heart } from 'lucide-react';
+import { Mail, Lock, User, ArrowRight, Loader2, Building2, Users, Phone, MessageCircle, Globe, X, Heart, Eye, EyeOff } from 'lucide-react';
 import './Auth.css';
 
 const Auth = ({ onAuthSuccess }) => {
@@ -11,6 +11,7 @@ const Auth = ({ onAuthSuccess }) => {
   const [termsAgreed, setTermsAgreed] = useState(false);
   const [isHowToUseOpen, setIsHowToUseOpen] = useState(false);
   const [howToUseTab, setHowToUseTab] = useState('tenant');
+  const [showPassword, setShowPassword] = useState(false);
   
   const [formData, setFormData] = useState({
     email: '',
@@ -231,13 +232,21 @@ const Auth = ({ onAuthSuccess }) => {
           <div className="input-group">
             <Lock size={20} className="input-icon" />
             <input
-              type="password"
+              type={showPassword ? "text" : "password"}
               name="password"
               placeholder="Password"
               required
               value={formData.password}
               onChange={handleInputChange}
             />
+            <button 
+              type="button" 
+              className="password-toggle" 
+              onClick={() => setShowPassword(!showPassword)}
+              style={{ background: 'none', border: 'none', position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+            >
+              {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+            </button>
           </div>
 
           {!isLogin && (

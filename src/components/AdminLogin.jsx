@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { supabase } from '../lib/supabase';
-import { Mail, Lock, Shield, Loader2, ArrowLeft } from 'lucide-react';
+import { Mail, Lock, Shield, Loader2, ArrowLeft, Eye, EyeOff } from 'lucide-react';
 import './Auth.css'; // Reusing some auth styles
 
 const AdminLogin = ({ onLoginSuccess, onBack }) => {
@@ -8,6 +8,7 @@ const AdminLogin = ({ onLoginSuccess, onBack }) => {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -70,12 +71,20 @@ const AdminLogin = ({ onLoginSuccess, onBack }) => {
           <div className="input-group">
             <Lock size={20} className="input-icon" />
             <input
-              type="password"
+              type={showPassword ? "text" : "password"}
               placeholder="Master Password"
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
             />
+            <button 
+              type="button" 
+              className="password-toggle" 
+              onClick={() => setShowPassword(!showPassword)}
+              style={{ background: 'none', border: 'none', position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+            >
+              {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+            </button>
           </div>
 
           {error && <div className="auth-error">{error}</div>}
