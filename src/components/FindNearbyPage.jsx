@@ -184,9 +184,17 @@ const FindNearbyPage = ({ listings, onSelectProperty, onViewLandlord, isLandlord
               </button>
             </div>
             
-            <div className="listing-grid">
+            <div className="listing-column" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
               {nearListings.map(item => (
-                <div key={item.id} className="listing-card animate-slide-up" onClick={() => onSelectProperty(item)} style={{ overflow: 'hidden' }}>
+                <div key={item.id} className="listing-card-vertical animate-slide-up" onClick={() => onSelectProperty(item)} style={{ 
+                  display: 'flex', 
+                  flexDirection: 'column',
+                  background: 'white',
+                  borderRadius: '20px',
+                  overflow: 'hidden',
+                  boxShadow: '0 4px 15px rgba(0,0,0,0.08)',
+                  border: '1px solid var(--border)'
+                }}>
                   <div className="image-container">
                     <img src={item.image || '/placeholder.png'} alt={item.name || item.title} />
                     <div className="rating-tag" style={{ background: '#16a34a', padding: '6px 12px', borderRadius: '20px' }}>
