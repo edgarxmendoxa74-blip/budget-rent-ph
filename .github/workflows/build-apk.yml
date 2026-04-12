@@ -33,23 +33,25 @@ jobs:
       - name: Set up Android SDK
         uses: android-actions/setup-android@v2
 
+      - name: Generate Web Assets
+        run: npm run build
+
       - name: Install Capacitor CLI
         run: npm install -g @capacitor/cli
 
-      - name: Add Android Platform
+      - name: Add or Sync Android Platform
         run: |
           if [ ! -d "android" ]; then
             npx cap add android
+          else
+            npx cap sync
           fi
-
-      - name: Sync Capacitor
-        run: npx cap sync
 
       - name: Build with Gradle
         run: |
           cd android
           chmod +x gradlew
-          ./gradlew assembleDebug
+          ./gradlew assembleDebug --stacktrace
 
       - name: Upload APK
         uses: actions/upload-artifact@v3
