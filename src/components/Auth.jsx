@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { supabase } from '../lib/supabase';
-import { Mail, Lock, User, ArrowRight, Loader2, Building2, Users, Phone, MessageCircle, Globe, X, Heart, Eye, EyeOff } from 'lucide-react';
+import { Mail, Lock, User, ArrowRight, Loader2, Building2, Users, Phone, MessageCircle, Globe, X, Heart, Eye, EyeOff, BadgeCheck } from 'lucide-react';
 import './Auth.css';
 
 const Auth = ({ onAuthSuccess }) => {
