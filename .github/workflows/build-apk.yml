@@ -43,10 +43,11 @@ jobs:
       - name: Install Capacitor Core & Android
         run: npm install @capacitor/core @capacitor/cli @capacitor/android --legacy-peer-deps
 
-      - name: Build Android App
+      - name: Add Android Platform
         run: |
-          if [ -d "android" ]; then rm -rf android; fi
-          npx cap add android
+          if [ ! -d "android" ]; then
+            npx cap add android
+          fi
           npx cap sync
           cd android
           chmod +x gradlew
