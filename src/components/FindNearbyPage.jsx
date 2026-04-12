@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Navigation, Loader2, MapPin, Heart, Wifi, Building2, Star, X, ShieldCheck, Search, AlertCircle, Signal } from 'lucide-react';
+import { Navigation, Loader2, MapPin, Heart, Wifi, Building2, Star, X, ShieldCheck, Search, AlertCircle, Signal, BadgeCheck } from 'lucide-react';
 
 const FindNearbyPage = ({ listings, onSelectProperty, onViewLandlord, isLandlord }) => {
   const [locating, setLocating] = useState(false);
@@ -94,7 +94,13 @@ const FindNearbyPage = ({ listings, onSelectProperty, onViewLandlord, isLandlord
                 <h2 style={{ color: 'var(--primary)', margin: 0 }}>Rentals Near You</h2>
                 {locationFound && <div className="live-pill"><Signal size={12} className="pulse" /> LIVE</div>}
               </div>
-              <p style={{ color: 'var(--primary)', opacity: 0.8, fontWeight: '500' }}>{locationFound ? 'Automatically tracking your current area' : 'Discover affordable housing around your area'}</p>
+              <p style={{ color: 'var(--primary)', opacity: 0.8, fontWeight: '500', marginBottom: '16px' }}>{locationFound ? 'Automatically tracking your current area' : 'Discover affordable housing around your area'}</p>
+              
+              <form onSubmit={handleManualSearch} className="search-bar" style={{ maxWidth: '100%', height: '55px', margin: '0 auto 8px' }}>
+                <Search size={20} />
+                <input type="text" placeholder="Enter City or Area..." value={manualQuery} onChange={(e) => setManualQuery(e.target.value)} />
+                <button type="submit" style={{ background: 'var(--primary)', color: 'white', border: 'none', borderRadius: '10px', padding: '10px 20px', fontWeight: 'bold' }}>Search</button>
+              </form>
             </>
           )}
         </div>
@@ -129,15 +135,9 @@ const FindNearbyPage = ({ listings, onSelectProperty, onViewLandlord, isLandlord
               <div className="animate-fade-in" style={{ background: '#fef2f2', padding: '24px', borderRadius: '16px', border: '1px solid #fee2e2', marginBottom: '24px' }}>
                 <AlertCircle size={48} style={{ color: '#ef4444', marginBottom: '16px' }} />
                 <h3 style={{ color: '#991b1b', marginBottom: '8px' }}>Location Access Required</h3>
-                <p style={{ color: '#b91c1c', fontSize: '0.9rem', marginBottom: '20px' }}>
-                  Please enable "Location" in your <b>Phone Settings</b> for this app to see properties near you automatically.
+                <p style={{ color: '#b91c1c', fontSize: '0.9rem', marginBottom: '0' }}>
+                  Please enable "Location" in your <b>Phone Settings</b> for this app to see properties near you automatically. Or use the manual search above.
                 </p>
-                <div style={{ fontSize: '0.85rem', fontWeight: 'bold', marginBottom: '12px' }}>Search manually instead:</div>
-                <form onSubmit={handleManualSearch} className="search-bar" style={{ background: 'white', maxWidth: '100%' }}>
-                  <Search size={18} />
-                  <input type="text" placeholder="E.g. Sampaloc, Manila" value={manualQuery} onChange={(e) => setManualQuery(e.target.value)} />
-                  <button type="submit" style={{ background: 'var(--primary)', color: 'white', border: 'none', borderRadius: '8px', padding: '6px 12px', fontWeight: 'bold' }}>Go</button>
-                </form>
               </div>
             ) : (
               <div style={{ textAlign: 'center', padding: '20px 0' }}>
@@ -152,18 +152,12 @@ const FindNearbyPage = ({ listings, onSelectProperty, onViewLandlord, isLandlord
                 >
                   {locating ? <><Loader2 size={24} className="animate-spin"/> Initializing...</> : <><Navigation size={22}/> Activate Live GPS</>}
                 </button>
-                
-                <div style={{ margin: '32px 0 24px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <div style={{ flex: 1, height: '1px', background: 'var(--border)' }}></div>
-                  <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 'bold' }}>OR SEARCH MANUALLY</span>
-                  <div style={{ flex: 1, height: '1px', background: 'var(--border)' }}></div>
+                <div style={{ marginTop: '20px', background: 'rgba(239, 68, 68, 0.1)', padding: '12px 16px', borderRadius: '12px', border: '1px solid rgba(239, 68, 68, 0.2)', display: 'inline-block', maxWidth: '90%' }}>
+                  <p style={{ fontSize: '0.85rem', color: '#dc2626', margin: 0, fontWeight: '500', lineHeight: '1.4', textAlign: 'left' }}>
+                    <MapPin size={14} style={{ display: 'inline', verticalAlign: 'text-bottom', marginRight: '4px' }} />
+                    <strong>Note:</strong> Please make sure to turn on your phone location from the top navigation bar before clicking the track button.
+                  </p>
                 </div>
-
-                <form onSubmit={handleManualSearch} className="search-bar" style={{ maxWidth: '100%', height: '55px' }}>
-                  <Search size={20} />
-                  <input type="text" placeholder="Enter City or Area..." value={manualQuery} onChange={(e) => setManualQuery(e.target.value)} />
-                  <button type="submit" style={{ background: 'var(--primary)', color: 'white', border: 'none', borderRadius: '10px', padding: '10px 20px', fontWeight: 'bold' }}>Search</button>
-                </form>
               </div>
             )}
           </div>
@@ -216,7 +210,10 @@ const FindNearbyPage = ({ listings, onSelectProperty, onViewLandlord, isLandlord
 
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: '16px 0 8px', cursor: 'pointer' }} onClick={(e) => { e.stopPropagation(); onViewLandlord && onViewLandlord(item); }}>
                       {item.owner_avatar ? <img src={item.owner_avatar} alt="" style={{ width: '28px', height: '28px', borderRadius: '50%', objectFit: 'cover', border: '1.5px solid var(--primary)' }} /> : <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'var(--primary)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: 'bold' }}>{(item.owner_name || 'L').charAt(0).toUpperCase()}</div>}
-                      <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: '500' }}>{item.owner_name || 'Landlord'}</span>
+                      <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: '500', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        {item.owner_name || 'Landlord'}
+                        {item.is_verified && <BadgeCheck size={14} className="verified-badge" />}
+                      </span>
                     </div>
                     <button className="inquire-btn" style={{ width: '100%', marginTop: '8px' }}>Inquire Now</button>
                   </div>

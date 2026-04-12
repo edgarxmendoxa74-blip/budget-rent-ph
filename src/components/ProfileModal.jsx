@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabase';
 import { X, User, Save, Loader2, CheckCircle, Camera, Phone, MessageCircle, Building2, Globe, BadgeCheck } from 'lucide-react';
 import './ProfileModal.css';
 
-const ProfileModal = ({ session, onClose, isEditingInitial = false }) => {
+const ProfileModal = ({ session, onClose, isEditingInitial = false, onProfileUpdated }) => {
   const [isEditing, setIsEditing] = useState(isEditingInitial);
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -70,6 +70,15 @@ const ProfileModal = ({ session, onClose, isEditingInitial = false }) => {
       await supabase.auth.updateUser({
         data: { avatar_url: publicUrl }
       });
+
+      if (userRole === 'landlord') {
+        await supabase
+          .from('properties')
+          .update({ owner_avatar: publicUrl })
+          .eq('user_id', session.user.id);
+      }
+
+      if (onProfileUpdated) onProfileUpdated();
     } catch (error) {
       alert('Error: ' + error.message);
     } finally {
@@ -114,6 +123,7 @@ const ProfileModal = ({ session, onClose, isEditingInitial = false }) => {
       }
 
       setSuccess(true);
+      if (onProfileUpdated) onProfileUpdated();
       setTimeout(() => {
         setSuccess(false);
         setIsEditing(false); // Switch back to view mode after save
@@ -149,7 +159,7 @@ const ProfileModal = ({ session, onClose, isEditingInitial = false }) => {
             <label htmlFor="avatar-upload" className="change-photo" title="Upload Photo"><Camera size={16} /></label>
           </div>
           <span className={`role-badge ${isVerified ? 'verified' : userRole}`}>
-            {isVerified ? 'Verified Elite Tier' : 'Standard Tier'}
+            {isVerified ? 'Verified' : 'Standard Tier'}
           </span>
           <h2 style={{ display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'center' }}>
             {isEditing ? 'Edit Profile' : (formData.fullName || 'Landlord')}

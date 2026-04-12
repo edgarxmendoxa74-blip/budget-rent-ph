@@ -184,7 +184,7 @@ function App() {
               {isGuest && (
                 <>
                   <button className="menu-link" onClick={() => { setIsMenuOpen(false); setActiveTab('explore'); }}>
-                    <div className="icon-container-mini"><Navigation size={18} /></div> Phone Location
+                    <div className="icon-container-mini"><MapPin size={18} /></div> Phone Location
                   </button>
                 </>
               )}
@@ -392,6 +392,22 @@ function App() {
                         <span><div className="spec-icon"><Wifi size={10} /></div> {item.wifi || 'No'}</span>
                         <span><div className="spec-icon"><Building2 size={10} /></div> {item.rooms || 1} Room</span>
                         <span><div className="spec-icon"><Star size={10} /></div> {item.cr || 'Shared'}</span>
+                      </div>
+                      <div 
+                        style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: '8px 0', cursor: 'pointer' }}
+                        onClick={(e) => { e.stopPropagation(); setViewingLandlord(item); }}
+                      >
+                        {item.owner_avatar ? (
+                          <img src={item.owner_avatar} alt="" style={{ width: '28px', height: '28px', borderRadius: '50%', objectFit: 'cover', border: '1.5px solid var(--primary)' }} />
+                        ) : (
+                          <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'var(--primary)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: 'bold' }}>
+                            {(item.owner_name || 'L').charAt(0).toUpperCase()}
+                          </div>
+                        )}
+                        <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          {item.owner_name || 'Landlord'}
+                          {item.is_verified && <BadgeCheck size={14} className="verified-badge" />}
+                        </span>
                       </div>
                       <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
                         <button className="inquire-btn" style={{ flex: 1, margin: 0 }} onClick={(e) => { e.stopPropagation(); setIsEditListingsOpen(true); }}>
@@ -635,7 +651,7 @@ function App() {
                 className={`nav-item ${activeTab === 'explore' ? 'active' : ''}`}
                 onClick={() => setActiveTab('explore')}
               >
-                <div className={`nav-icon-box ${activeTab === 'explore' ? 'active' : ''}`}><Navigation size={22} /></div>
+                <div className={`nav-icon-box ${activeTab === 'explore' ? 'active' : ''}`}><MapPin size={22} /></div>
                 <span>Nearby</span>
               </button>
               <button 
@@ -661,7 +677,7 @@ function App() {
 
       {/* Edit Profile Modal */}
       {isProfileModalOpen && (
-        <ProfileModal session={session} onClose={() => setIsProfileModalOpen(false)} isEditingInitial={isProfileEditing} />
+        <ProfileModal session={session} onClose={() => setIsProfileModalOpen(false)} isEditingInitial={isProfileEditing} onProfileUpdated={fetchProperties} />
       )}
 
       {/* Edit Listings Modal */}

@@ -26,9 +26,16 @@ const PropertyForm = ({ onClose, session, onListingAdded }) => {
     ownerWhatsapp: session?.user?.user_metadata?.whatsapp || ''
   });
   const [image, setImage] = useState(null);
+  const [isVerified, setIsVerified] = useState(false);
 
   // Sync session data if it changes
   useEffect(() => {
+    if (session?.user?.id) {
+      supabase.from('properties').select('is_verified').eq('user_id', session.user.id).eq('is_verified', true).limit(1).then(({data}) => {
+         if (data && data.length > 0) setIsVerified(true);
+      });
+    }
+
     if (session?.user?.user_metadata) {
       setFormData(prev => ({
         ...prev,
@@ -105,6 +112,7 @@ const PropertyForm = ({ onClose, session, onListingAdded }) => {
           email: formData.email,
           amenities: amenities,
           user_id: session.user.id,
+          is_verified: isVerified,
           owner_name: session.user.user_metadata?.full_name || 'Landlord',
           owner_avatar: session.user.user_metadata?.avatar_url || '',
           owner_business_name: formData.ownerBusinessName,
