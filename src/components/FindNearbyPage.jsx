@@ -1,44 +1,68 @@
 import React, { useState, useEffect } from 'react';
-import { Navigation, Loader2, MapPin, Heart, Wifi, Building2, Star, X, ShieldCheck } from 'lucide-react';
+import { Navigation, Loader2, MapPin, Heart, Wifi, Building2, Star, X, ShieldCheck, Search, AlertCircle } from 'lucide-react';
 
 const FindNearbyPage = ({ listings, onSelectProperty, onViewLandlord, isLandlord }) => {
   const [locating, setLocating] = useState(false);
   const [locationFound, setLocationFound] = useState(false);
   const [nearListings, setNearListings] = useState([]);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [errorType, setErrorType] = useState(null); // 'denied' or 'unavailable'
+  const [manualQuery, setManualQuery] = useState('');
 
   const handleButtonClick = () => {
     setShowConfirm(true);
   };
 
+  const handleManualSearch = (e) => {
+    e?.preventDefault();
+    if (!manualQuery.trim()) return;
+    
+    setLocating(true);
+    setErrorType(null);
+    
+    // Simulate searching for the typed area
+    setTimeout(() => {
+      setLocating(false);
+      setLocationFound(true);
+      
+      // Filter listings based on manual query or just show relevant ones
+      const results = listings.filter(item => 
+        item.location.toLowerCase().includes(manualQuery.toLowerCase()) || 
+        (item.name || item.title || "").toLowerCase().includes(manualQuery.toLowerCase())
+      );
+      
+      setNearListings(results.length > 0 ? results : listings.slice(0, 3)); 
+    }, 1500);
+  };
+
   const handleConfirmLocation = () => {
     setShowConfirm(false);
     setLocating(true);
+    setErrorType(null);
     
-    // Simulate phone location fetch with Geolocation API
     if ("geolocation" in navigator) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
-          // In a real app, we'd use position.coords.latitude/longitude to filter listings by distance
-          // For this demo, we'll simulate a search delay and then show relevant listings
           setTimeout(() => {
             setLocating(false);
             setLocationFound(true);
             
-            // Mock nearby algorithm: find properties that might be "near"
-            // We'll just take a subset and add a "distance" tag for effect
-            const nearby = listings.slice(0, 4).map((item, index) => ({
+            const nearby = listings.slice(0, 4).map((item) => ({
               ...item,
-              distance: (Math.random() * 2 + 0.1).toFixed(1) // Random distance between 0.1 and 2.1km
+              distance: (Math.random() * 2 + 0.1).toFixed(1)
             }));
             setNearListings(nearby); 
           }, 2000);
         },
         (error) => {
-          alert('Location access denied. Please enable Location Services in your browser settings to find nearby rentals.');
           setLocating(false);
+          if (error.code === error.PERMISSION_DENIED) {
+            setErrorType('denied');
+          } else {
+            setErrorType('unavailable');
+          }
         },
-        { enableHighAccuracy: true, timeout: 10000 }
+        { enableHighAccuracy: true, timeout: 8000 }
       );
     } else {
       alert("Geolocation is not supported by your browser.");
@@ -61,33 +85,71 @@ const FindNearbyPage = ({ listings, onSelectProperty, onViewLandlord, isLandlord
 
       <main className="info-page-container" style={{ width: '100%', maxWidth: '800px', padding: '24px' }}>
         {!locationFound ? (
-          <div style={{ textAlign: 'center', padding: '40px 20px', borderRadius: '16px' }}>
-            <Navigation size={64} style={{ color: 'var(--primary)', margin: '0 auto 24px', opacity: 0.9 }} />
-            <h3 style={{ marginBottom: '12px', fontSize: '1.2rem', color: 'var(--primary)' }}>Find Nearby Rentals</h3>
-            <p style={{ color: 'var(--text-muted)', marginBottom: '32px', fontSize: '0.95rem' }}>Use your phone's GPS to find the best boarding houses and apartments right around your current location.</p>
-            
-            <button 
-              onClick={handleButtonClick}
-              disabled={locating}
-              style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: 'var(--primary)', color: 'white', padding: '16px 40px', borderRadius: '30px', border: 'none', fontSize: '1.05rem', fontWeight: 'bold', cursor: 'pointer', boxShadow: '0 4px 15px rgba(0, 51, 102, 0.3)', transition: 'transform 0.2s' }}
-              onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.95)'}
-              onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
-            >
-              {locating ? <><Loader2 size={20} className="animate-spin"/> Locating...</> : <><Navigation size={20}/> Use Phone Location</>}
-            </button>
+          <div style={{ textAlign: 'center', padding: '20px 0' }}>
+            {errorType === 'denied' ? (
+              <div className="animate-fade-in" style={{ background: '#fef2f2', padding: '24px', borderRadius: '16px', border: '1px solid #fee2e2', marginBottom: '24px' }}>
+                <AlertCircle size={48} style={{ color: '#ef4444', marginBottom: '16px' }} />
+                <h3 style={{ color: '#991b1b', marginBottom: '8px' }}>Location Access Denied</h3>
+                <p style={{ color: '#b91c1c', fontSize: '0.9rem', marginBottom: '20px' }}>
+                  Para i-track ang pinakamalapit na rental, pakipindot ang lock icon sa browser address bar at i-enable ang "Location".
+                </p>
+                <div style={{ fontSize: '0.85rem', fontWeight: 'bold', marginBottom: '12px' }}>O kaya, i-type na lang manually:</div>
+                <form onSubmit={handleManualSearch} className="search-bar" style={{ background: 'white', maxWidth: '100%' }}>
+                  <Search size={18} />
+                  <input 
+                    type="text" 
+                    placeholder="E.g. Sampaloc, Manila" 
+                    value={manualQuery}
+                    onChange={(e) => setManualQuery(e.target.value)}
+                  />
+                  <button type="submit" style={{ background: 'var(--primary)', color: 'white', border: 'none', borderRadius: '8px', padding: '6px 12px', fontWeight: 'bold' }}>Go</button>
+                </form>
+              </div>
+            ) : (
+              <div style={{ textAlign: 'center', padding: '20px 0' }}>
+                <Navigation size={64} style={{ color: 'var(--primary)', margin: '0 auto 24px', opacity: 0.9 }} />
+                <h3 style={{ marginBottom: '12px', fontSize: '1.2rem', color: 'var(--primary)' }}>Find Nearby Rentals</h3>
+                <p style={{ color: 'var(--text-muted)', marginBottom: '32px', fontSize: '0.95rem' }}>Use your phone's GPS to find the best boarding houses and apartments right around your current location.</p>
+                
+                <button 
+                  onClick={handleButtonClick}
+                  disabled={locating}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: 'var(--primary)', color: 'white', padding: '16px 40px', borderRadius: '30px', border: 'none', fontSize: '1.05rem', fontWeight: 'bold', cursor: 'pointer', boxShadow: '0 4px 15px rgba(0, 51, 102, 0.3)' }}
+                >
+                  {locating ? <><Loader2 size={20} className="animate-spin"/> Locating...</> : <><Navigation size={20}/> Use Phone Location</>}
+                </button>
+                
+                <div style={{ margin: '24px 0', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <div style={{ flex: 1, height: '1px', background: 'var(--border)' }}></div>
+                  <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>OR SEARCH MANUALLY</span>
+                  <div style={{ flex: 1, height: '1px', background: 'var(--border)' }}></div>
+                </div>
+
+                <form onSubmit={handleManualSearch} className="search-bar" style={{ maxWidth: '100%' }}>
+                  <Search size={18} />
+                  <input 
+                    type="text" 
+                    placeholder="Type your area or city..." 
+                    value={manualQuery}
+                    onChange={(e) => setManualQuery(e.target.value)}
+                  />
+                  <button type="submit" style={{ background: 'var(--primary)', color: 'white', border: 'none', borderRadius: '8px', padding: '6px 12px', fontWeight: 'bold' }}>Search</button>
+                </form>
+              </div>
+            )}
           </div>
         ) : (
           <div className="listings">
             <div className="section-header" style={{ marginBottom: '24px' }}>
               <div>
-                <h3 style={{ fontSize: '1.3rem', color: 'var(--primary)' }}>Properties Near You</h3>
-                <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>Found {nearListings.length} results within 5km</p>
+                <h3 style={{ fontSize: '1.3rem', color: 'var(--primary)' }}>Results for {manualQuery || 'Area Near You'}</h3>
+                <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>Found {nearListings.length} results</p>
               </div>
               <button 
-                onClick={() => setLocationFound(false)} 
+                onClick={() => { setLocationFound(false); setErrorType(null); }} 
                 style={{ background: 'none', border: 'none', color: 'var(--primary)', fontWeight: '600', cursor: 'pointer', fontSize: '0.9rem' }}
               >
-                Refresh
+                Back to Search
               </button>
             </div>
             
@@ -103,7 +165,7 @@ const FindNearbyPage = ({ listings, onSelectProperty, onViewLandlord, isLandlord
                     <img src={item.image || '/placeholder.png'} alt={item.name || item.title} />
                     <div className="rating-tag" style={{ background: '#16a34a', padding: '6px 12px', borderRadius: '20px' }}>
                       <Navigation size={12} style={{ display: 'inline', marginRight: '4px' }} />
-                      {item.distance} km away
+                      {item.distance ? `${item.distance} km away` : 'Nearby'}
                     </div>
                   </div>
                   <div className="card-info">
@@ -140,6 +202,11 @@ const FindNearbyPage = ({ listings, onSelectProperty, onViewLandlord, isLandlord
                 </div>
               ))}
             </div>
+            {nearListings.length === 0 && (
+              <div style={{ textAlign: 'center', padding: '40px' }}>
+                <p style={{ color: 'var(--text-muted)' }}>Walang nahanap na property sa area na ito. Subukan ang ibang city.</p>
+              </div>
+            )}
           </div>
         )}
       </main>
