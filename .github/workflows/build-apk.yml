@@ -21,7 +21,7 @@ jobs:
       - name: Install Dependencies
         run: npm install --legacy-peer-deps
 
-      - name: Build Web App
+      - name: Generate Web Assets
         run: npm run build
 
       - name: Set up Java
@@ -33,19 +33,16 @@ jobs:
       - name: Set up Android SDK
         uses: android-actions/setup-android@v2
 
-      - name: Generate Web Assets
-        run: npm run build
-
       - name: Install Capacitor CLI
         run: npm install -g @capacitor/cli
 
-      - name: Add or Sync Android Platform
+      - name: Add Android Platform
         run: |
-          if [ ! -d "android" ]; then
-            npx cap add android
-          else
-            npx cap sync
-          fi
+          rm -rf android
+          npx cap add android
+
+      - name: Sync Capacitor
+        run: npx cap sync
 
       - name: Build with Gradle
         run: |
