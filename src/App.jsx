@@ -12,54 +12,7 @@ import AdminPanel from './components/AdminPanel';
 import AdminLogin from './components/AdminLogin';
 import './App.css';
 
-const LISTINGS = [
-  {
-    id: 1,
-    title: "Premium Male Boarding House",
-    type: "Boarding House",
-    price: 3500,
-    location: "Sampaloc, Manila",
-    image: "/boarding.png",
-    rating: 4.8,
-    amenities: ["WiFi", "Laundry", "24/7 Security"],
-    description: "Located near UST, this boarding house offers a quiet study environment with high-speed internet and regular housekeeping."
-  },
-  {
-    id: 2,
-    title: "Cozy Bedspace for Females",
-    type: "Bed Space",
-    price: 2500,
-    location: "Katipunan, Quezon City",
-    image: "/bedspace.png",
-    rating: 4.5,
-    amenities: ["WiFi", "Aircon", "Near Mall"],
-    description: "A secure and friendly bedspace perfect for students and young professionals. Walking distance to UP and Ateneo."
-  },
-  {
-    id: 3,
-    title: "Modern Studio Apartment",
-    type: "Apartment",
-    price: 8500,
-    location: "Makati City",
-    image: "/studio.png",
-    rating: 4.9,
-    amenities: ["WiFi", "Kitchen", "Gym Access"],
-    description: "Centrally located in Makati, this studio is perfect for solo living. High-end finishes and great city view."
-  },
-  {
-    id: 4,
-    title: "Budget Bedspace near LRT",
-    type: "Bed Space",
-    price: 1800,
-    location: "Pasay City",
-    image: "/bedspace.png",
-    rating: 4.2,
-    amenities: ["Fan", "Storage", "CCTV"],
-    description: "Very affordable bedspace for commute-heavy professionals. Just 2 mins away from LRT Libertad station."
-  }
-];
-
-const CATEGORIES = ["All", "Boarding House", "Bed Space", "Apartment"];
+const CATEGORIES = ["All", "Boarding House", "Bed Space", "Apartment", "Studio"];
 
 function App() {
   const [session, setSession] = useState(null);

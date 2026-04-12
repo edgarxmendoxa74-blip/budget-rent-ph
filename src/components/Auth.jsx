@@ -123,17 +123,17 @@ const Auth = ({ onAuthSuccess }) => {
 
                 {howToUseTab === 'tenant' ? (
                   <ul style={{ paddingLeft: '20px', fontSize: '0.9rem', color: 'var(--text-muted)', lineHeight: '1.8' }}>
-                    <li>Mag-browse ng mga abot-kayang boarding house at bedspace.</li>
-                    <li>Gamitin ang search bar para sa lokasyon.</li>
-                    <li>I-click ang <strong>"Inquire Now"</strong> para makita ang contact details ng owner.</li>
-                    <li>I-save ang mga paboritong listing gamit ang <Heart size={14} style={{ display: 'inline' }} /> icon.</li>
+                    <li><strong>Mag-browse:</strong> Humanap ng mga murang boarding house, bedspace, at studio apartment malapit sa iyong target location.</li>
+                    <li><strong>Nearby Search:</strong> Gamitin ang "Nearby" tab para makita ang mga listings na pinakamalapit sa iyong kasalukuyang pwesto.</li>
+                    <li><strong>Inquire Now:</strong> I-click ang button para direktang makatawag o makapag-email sa property owner.</li>
+                    <li><strong>Verified Badge:</strong> Humanap ng <BadgeCheck size={14} style={{ display: 'inline', color: '#0066ff' }} /> icon para makasiguro na ang landlord ay dumaan sa aming validation.</li>
                   </ul>
                 ) : (
                   <ul style={{ paddingLeft: '20px', fontSize: '0.9rem', color: 'var(--text-muted)', lineHeight: '1.8' }}>
-                    <li>Mag-register bilang <strong>Landlord</strong> gamit ang iyong email.</li>
-                    <li>I-post ang iyong property gamit ang <strong>(+)</strong> button.</li>
-                    <li>I-manage ang iyong mga listings sa <strong>"My Listings"</strong> tab.</li>
-                    <li>Kumuha ng <strong>Verified Badge</strong> sa menu para mas pagkatiwalaan ng tenants.</li>
+                    <li><strong>Register:</strong> Gumawa ng Landlord account para makapagsimulang mag-post ng iyong mga paupahan.</li>
+                    <li><strong>Easy Post:</strong> I-click ang <strong>(+)</strong> button at ilagay ang kumpletong detalye at magagandang litrato ng iyong property.</li>
+                    <li><strong>Manage Tabs:</strong> Gamitin ang <strong>"My Listings"</strong> para sa mabilis na pag-edit o pag-update ng impormasyon.</li>
+                    <li><strong>Be Verified:</strong> I-click ang <strong>"Get Verified"</strong> sa menu para mapataas ang tiwala ng mga customers sa iyong mga post.</li>
                   </ul>
                 )}
               </div>

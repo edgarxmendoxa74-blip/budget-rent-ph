@@ -89,18 +89,7 @@ const AdminLogin = ({ onLoginSuccess, onBack }) => {
           </button>
         </form>
 
-        <div className="auth-footer admin-creds" style={{ marginTop: '30px', padding: '15px', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '12px' }}>
-          <h4 style={{ color: '#92400e', fontSize: '0.85rem', marginBottom: '8px' }}>Admin Credentials:</h4>
-          <p style={{ margin: '4px 0', fontSize: '0.8rem', color: '#b45309' }}>
-            <strong>Email:</strong> admin@budgetrent.ph
-          </p>
-          <p style={{ margin: '4px 0', fontSize: '0.8rem', color: '#b45309' }}>
-            <strong>Password:</strong> admin123
-          </p>
-          <p style={{ marginTop: '10px', fontSize: '0.75rem', color: '#d97706', fontStyle: 'italic' }}>
-            * Note: This works even if the user is not yet created in Supabase (Dev Bypass).
-          </p>
-        </div>
+
       </div>
     </div>
   );
