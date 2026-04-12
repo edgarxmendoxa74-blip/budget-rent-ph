@@ -82,9 +82,9 @@ function App() {
   };
 
   const filteredListings = properties.filter(item => {
-    const matchesCategory = selectedCategory === "All" || item.type === selectedCategory;
+    const matchesCategory = selectedCategory === "All" || (item.type || "") === selectedCategory;
     const matchesSearch = (item.name || item.title || "").toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          item.location.toLowerCase().includes(searchQuery.toLowerCase());
+                          (item.location || "").toLowerCase().includes(searchQuery.toLowerCase());
     const matchesMyListings = activeTab === 'mylistings' ? item.user_id === session?.user?.id : true;
     return matchesCategory && matchesSearch && matchesMyListings;
   });

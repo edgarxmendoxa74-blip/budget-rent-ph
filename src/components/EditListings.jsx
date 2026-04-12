@@ -95,7 +95,7 @@ const EditListings = ({ session, onClose, onListingUpdated }) => {
         .update({
           name: editingItem.name,
           type: editingItem.type,
-          price: parseFloat(editingItem.price),
+          price: parseFloat(editingItem.price || 0),
           location: editingItem.location,
           description: editingItem.description,
           contact: editingItem.contact,
@@ -103,9 +103,9 @@ const EditListings = ({ session, onClose, onListingUpdated }) => {
           wifi: editingItem.wifi,
           parking: editingItem.parking,
           cr: editingItem.cr,
-          rooms: parseInt(editingItem.rooms),
+          rooms: parseInt(editingItem.rooms || 1),
           secured: editingItem.secured,
-          kitchen: parseInt(editingItem.kitchen),
+          kitchen: parseInt(editingItem.kitchen || 0),
           email: editingItem.email,
           amenities: amenities,
         })
