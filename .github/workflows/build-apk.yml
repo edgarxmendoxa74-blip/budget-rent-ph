@@ -16,7 +16,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version: 22
 
       - name: Install Dependencies
         run: npm install --legacy-peer-deps
@@ -28,17 +28,17 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
-          java-version: '17'
+          java-version: '21'
 
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
 
       - name: Install Capacitor CLI
-        run: npm install -g @capacitor/cli
+        run: npm install -g @capacitor/cli @capacitor/core @capacitor/android
 
       - name: Add Android Platform
         run: |
-          rm -rf android
+          if [ -d "android" ]; then rm -rf android; fi
           npx cap add android
 
       - name: Sync Capacitor
@@ -49,6 +49,8 @@ jobs:
           cd android
           chmod +x gradlew
           ./gradlew assembleDebug --stacktrace
+        env:
+          FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
