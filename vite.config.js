@@ -13,18 +13,20 @@ export default defineConfig({
       manifest: {
         name: 'Budget Rent PH',
         short_name: 'BudgetRent',
-        description: 'Affordable rentals across the Philippines',
+        description: 'Professional Rentals in PH',
         theme_color: '#003366',
         icons: [
           {
             src: 'logo.png',
             sizes: '192x192',
-            type: 'image/png'
+            type: 'image/png',
+            purpose: 'any maskable'
           },
           {
             src: 'logo.png',
             sizes: '512x512',
-            type: 'image/png'
+            type: 'image/png',
+            purpose: 'any maskable'
           }
         ],
         display: 'standalone',
