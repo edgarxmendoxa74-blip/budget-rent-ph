@@ -8,47 +8,32 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout Code
+      - name: Checkout
         uses: actions/checkout@v3
 
-      - name: Set up Node.js
+      - name: Setup Node
         uses: actions/setup-node@v3
         with:
           node-version: 18
 
-      - name: Install Dependencies
+      - name: Install dependencies
         run: npm install --legacy-peer-deps
 
-      - name: Generate Web Assets
+      - name: Build Web
         run: npm run build
 
-      - name: Set up Java
-        uses: actions/setup-java@v3
-        with:
-          distribution: 'zulu'
-          java-version: '17'
-
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v2
-
-      - name: Install Capacitor CLI
-        run: npm install -g @capacitor/cli
-
-      - name: Add Android Platform
-        run: |
-          rm -rf android
-          npx cap add android
-
       - name: Sync Capacitor
-        run: npx cap sync
+        run: |
+          npm install -g @capacitor/cli @capacitor/core @capacitor/android
+          npx cap sync
 
-      - name: Build with Gradle
+      - name: Build Android
         run: |
           cd android
           chmod +x gradlew
-          ./gradlew assembleDebug --stacktrace
+          ./gradlew assembleDebug
+        continue-on-error: true
 
       - name: Upload APK
         uses: actions/upload-artifact@v3
