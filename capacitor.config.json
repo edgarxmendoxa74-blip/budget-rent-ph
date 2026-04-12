@@ -1,0 +1,6 @@
+{
+  "appId": "com.budgetrent.ph",
+  "appName": "Budget Rent PH",
+  "webDir": "dist",
+  "bundledWebRuntime": false
+}
