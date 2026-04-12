@@ -1,4 +1,4 @@
-# Updated for Node 24 Compatibility
+# Fixed Capacitor Android Dependency
 name: Build Android APK
 
 on:
@@ -37,14 +37,13 @@ jobs:
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Install Capacitor CLI
-        run: npm install -g @capacitor/cli @capacitor/core @capacitor/android
+      - name: Install Capacitor Core & Android
+        run: npm install @capacitor/core @capacitor/cli @capacitor/android --legacy-peer-deps
 
       - name: Build Android App
         run: |
-          if [ ! -d "android" ]; then
-            npx cap add android
-          fi
+          if [ -d "android" ]; then rm -rf android; fi
+          npx cap add android
           npx cap sync
           cd android
           chmod +x gradlew
