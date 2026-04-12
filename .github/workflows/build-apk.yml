@@ -8,35 +8,50 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v3
 
-      - name: Setup Node
-        uses: actions/setup-node@v3
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: 18
 
-      - name: Install dependencies
+      - name: Install Dependencies
         run: npm install --legacy-peer-deps
 
-      - name: Build Web
+      - name: Generate Web Assets
         run: npm run build
 
-      - name: Sync Capacitor
-        run: |
-          npm install -g @capacitor/cli @capacitor/core @capacitor/android
-          npx cap sync
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
 
-      - name: Build Android
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Capacitor CLI
+        run: npm install -g @capacitor/cli
+
+      - name: Add Android Platform
+        run: |
+          rm -rf android
+          npx cap add android
+
+      - name: Sync Capacitor
+        run: npx cap sync
+
+      - name: Build with Gradle
         run: |
           cd android
           chmod +x gradlew
-          ./gradlew assembleDebug
-        continue-on-error: true
+          ./gradlew assembleDebug --stacktrace
 
       - name: Upload APK
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: budget-rent-ph-apk
           path: android/app/build/outputs/apk/debug/app-debug.apk
