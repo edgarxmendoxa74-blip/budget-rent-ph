@@ -128,9 +128,9 @@ const FindNearbyPage = ({ listings, onSelectProperty, onViewLandlord, isLandlord
             {errorType === 'denied' ? (
               <div className="animate-fade-in" style={{ background: '#fef2f2', padding: '24px', borderRadius: '16px', border: '1px solid #fee2e2', marginBottom: '24px' }}>
                 <AlertCircle size={48} style={{ color: '#ef4444', marginBottom: '16px' }} />
-                <h3 style={{ color: '#991b1b', marginBottom: '8px' }}>Tracking Blocked</h3>
+                <h3 style={{ color: '#991b1b', marginBottom: '8px' }}>Location Access Required</h3>
                 <p style={{ color: '#b91c1c', fontSize: '0.9rem', marginBottom: '20px' }}>
-                  Please enable "Location" in your browser settings or lock icon to see properties near you automatically.
+                  Please enable "Location" in your <b>Phone Settings</b> for this app to see properties near you automatically.
                 </p>
                 <div style={{ fontSize: '0.85rem', fontWeight: 'bold', marginBottom: '12px' }}>Search manually instead:</div>
                 <form onSubmit={handleManualSearch} className="search-bar" style={{ background: 'white', maxWidth: '100%' }}>
