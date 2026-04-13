@@ -117,7 +117,12 @@ const PropertyForm = ({ onClose, session, onListingAdded }) => {
       setSubmitted(true);
       if (onListingAdded) onListingAdded();
     } catch (error) {
-      alert('Error saving listing: ' + error.message);
+      console.error('Save error:', error);
+      if (error.message?.includes('column')) {
+        alert('Database Error: Some columns are missing in the Supabase "properties" table. Please run the migration SQL provided in the fix plan.');
+      } else {
+        alert('Error saving listing: ' + error.message);
+      }
     } finally {
       setLoading(false);
     }
@@ -125,8 +130,8 @@ const PropertyForm = ({ onClose, session, onListingAdded }) => {
 
   if (submitted) {
     return (
-      <div className="modal-overlay" onClick={onClose}>
-        <div className="modal-content text-center animate-slide-up" onClick={e => e.stopPropagation()}>
+      <div className="modal-overlay centered" onClick={onClose}>
+        <div className="modal-content property-modal success-modal animate-fade-in" onClick={e => e.stopPropagation()}>
           <div className="success-view">
             <CheckCircle size={64} className="success-icon" />
             <h2>Sapat na ang impormasyon!</h2>

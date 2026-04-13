@@ -60,6 +60,9 @@ const AdminPanel = ({ onBack, onLogout }) => {
       setLandlords(uniqueLandlords);
     } catch (error) {
       console.error('Error fetching landlords:', error);
+      if (error.message?.includes('column')) {
+        alert('Database Error: The "properties" table is missing columns (e.g. owner_business_name). Please check the SQL migration guide.');
+      }
     } finally {
       setLoading(false);
     }

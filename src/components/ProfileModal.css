@@ -207,4 +207,7 @@
   .info-grid {
     grid-template-columns: 1fr;
   }
+  .profile-modal {
+    padding: 24px 16px;
+  }
 }

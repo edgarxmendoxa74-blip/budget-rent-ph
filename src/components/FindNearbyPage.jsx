@@ -91,10 +91,10 @@ const FindNearbyPage = ({ listings, onSelectProperty, onViewLandlord, isLandlord
           {!isLandlord && (
             <>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: '8px' }}>
-                <h2 style={{ color: 'var(--text-color)', margin: 0 }}>Rentals Near You</h2>
+                <h2 style={{ color: 'var(--primary)', margin: 0 }}>Rentals Near You</h2>
                 {locationFound && <div className="live-pill"><Signal size={12} className="pulse" /> LIVE</div>}
               </div>
-              <p style={{ color: 'var(--text-muted)' }}>{locationFound ? 'Automatically tracking your current area' : 'Discover affordable housing around your area'}</p>
+              <p style={{ color: 'var(--primary)', opacity: 0.8, fontWeight: '500' }}>{locationFound ? 'Automatically tracking your current area' : 'Discover affordable housing around your area'}</p>
             </>
           )}
         </div>
@@ -102,8 +102,8 @@ const FindNearbyPage = ({ listings, onSelectProperty, onViewLandlord, isLandlord
 
       <style>{`
         .live-pill {
-          background: #ef4444;
-          color: white;
+          background: var(--secondary);
+          color: var(--primary);
           padding: 2px 8px;
           border-radius: 20px;
           font-size: 0.65rem;

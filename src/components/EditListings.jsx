@@ -10,6 +10,7 @@ const EditListings = ({ session, onClose, onListingUpdated }) => {
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(null);
   const [uploading, setUploading] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState(null);
 
   useEffect(() => {
     fetchMyListings();
@@ -32,13 +33,19 @@ const EditListings = ({ session, onClose, onListingUpdated }) => {
     }
   };
 
-  const handleDelete = async (id) => {
-    if (!confirm('Delete this listing permanently?')) return;
+  const handleDelete = (item) => {
+    setDeleteConfirm(item);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deleteConfirm) return;
+    const id = deleteConfirm.id;
     setDeleting(id);
     try {
       const { error } = await supabase.from('properties').delete().eq('id', id);
       if (error) throw error;
       setMyListings(prev => prev.filter(p => p.id !== id));
+      setDeleteConfirm(null);
       if (onListingUpdated) onListingUpdated();
     } catch (err) {
       alert('Error: ' + err.message);
@@ -108,6 +115,9 @@ const EditListings = ({ session, onClose, onListingUpdated }) => {
           kitchen: parseInt(editingItem.kitchen || 0),
           email: editingItem.email,
           amenities: amenities,
+          owner_business_name: editingItem.owner_business_name,
+          owner_facebook: editingItem.owner_facebook,
+          owner_whatsapp: editingItem.owner_whatsapp
         })
         .eq('id', editingItem.id);
       if (error) throw error;
@@ -160,7 +170,7 @@ const EditListings = ({ session, onClose, onListingUpdated }) => {
                     <button className="edit-action-btn edit" onClick={() => handleEdit(item)}>
                       <Edit3 size={16} />
                     </button>
-                    <button className="edit-action-btn delete" onClick={() => handleDelete(item.id)} disabled={deleting === item.id}>
+                    <button className="edit-action-btn delete" onClick={() => handleDelete(item)} disabled={deleting === item.id}>
                       {deleting === item.id ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
                     </button>
                   </div>
@@ -248,6 +258,38 @@ const EditListings = ({ session, onClose, onListingUpdated }) => {
               </div>
               <button className="save-edit-btn" onClick={handleSave} disabled={saving}>
                 {saving ? <Loader2 size={18} className="animate-spin" /> : <><Save size={18} /> Save Changes</>}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Custom Delete Confirmation Modal */}
+      {deleteConfirm && (
+        <div className="modal-overlay centered" onClick={() => setDeleteConfirm(null)} style={{ zIndex: 3000 }}>
+          <div className="modal-content success-modal animate-fade-in" onClick={e => e.stopPropagation()} style={{ maxWidth: '350px', padding: '30px', textAlign: 'center' }}>
+            <div style={{ color: '#ef4444', marginBottom: '20px' }}>
+              <Trash2 size={64} style={{ margin: '0 auto' }} />
+            </div>
+            <h3 style={{ fontSize: '1.25rem', marginBottom: '12px' }}>Are you sure?</h3>
+            <p style={{ color: 'var(--text-muted)', marginBottom: '24px', fontSize: '0.95rem' }}>
+              Do you really want to delete <strong>{deleteConfirm.name}</strong>? This action cannot be undone.
+            </p>
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <button 
+                className="edit-action-btn" 
+                style={{ flex: 1, margin: 0, background: '#f1f5f9', color: 'var(--text-main)', borderRadius: '12px' }}
+                onClick={() => setDeleteConfirm(null)}
+              >
+                Cancel
+              </button>
+              <button 
+                className="edit-action-btn" 
+                style={{ flex: 1, margin: 0, background: '#ef4444', color: 'white', borderRadius: '12px' }}
+                onClick={handleConfirmDelete}
+                disabled={deleting === deleteConfirm.id}
+              >
+                {deleting === deleteConfirm.id ? <Loader2 className="animate-spin" size={20} /> : 'Delete'}
               </button>
             </div>
           </div>

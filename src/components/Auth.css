@@ -45,17 +45,25 @@
 }
 
 .auth-header p {
-  color: var(--text-muted);
+  color: var(--primary);
+  opacity: 0.7;
   font-size: 15px;
   line-height: 1.5;
+  font-weight: 500;
 }
 
 /* Choice Grid - Side by Side */
 .auth-choice-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 16px;
+  gap: 12px;
   margin: 32px 0;
+}
+
+@media (max-width: 380px) {
+  .auth-choice-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .auth-submit-btn {

@@ -65,9 +65,12 @@
 .menu-btn {
   background: none;
   border: none;
-  color: var(--text-main);
+  color: var(--primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
-  padding: 8px;
+  padding: 4px;
 }
 
 /* Mobile Menu Drawer */
@@ -197,9 +200,11 @@
 }
 
 .hero p {
-  color: var(--text-muted);
+  color: var(--primary);
+  opacity: 0.8;
   margin-bottom: 32px;
   font-size: 1.05rem;
+  font-weight: 500;
 }
 
 .search-bar {
@@ -307,7 +312,7 @@
 
 .image-container {
   width: 100%;
-  height: 180px; /* Reduced height from 220px */
+  height: 155px; /* Reduced height from 180px */
   flex-shrink: 0;
   position: relative;
 }
@@ -347,9 +352,9 @@
   -webkit-backdrop-filter: blur(8px);
   backdrop-filter: blur(8px);
   color: white;
-  padding: 4px 10px;
-  border-radius: 8px;
-  font-size: 0.75rem;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 0.65rem;
   display: flex;
   align-items: center;
   gap: 6px;
@@ -357,14 +362,14 @@
 }
 
 .card-info {
-  padding: 12px 16px; /* Reduced padding from 20px */
+  padding: 10px 14px; /* Reduced padding from 12px 16px */
   display: flex;
   flex-direction: column;
-  gap: 6px; /* Reduced gap */
+  gap: 4px; /* Reduced gap from 6px */
 }
 
 .card-info h4 {
-  font-size: 1.1rem; /* Slightly smaller title */
+  font-size: 1rem; /* Smaller title from 1.1rem */
   margin: 0;
   line-height: 1.2;
   font-weight: 700;
@@ -393,7 +398,7 @@
 }
 
 .price {
-  font-size: 1.05rem;
+  font-size: 0.95rem; /* Smaller from 1.05rem */
   font-weight: 700;
   color: #16a34a;
 }
@@ -406,14 +411,14 @@
 
 .inquire-btn {
   width: 100% !important;
-  padding: 10px !important;
+  padding: 8px !important; /* Smaller from 10px */
   background: var(--primary);
   color: white;
   border: none;
-  border-radius: 12px !important;
+  border-radius: 10px !important;
   font-weight: 700;
-  font-size: 0.9rem !important;
-  margin-top: 8px !important;
+  font-size: 0.85rem !important;
+  margin-top: 6px !important;
   cursor: pointer;
   transition: all 0.3s;
   align-self: center !important;
@@ -430,10 +435,10 @@
   display: flex;
   align-items: center;
   gap: 3px;
-  font-size: 0.65rem; /* Smaller specs */
+  font-size: 0.6rem; /* Smaller from 0.65rem */
   color: var(--text-main);
   background: #f1f5f9;
-  padding: 4px 10px;
+  padding: 3px 8px; /* Smaller from 4px 10px */
   border-radius: 6px;
   font-weight: 600;
 }

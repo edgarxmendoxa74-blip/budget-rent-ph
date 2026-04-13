@@ -96,6 +96,23 @@ const ProfileModal = ({ session, onClose, isEditingInitial = false }) => {
       });
 
       if (error) throw error;
+
+      // Also sync to properties table to keep owner info updated on listings
+      if (userRole === 'landlord') {
+        await supabase
+          .from('properties')
+          .update({
+            owner_name: formData.fullName,
+            owner_avatar: formData.avatarUrl,
+            owner_business_name: formData.propertyName,
+            owner_facebook: formData.facebook,
+            owner_whatsapp: formData.whatsapp,
+            email: formData.businessEmail || formData.email,
+            contact: formData.phone
+          })
+          .eq('user_id', session.user.id);
+      }
+
       setSuccess(true);
       setTimeout(() => {
         setSuccess(false);
@@ -132,11 +149,11 @@ const ProfileModal = ({ session, onClose, isEditingInitial = false }) => {
             <label htmlFor="avatar-upload" className="change-photo" title="Upload Photo"><Camera size={16} /></label>
           </div>
           <span className={`role-badge ${isVerified ? 'verified' : userRole}`}>
-            {isVerified ? 'VERIFIED OWNER' : userRole.toUpperCase()}
+            {isVerified ? 'Verified Elite Tier' : 'Standard Tier'}
           </span>
           <h2 style={{ display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'center' }}>
-            {isEditing ? 'Edit Profile' : 'Account Details'}
-            {isVerified && <BadgeCheck size={20} className="verified-badge" />}
+            {isEditing ? 'Edit Profile' : (formData.fullName || 'Landlord')}
+            {isVerified && <BadgeCheck size={24} className="verified-badge" />}
           </h2>
           <a href={`mailto:${formData.email}`} className="profile-email">{formData.email}</a>
         </div>

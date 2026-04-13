@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, MapPin, Bed, Bath, Wifi, Shield, Star, Menu, X, Heart, MessageCircle, Phone, LogOut, Building2, User, Loader2, ClipboardList, Mail, BadgeCheck, Headset, ArrowLeft, Home, Navigation, Globe } from 'lucide-react';
+import { Search, MapPin, Bed, Bath, Wifi, Shield, Star, Menu, X, Heart, MessageCircle, Phone, LogOut, Building2, User, Loader2, ClipboardList, Mail, BadgeCheck, Headset, ArrowLeft, Home, Navigation, Globe, Trash2 } from 'lucide-react';
 import { supabase } from './lib/supabase';
 import Auth from './components/Auth';
 import PropertyForm from './components/PropertyForm';
@@ -29,6 +29,8 @@ function App() {
   const [selectedProperty, setSelectedProperty] = useState(null);
   const [viewingLandlord, setViewingLandlord] = useState(null);
   const [activeTab, setActiveTab] = useState('home'); // 'home' or 'explore'
+  const [propertyToDelete, setPropertyToDelete] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const isOwner = session?.user?.email === 'admin@budgetrent.ph' || localStorage.getItem('budgetrent_admin_bypass') === 'true';
 
 
@@ -37,6 +39,14 @@ function App() {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
     });
+
+    // Secret Admin Shortcut: visit yoursite.com/?admin=true to unlock admin tools
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('admin') === 'true') {
+      localStorage.setItem('budgetrent_admin_bypass', 'true');
+      alert('Secret Admin Mode Activated 🚀');
+      window.location.href = window.location.pathname; // Clean URL
+    }
 
     const {
       data: { subscription },
@@ -68,6 +78,26 @@ function App() {
       console.error('Error fetching properties:', error.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDeleteProperty = async () => {
+    if (!propertyToDelete) return;
+    try {
+      setIsDeleting(true);
+      const { error } = await supabase
+        .from('properties')
+        .delete()
+        .eq('id', propertyToDelete.id);
+      
+      if (error) throw error;
+      
+      setProperties(prev => prev.filter(p => p.id !== propertyToDelete.id));
+      setPropertyToDelete(null);
+    } catch (error) {
+      alert('Error deleting listing: ' + error.message);
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -115,11 +145,24 @@ function App() {
         <div className="nav-content">
           <div className="logo-section">
             <img src="/logo.png" alt="Logo" className="logo-img" />
-            <h1 className="brand-name">BudgetRent<span>PH</span></h1>
+            <div 
+              className="brand-name" 
+              onContextMenu={(e) => {
+                e.preventDefault();
+                const bypass = localStorage.getItem('budgetrent_admin_bypass') === 'true';
+                localStorage.setItem('budgetrent_admin_bypass', bypass ? 'false' : 'true');
+                alert(bypass ? 'Admin Bypass Disabled' : 'Admin Bypass Enabled 🔒');
+                window.location.reload();
+              }}
+              style={{ cursor: 'pointer', userSelect: 'none' }}
+              title="Hold/Right-click for Admin"
+            >
+              Budget<span>Rent</span>PH
+            </div>
           </div>
           <div className="nav-actions">
             <button className="menu-btn" onClick={() => setIsMenuOpen(true)}>
-              <Menu size={24} />
+              <Menu size={28} />
             </button>
           </div>
         </div>
@@ -333,7 +376,7 @@ function App() {
                     <div className="image-container">
                       <img src={item.image || '/placeholder.png'} alt={item.name || item.title} />
                       <div className="rating-tag" style={{ background: 'var(--primary)', color: 'white' }}>
-                        Manage Listing
+                        <Shield size={12} fill="currentColor" /> Manage Listing
                       </div>
                     </div>
                     <div className="card-info">
@@ -345,9 +388,23 @@ function App() {
                       <div className="location">
                         <MapPin size={14} /> {item.location}
                       </div>
-                      <button className="inquire-btn" onClick={(e) => { e.stopPropagation(); setIsEditListingsOpen(true); }}>
-                        Edit Details
-                      </button>
+                      <div className="property-specs">
+                        <span><div className="spec-icon"><Wifi size={10} /></div> {item.wifi || 'No'}</span>
+                        <span><div className="spec-icon"><Building2 size={10} /></div> {item.rooms || 1} Room</span>
+                        <span><div className="spec-icon"><Star size={10} /></div> {item.cr || 'Shared'}</span>
+                      </div>
+                      <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
+                        <button className="inquire-btn" style={{ flex: 1, margin: 0 }} onClick={(e) => { e.stopPropagation(); setIsEditListingsOpen(true); }}>
+                          Edit
+                        </button>
+                        <button 
+                          className="inquire-btn" 
+                          style={{ flex: 1, margin: 0, background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444' }} 
+                          onClick={(e) => { e.stopPropagation(); setPropertyToDelete(item); }}
+                        >
+                          Delete
+                        </button>
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -689,6 +746,38 @@ function App() {
                <a href={`mailto:${viewingLandlord.email}`} className="contact-btn email">
                   <Mail size={20} /> Message
                </a>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {propertyToDelete && (
+        <div className="modal-overlay centered" onClick={() => setPropertyToDelete(null)} style={{ zIndex: 3000 }}>
+          <div className="modal-content success-modal animate-fade-in" onClick={e => e.stopPropagation()} style={{ maxWidth: '350px', padding: '30px', textAlign: 'center' }}>
+            <div style={{ color: '#ef4444', marginBottom: '20px' }}>
+              <Trash2 size={64} style={{ margin: '0 auto' }} />
+            </div>
+            <h3 style={{ fontSize: '1.25rem', marginBottom: '12px' }}>Are you sure?</h3>
+            <p style={{ color: 'var(--text-muted)', marginBottom: '24px', fontSize: '0.95rem' }}>
+              Do you really want to delete <strong>{propertyToDelete.name || propertyToDelete.title}</strong>? This action cannot be undone.
+            </p>
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <button 
+                className="inquire-btn" 
+                style={{ flex: 1, margin: 0, background: 'var(--background)', color: 'var(--text-main)', border: '1px solid var(--border)' }}
+                onClick={() => setPropertyToDelete(null)}
+              >
+                Cancel
+              </button>
+              <button 
+                className="inquire-btn" 
+                style={{ flex: 1, margin: 0, background: '#ef4444' }}
+                onClick={handleDeleteProperty}
+                disabled={isDeleting}
+              >
+                {isDeleting ? <Loader2 className="animate-spin" size={20} /> : 'Delete Item'}
+              </button>
             </div>
           </div>
         </div>
