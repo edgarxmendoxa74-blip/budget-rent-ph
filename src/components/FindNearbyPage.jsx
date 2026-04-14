@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Navigation, Loader2, MapPin, Heart, Wifi, Building2, Star, X, ShieldCheck, Search, AlertCircle, Signal, BadgeCheck } from 'lucide-react';
+import { Navigation, Loader2, MapPin, Wifi, Building2, Star, X, ShieldCheck, Search, AlertCircle, Signal, BadgeCheck } from 'lucide-react';
 
 const FindNearbyPage = ({ listings, onSelectProperty, onViewLandlord, isLandlord }) => {
   const [locating, setLocating] = useState(false);
@@ -141,23 +141,21 @@ const FindNearbyPage = ({ listings, onSelectProperty, onViewLandlord, isLandlord
               </div>
             ) : (
               <div style={{ textAlign: 'center', padding: '20px 0' }}>
-                <Navigation size={64} style={{ color: 'var(--primary)', margin: '0 auto 24px', opacity: 0.9 }} />
-                <h3 style={{ marginBottom: '12px', fontSize: '1.2rem', color: 'var(--primary)' }}>Start Automatic Tracking</h3>
-                <p style={{ color: 'var(--text-muted)', marginBottom: '32px', fontSize: '0.95rem' }}>Open your location to view boarding houses and apartments updated in real-time as you move.</p>
+                <MapPin size={64} style={{ color: 'var(--primary)', margin: '0 auto 24px', opacity: 0.9 }} />
+                <h3 style={{ marginBottom: '20px', fontSize: '1.2rem', color: 'var(--primary)', fontWeight: '700' }}>Start Automatic Tracking</h3>
                 
                 <button 
                   onClick={handleButtonClick}
                   disabled={locating}
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: '10px', background: 'var(--primary)', color: 'white', padding: '18px 45px', borderRadius: '30px', border: 'none', fontSize: '1.1rem', fontWeight: 'bold', cursor: 'pointer', boxShadow: '0 8px 20px rgba(0, 51, 102, 0.3)' }}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '10px', background: 'var(--primary)', color: 'white', padding: '18px 45px', borderRadius: '30px', border: 'none', fontSize: '1.1rem', fontWeight: 'bold', cursor: 'pointer', boxShadow: '0 8px 20px rgba(0, 51, 102, 0.3)', marginBottom: '24px' }}
                 >
-                  {locating ? <><Loader2 size={24} className="animate-spin"/> Initializing...</> : <><Navigation size={22}/> Activate Live GPS</>}
+                  {locating ? <><Loader2 size={24} className="animate-spin"/> Initializing...</> : <><MapPin size={22}/> Activate Live GPS</>}
                 </button>
-                <div style={{ marginTop: '20px', background: 'rgba(239, 68, 68, 0.1)', padding: '12px 16px', borderRadius: '12px', border: '1px solid rgba(239, 68, 68, 0.2)', display: 'inline-block', maxWidth: '90%' }}>
-                  <p style={{ fontSize: '0.85rem', color: '#dc2626', margin: 0, fontWeight: '500', lineHeight: '1.4', textAlign: 'left' }}>
-                    <MapPin size={14} style={{ display: 'inline', verticalAlign: 'text-bottom', marginRight: '4px' }} />
-                    <strong>Note:</strong> Please make sure to turn on your phone location from the top navigation bar before clicking the track button.
-                  </p>
-                </div>
+
+                <p style={{ color: '#dc2626', fontSize: '0.85rem', maxWidth: '340px', margin: '16px auto 0', lineHeight: '1.6' }}>
+                  <span style={{ fontWeight: '800', display: 'block', textTransform: 'uppercase', marginBottom: '6px', fontSize: '0.75rem', letterSpacing: '0.5px' }}>Reminder</span>
+                  Go to your <b>Phone Settings</b> &gt; <b>Location</b> then turn it <b>ON</b>. This allows the app to show listings updated in real-time as you move.
+                </p>
               </div>
             )}
           </div>

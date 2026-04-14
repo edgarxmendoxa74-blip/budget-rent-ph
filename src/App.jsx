@@ -31,7 +31,9 @@ function App() {
   const [activeTab, setActiveTab] = useState('home'); // 'home' or 'explore'
   const [propertyToDelete, setPropertyToDelete] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
-  const isOwner = session?.user?.email === 'admin@budgetrent.ph' || localStorage.getItem('budgetrent_admin_bypass') === 'true';
+  const isOwner = session?.user?.email === 'admin@budgetrent.ph' || 
+                  session?.user?.email === 'mendozajakong@gmail.com' || 
+                  localStorage.getItem('budgetrent_admin_bypass') === 'true';
 
 
 
@@ -50,8 +52,11 @@ function App() {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = supabase.auth.onAuthStateChange((event, session) => {
       setSession(session);
+      if (event === 'SIGNED_OUT') {
+        localStorage.clear();
+      }
     });
 
     fetchProperties(); // Initial fetch
@@ -76,6 +81,13 @@ function App() {
       setProperties(data || []);
     } catch (error) {
       console.error('Error fetching properties:', error.message);
+      if (error.message.toLowerCase().includes('jwt')) {
+         // Auto-logout if JWT is expired to fix the infinite 401 loop
+         supabase.auth.signOut().then(() => {
+            localStorage.clear();
+            window.location.reload();
+         });
+      }
     } finally {
       setLoading(false);
     }

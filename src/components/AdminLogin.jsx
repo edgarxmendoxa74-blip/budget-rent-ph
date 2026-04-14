@@ -16,10 +16,11 @@ const AdminLogin = ({ onLoginSuccess, onBack }) => {
     setError(null);
 
     try {
-      // DEVELOPMENT BYPASS: If Supabase auth fails, but credentials match the hardcoded ones
-      // we allow access for development/demo purposes.
-      if (email === 'admin@budgetrent.ph' && password === 'admin123') {
-        console.log('Dev Login Triggered');
+      // Allow specific admin emails
+      const isAdminEmail = email === 'admin@budgetrent.ph' || email === 'mendozajakong@gmail.com';
+
+      // DEVELOPMENT BYPASS: If credentials match hardcoded, skip Supabase Auth for quick access
+      if (isAdminEmail && password === 'admin123') {
         localStorage.setItem('budgetrent_admin_bypass', 'true');
         onLoginSuccess();
         return;
@@ -32,14 +33,14 @@ const AdminLogin = ({ onLoginSuccess, onBack }) => {
 
       if (error) throw error;
 
-      if (data.user.email !== 'admin@budgetrent.ph') {
+      if (data.user.email !== 'admin@budgetrent.ph' && data.user.email !== 'mendozajakong@gmail.com') {
         await supabase.auth.signOut();
         throw new Error('This account does not have administrative privileges.');
       }
 
       onLoginSuccess();
     } catch (err) {
-      setError(err.message + ". (Dev Tip: Try admin@budgetrent.ph / admin123)");
+      setError(err.message + ". (Check your Email/Password)");
     } finally {
       setLoading(false);
     }
