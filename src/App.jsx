@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Search, MapPin, Bed, Bath, Wifi, Shield, Star, Menu, X, Heart, MessageCircle, Phone, LogOut, Building2, User, Loader2, ClipboardList, Mail, BadgeCheck, Headset, ArrowLeft, Home, Navigation, Globe, Trash2 } from 'lucide-react';
-import { supabase } from './lib/supabase';
+import { clearSupabaseSessionStorage, recoverFromJwtError, supabase, validateCurrentSession } from './lib/supabase';
 import Auth from './components/Auth';
 import PropertyForm from './components/PropertyForm';
 import ProfileModal from './components/ProfileModal';
@@ -13,6 +13,65 @@ import AdminLogin from './components/AdminLogin';
 import './App.css';
 
 const CATEGORIES = ["All", "Boarding House", "Bed Space", "Apartment", "Studio"];
+const HIDDEN_PROPERTIES_KEY = 'budgetrent_hidden_properties';
+
+const getHiddenPropertyIds = () => {
+  try {
+    return JSON.parse(localStorage.getItem(HIDDEN_PROPERTIES_KEY) || '[]');
+  } catch {
+    return [];
+  }
+};
+
+const normalizePropertyOwnerProfiles = (items) => {
+  const ownerMap = new Map();
+
+  items.forEach((item) => {
+    const ownerKey = item.user_id || item.email;
+    if (!ownerKey) return;
+
+    const existing = ownerMap.get(ownerKey) || {};
+    ownerMap.set(ownerKey, {
+      owner_name: existing.owner_name || item.owner_name,
+      owner_avatar: existing.owner_avatar || item.owner_avatar,
+      owner_business_name: existing.owner_business_name || item.owner_business_name,
+      owner_facebook: existing.owner_facebook || item.owner_facebook,
+      owner_whatsapp: existing.owner_whatsapp || item.owner_whatsapp,
+      contact: existing.contact || item.contact,
+      email: existing.email || item.email
+    });
+  });
+
+  return items.map((item) => {
+    const ownerKey = item.user_id || item.email;
+    if (!ownerKey || !ownerMap.has(ownerKey)) return item;
+    return {
+      ...item,
+      ...ownerMap.get(ownerKey)
+    };
+  });
+};
+
+const applySubscriptionExpiry = (items) => {
+  const now = new Date();
+
+  return items.map((item) => {
+    const isExpired = item.subscription_expiry && new Date(item.subscription_expiry) < now;
+    if (!isExpired || !item.is_verified) return item;
+
+    // Reflect expiry immediately in the UI even before admin manually opens the dashboard.
+    supabase.from('properties').update({
+      is_verified: false,
+      subscription_status: 'Expired'
+    }).eq('email', item.email);
+
+    return {
+      ...item,
+      is_verified: false,
+      subscription_status: 'Expired'
+    };
+  });
+};
 
 function App() {
   const [session, setSession] = useState(null);
@@ -31,6 +90,7 @@ function App() {
   const [activeTab, setActiveTab] = useState('home'); // 'home' or 'explore'
   const [propertyToDelete, setPropertyToDelete] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [editingListingItem, setEditingListingItem] = useState(null);
   const isOwner = session?.user?.email === 'admin@budgetrent.ph' || 
                   session?.user?.email === 'mendozajakong@gmail.com' || 
                   localStorage.getItem('budgetrent_admin_bypass') === 'true';
@@ -38,7 +98,7 @@ function App() {
 
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    validateCurrentSession().then((session) => {
       setSession(session);
     });
 
@@ -55,7 +115,9 @@ function App() {
     } = supabase.auth.onAuthStateChange((event, session) => {
       setSession(session);
       if (event === 'SIGNED_OUT') {
-        localStorage.clear();
+        const hiddenProperties = localStorage.getItem(HIDDEN_PROPERTIES_KEY);
+        clearSupabaseSessionStorage();
+        if (hiddenProperties) localStorage.setItem(HIDDEN_PROPERTIES_KEY, hiddenProperties);
       }
     });
 
@@ -78,15 +140,13 @@ function App() {
         .order('created_at', { ascending: false });
       
       if (error) throw error;
-      setProperties(data || []);
+      const hiddenPropertyIds = new Set(getHiddenPropertyIds());
+      const normalizedProperties = applySubscriptionExpiry(normalizePropertyOwnerProfiles(data || []));
+      setProperties(normalizedProperties.filter(item => !hiddenPropertyIds.has(item.id)));
     } catch (error) {
       console.error('Error fetching properties:', error.message);
-      if (error.message.toLowerCase().includes('jwt')) {
-         // Auto-logout if JWT is expired to fix the infinite 401 loop
-         supabase.auth.signOut().then(() => {
-            localStorage.clear();
-            window.location.reload();
-         });
+      if (await recoverFromJwtError(error)) {
+         window.location.reload();
       }
     } finally {
       setLoading(false);
@@ -130,6 +190,8 @@ function App() {
     const matchesMyListings = activeTab === 'mylistings' ? item.user_id === session?.user?.id : true;
     return matchesCategory && matchesSearch && matchesMyListings;
   });
+
+  const shouldShowOwnerAvatar = (item) => Boolean(item?.owner_avatar);
 
 
 
@@ -318,7 +380,7 @@ function App() {
                         style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: '8px 0', cursor: 'pointer' }}
                         onClick={(e) => { e.stopPropagation(); setViewingLandlord(item); }}
                       >
-                        {item.owner_avatar ? (
+                        {shouldShowOwnerAvatar(item) ? (
                           <img src={item.owner_avatar} alt="" style={{ width: '28px', height: '28px', borderRadius: '50%', objectFit: 'cover', border: '1.5px solid var(--primary)' }} />
                         ) : (
                           <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'var(--primary)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: 'bold' }}>
@@ -383,7 +445,6 @@ function App() {
                   <div 
                     key={item.id} 
                     className="listing-card animate-slide-up"
-                    onClick={() => { setIsEditListingsOpen(true); }}
                   >
                     <div className="image-container">
                       <img src={item.image || '/placeholder.png'} alt={item.name || item.title} />
@@ -409,7 +470,7 @@ function App() {
                         style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: '8px 0', cursor: 'pointer' }}
                         onClick={(e) => { e.stopPropagation(); setViewingLandlord(item); }}
                       >
-                        {item.owner_avatar ? (
+                        {shouldShowOwnerAvatar(item) ? (
                           <img src={item.owner_avatar} alt="" style={{ width: '28px', height: '28px', borderRadius: '50%', objectFit: 'cover', border: '1.5px solid var(--primary)' }} />
                         ) : (
                           <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'var(--primary)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: 'bold' }}>
@@ -422,7 +483,7 @@ function App() {
                         </span>
                       </div>
                       <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
-                        <button className="inquire-btn" style={{ flex: 1, margin: 0 }} onClick={(e) => { e.stopPropagation(); setIsEditListingsOpen(true); }}>
+                        <button className="inquire-btn" style={{ flex: 1, margin: 0 }} onClick={(e) => { e.stopPropagation(); setEditingListingItem(item); setIsEditListingsOpen(true); }}>
                           Edit
                         </button>
                         <button 
@@ -545,7 +606,7 @@ function App() {
       {/* Property Modal */}
       {selectedProperty && (
         <div className="modal-overlay" onClick={() => setSelectedProperty(null)}>
-          <div className="modal-content animate-slide-up" onClick={e => e.stopPropagation()}>
+          <div className="modal-content property-detail-modal animate-slide-up" onClick={e => e.stopPropagation()}>
             <button className="close-btn" onClick={() => setSelectedProperty(null)}><X size={24} /></button>
             <div className="modal-image">
               <img src={selectedProperty.image} alt={selectedProperty.name || selectedProperty.title} />
@@ -566,29 +627,25 @@ function App() {
 
               {/* Owner Profile */}
               <div className="divider"></div>
-              <div 
-                className="owner-profile-card clickable" 
-                onClick={() => setViewingLandlord(selectedProperty)}
-                style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', background: 'var(--bg-secondary, #f8fafc)', borderRadius: '12px', marginBottom: '8px', cursor: 'pointer', border: '1.5px solid transparent', transition: 'all 0.2s' }}
-              >
-                {selectedProperty.owner_avatar ? (
-                  <img src={selectedProperty.owner_avatar} alt="Owner" style={{ width: '48px', height: '48px', borderRadius: '50%', objectFit: 'cover', border: '2px solid var(--primary)' }} />
+              <div className="owner-profile-card clickable property-owner-card" onClick={() => setViewingLandlord(selectedProperty)}>
+                {shouldShowOwnerAvatar(selectedProperty) ? (
+                  <img src={selectedProperty.owner_avatar} alt="Owner" className="property-owner-avatar" />
                 ) : (
-                  <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'var(--primary)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', fontWeight: 'bold' }}>
+                  <div className="property-owner-avatar property-owner-placeholder">
                     {(selectedProperty.owner_name || 'L').charAt(0).toUpperCase()}
                   </div>
                 )}
-                <div style={{ flex: 1 }}>
-                  <p style={{ fontWeight: '600', margin: 0, fontSize: '1rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <div className="property-owner-info">
+                  <p className="property-owner-name">
                     {selectedProperty.owner_name || 'Landlord'}
                     {selectedProperty.is_verified && <BadgeCheck size={16} className="verified-badge" />}
                   </p>
-                  <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Tap to view full profile</span>
+                  <span className="property-owner-meta">Tap to view full profile</span>
                 </div>
-                <Navigation size={16} className="text-muted" />
+                <Navigation size={16} className="property-owner-arrow" />
               </div>
 
-              <h3>Listing Details</h3>
+              <h3>{selectedProperty.type === 'Boarding House' ? 'Boarding House Details' : 'Listing Details'}</h3>
               <div className="amenities-list">
                 <div className="amenity-item">
                   <div className="circle-icon"><Wifi size={16} /></div> 
@@ -598,17 +655,31 @@ function App() {
                   </div>
                 </div>
                 <div className="amenity-item">
-                  <div className="circle-icon"><Building2 size={16} /></div> 
+                  <div className="circle-icon"><Bed size={16} /></div> 
                   <div>
-                    <label>Total Rooms</label>
+                    <label>Available Rooms</label>
                     <p>{selectedProperty.rooms || 1} Room(s)</p>
                   </div>
                 </div>
                 <div className="amenity-item">
-                  <div className="circle-icon"><Star size={16} /></div> 
+                  <div className="circle-icon"><Bath size={16} /></div> 
                   <div>
                     <label>CR / Bathroom</label>
                     <p>{selectedProperty.cr || 'Shared'}</p>
+                  </div>
+                </div>
+                <div className="amenity-item">
+                  <div className="circle-icon"><Building2 size={16} /></div> 
+                  <div>
+                    <label>Parking</label>
+                    <p>{selectedProperty.parking || 'No'}</p>
+                  </div>
+                </div>
+                <div className="amenity-item">
+                  <div className="circle-icon"><Home size={16} /></div> 
+                  <div>
+                    <label>Kitchen</label>
+                    <p>{Number(selectedProperty.kitchen) > 0 ? `${selectedProperty.kitchen} Available` : 'None'}</p>
                   </div>
                 </div>
                 <div className="amenity-item">
@@ -696,8 +767,9 @@ function App() {
       {isEditListingsOpen && (
         <EditListings 
           session={session} 
-          onClose={() => setIsEditListingsOpen(false)} 
-          onListingUpdated={fetchProperties} 
+          onClose={() => { setIsEditListingsOpen(false); setEditingListingItem(null); }} 
+          onListingUpdated={fetchProperties}
+          initialEditingItem={editingListingItem}
         />
       )}
 
@@ -709,7 +781,7 @@ function App() {
             
             <div className="profile-header">
               <div className="profile-avatar">
-                {viewingLandlord.owner_avatar ? (
+                {shouldShowOwnerAvatar(viewingLandlord) ? (
                   <img src={viewingLandlord.owner_avatar} alt="Avatar" className="avatar-img" />
                 ) : (
                   <div className="avatar-placeholder">

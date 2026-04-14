@@ -3,7 +3,7 @@ import { X, Edit3, Trash2, Loader2, Save, MapPin, Camera } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import './EditListings.css';
 
-const EditListings = ({ session, onClose, onListingUpdated }) => {
+const EditListings = ({ session, onClose, onListingUpdated, initialEditingItem = null }) => {
   const [myListings, setMyListings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [editingItem, setEditingItem] = useState(null);
@@ -14,7 +14,7 @@ const EditListings = ({ session, onClose, onListingUpdated }) => {
 
   useEffect(() => {
     fetchMyListings();
-  }, []);
+  }, [session, initialEditingItem]);
 
   const fetchMyListings = async () => {
     try {
@@ -26,6 +26,10 @@ const EditListings = ({ session, onClose, onListingUpdated }) => {
         .order('created_at', { ascending: false });
       if (error) throw error;
       setMyListings(data || []);
+      if (initialEditingItem) {
+        const matchedItem = (data || []).find(item => item.id === initialEditingItem.id);
+        setEditingItem(matchedItem ? { ...matchedItem } : { ...initialEditingItem });
+      }
     } catch (err) {
       console.error('Error:', err.message);
     } finally {
@@ -125,6 +129,7 @@ const EditListings = ({ session, onClose, onListingUpdated }) => {
       setMyListings(prev => prev.map(p => p.id === editingItem.id ? editingItem : p));
       setEditingItem(null);
       if (onListingUpdated) onListingUpdated();
+      if (initialEditingItem) onClose();
     } catch (err) {
       alert('Error: ' + err.message);
     } finally {
@@ -132,8 +137,11 @@ const EditListings = ({ session, onClose, onListingUpdated }) => {
     }
   };
 
+  const isDirectEditMode = Boolean(initialEditingItem);
+
   return (
     <div className="edit-listings-overlay" onClick={onClose}>
+      {!isDirectEditMode && (
       <div className="edit-listings-modal animate-slide-up" onClick={e => e.stopPropagation()}>
         
         <div className="edit-listings-top">
@@ -180,14 +188,15 @@ const EditListings = ({ session, onClose, onListingUpdated }) => {
           )}
         </div>
       </div>
+      )}
 
       {/* Edit Form Modal - rendered outside the main modal */}
       {editingItem && (
-        <div className="edit-form-overlay" onClick={(e) => { e.stopPropagation(); setEditingItem(null); }}>
+        <div className="edit-form-overlay" onClick={(e) => { e.stopPropagation(); initialEditingItem ? onClose() : setEditingItem(null); }}>
           <div className="edit-form-content animate-slide-up" onClick={e => e.stopPropagation()}>
             <div className="edit-form-header">
               <h3>Edit Listing</h3>
-              <button onClick={() => setEditingItem(null)}><X size={20} /></button>
+              <button onClick={() => initialEditingItem ? onClose() : setEditingItem(null)}><X size={20} /></button>
             </div>
             <div className="edit-form-body">
               <div className="edit-form-image">

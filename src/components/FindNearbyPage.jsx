@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Navigation, Loader2, MapPin, Wifi, Building2, Star, X, ShieldCheck, Search, AlertCircle, Signal, BadgeCheck } from 'lucide-react';
 
+const shouldShowOwnerAvatar = (item) => Boolean(item?.owner_avatar);
+
 const FindNearbyPage = ({ listings, onSelectProperty, onViewLandlord, isLandlord }) => {
   const [locating, setLocating] = useState(false);
   const [locationFound, setLocationFound] = useState(false);
@@ -207,7 +209,7 @@ const FindNearbyPage = ({ listings, onSelectProperty, onViewLandlord, isLandlord
                     </div>
 
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: '16px 0 8px', cursor: 'pointer' }} onClick={(e) => { e.stopPropagation(); onViewLandlord && onViewLandlord(item); }}>
-                      {item.owner_avatar ? <img src={item.owner_avatar} alt="" style={{ width: '28px', height: '28px', borderRadius: '50%', objectFit: 'cover', border: '1.5px solid var(--primary)' }} /> : <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'var(--primary)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: 'bold' }}>{(item.owner_name || 'L').charAt(0).toUpperCase()}</div>}
+                      {shouldShowOwnerAvatar(item) ? <img src={item.owner_avatar} alt="" style={{ width: '28px', height: '28px', borderRadius: '50%', objectFit: 'cover', border: '1.5px solid var(--primary)' }} /> : <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'var(--primary)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: 'bold' }}>{(item.owner_name || 'L').charAt(0).toUpperCase()}</div>}
                       <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: '500', display: 'flex', alignItems: 'center', gap: '4px' }}>
                         {item.owner_name || 'Landlord'}
                         {item.is_verified && <BadgeCheck size={14} className="verified-badge" />}

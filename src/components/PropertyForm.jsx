@@ -28,11 +28,48 @@ const PropertyForm = ({ onClose, session, onListingAdded }) => {
   const [image, setImage] = useState(null);
   const [isVerified, setIsVerified] = useState(false);
 
+  const getVerificationRow = async () => {
+    const withExpiry = await supabase
+      .from('properties')
+      .select('is_verified, subscription_expiry')
+      .eq('user_id', session.user.id)
+      .limit(1);
+
+    if (!withExpiry.error) return withExpiry;
+
+    const message = withExpiry.error.message?.toLowerCase() || '';
+    if (!message.includes('subscription_expiry') && !message.includes('column')) {
+      throw withExpiry.error;
+    }
+
+    return await supabase
+      .from('properties')
+      .select('is_verified')
+      .eq('user_id', session.user.id)
+      .limit(1);
+  };
+
   // Sync session data if it changes
   useEffect(() => {
     if (session?.user?.id) {
-      supabase.from('properties').select('is_verified').eq('user_id', session.user.id).eq('is_verified', true).limit(1).then(({data}) => {
-         if (data && data.length > 0) setIsVerified(true);
+      getVerificationRow().then(async ({ data, error }) => {
+         if (error) throw error;
+         const latestProperty = data?.[0];
+         if (!latestProperty) return;
+
+         const isExpired = latestProperty.subscription_expiry && new Date(latestProperty.subscription_expiry) < new Date();
+         if (latestProperty.is_verified && isExpired) {
+           setIsVerified(false);
+           await supabase
+             .from('properties')
+             .update({ is_verified: false, subscription_status: 'Expired' })
+             .eq('user_id', session.user.id);
+           return;
+         }
+
+         if (latestProperty.is_verified) setIsVerified(true);
+      }).catch((err) => {
+        console.error('Error checking property verification:', err);
       });
     }
 

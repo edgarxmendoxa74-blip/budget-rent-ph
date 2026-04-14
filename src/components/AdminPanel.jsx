@@ -1,24 +1,83 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { supabase } from '../lib/supabase';
 import { 
-  Users, ClipboardList, TrendingUp, Shield, LogOut, Search, 
-  MapPin, Check, X, Building2, Trash2, Wifi, Star, CreditCard,
-  Settings, Zap, BarChart3, Clock, Mail, Phone, Award, AlertCircle, RefreshCw
+  Users, ClipboardList, Shield, LogOut, Search, 
+  Check, X, Building2, Trash2, Star,
+  Settings, BarChart3, Clock, Award, AlertCircle, RefreshCw, ImagePlus
 } from 'lucide-react';
 import './AdminPanel.css';
 
-const AdminPanel = ({ onBack, onLogout }) => {
+const HIDDEN_PROPERTIES_KEY = 'budgetrent_hidden_properties';
+const PAYMENT_METHODS_KEY = 'budgetrent_payment_methods';
+
+const DEFAULT_PAYMENT_METHODS = [
+  { id: 1, method: 'GCash', accountName: 'EDGAR M.', accountNumber: '09171234567', qrUrl: '' },
+  { id: 2, method: 'Maya', accountName: 'EDGAR M.', accountNumber: '09171234567', qrUrl: '' },
+  { id: 3, method: 'ShopeePay', accountName: 'EDGAR M.', accountNumber: '09171234567', qrUrl: '' }
+];
+
+const getHiddenPropertyIds = () => {
+  try {
+    return JSON.parse(localStorage.getItem(HIDDEN_PROPERTIES_KEY) || '[]');
+  } catch {
+    return [];
+  }
+};
+
+const setHiddenPropertyIds = (ids) => {
+  localStorage.setItem(HIDDEN_PROPERTIES_KEY, JSON.stringify(ids));
+};
+
+const normalizePropertyOwnerProfiles = (items) => {
+  const ownerMap = new Map();
+
+  items.forEach((item) => {
+    const ownerKey = item.user_id || item.email;
+    if (!ownerKey) return;
+
+    const existing = ownerMap.get(ownerKey) || {};
+    ownerMap.set(ownerKey, {
+      owner_name: existing.owner_name || item.owner_name,
+      owner_avatar: existing.owner_avatar || item.owner_avatar,
+      owner_business_name: existing.owner_business_name || item.owner_business_name,
+      owner_facebook: existing.owner_facebook || item.owner_facebook,
+      owner_whatsapp: existing.owner_whatsapp || item.owner_whatsapp,
+      contact: existing.contact || item.contact,
+      email: existing.email || item.email
+    });
+  });
+
+  return items.map((item) => {
+    const ownerKey = item.user_id || item.email;
+    if (!ownerKey || !ownerMap.has(ownerKey)) return item;
+    return {
+      ...item,
+      ...ownerMap.get(ownerKey)
+    };
+  });
+};
+
+const getStoredPaymentMethods = () => {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(PAYMENT_METHODS_KEY) || 'null');
+    return Array.isArray(parsed) && parsed.length > 0 ? parsed : DEFAULT_PAYMENT_METHODS;
+  } catch {
+    return DEFAULT_PAYMENT_METHODS;
+  }
+};
+
+const getAdminAvatarFallback = ({ ownerName, businessName }) => {
+  return `https://ui-avatars.com/api/?name=${encodeURIComponent(ownerName || businessName || 'Landlord')}&background=random`;
+};
+
+const AdminPanel = ({ onLogout }) => {
   const [activeTab, setActiveTab] = useState('analytics'); 
-  const [paymentMethods, setPaymentMethods] = useState([
-    { id: 1, method: 'GCash', name: 'EDGAR M.', number: '09171234567', qrUrl: 'https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=GCash-09171234567' },
-    { id: 2, method: 'Maya', name: 'EDGAR M.', number: '09171234567', qrUrl: 'https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=Maya-09171234567' },
-    { id: 3, method: 'Bank Transfer', name: 'EDGAR M.', number: '1234-5678-90', qrUrl: '' }
-  ]);
+  const [paymentMethods, setPaymentMethods] = useState(getStoredPaymentMethods);
   
   const [landlords, setLandlords] = useState([]);
-  const [tenants, setTenants] = useState([]);
   const [verificationRequests, setVerificationRequests] = useState([]);
   const [allProperties, setAllProperties] = useState([]);
+  const [hiddenPropertyIds, setHiddenPropertyIdsState] = useState(getHiddenPropertyIds());
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -26,7 +85,25 @@ const AdminPanel = ({ onBack, onLogout }) => {
   // Modals state
   const [isManageModalOpen, setIsManageModalOpen] = useState(false);
   const [selectedLandlordListings, setSelectedLandlordListings] = useState([]);
-  const [updatingId, setUpdatingId] = useState(null);
+
+  const filteredLandlords = useMemo(() => {
+    if (!searchQuery) return landlords;
+    const lowerQuery = searchQuery.toLowerCase();
+    return landlords.filter(l => (l.owner_name || l.email)?.toLowerCase().includes(lowerQuery));
+  }, [landlords, searchQuery]);
+
+  const pendingRequests = useMemo(() => {
+    return verificationRequests.filter(r => r.status === 'pending');
+  }, [verificationRequests]);
+
+  const activeBadgesCount = useMemo(() => {
+    return landlords.filter(l => l.is_verified).length;
+  }, [landlords]);
+
+  const visibleProperties = useMemo(() => {
+    const hiddenSet = new Set(hiddenPropertyIds);
+    return allProperties.filter(p => !hiddenSet.has(p.id));
+  }, [allProperties, hiddenPropertyIds]);
 
   useEffect(() => {
     fetchData();
@@ -34,11 +111,13 @@ const AdminPanel = ({ onBack, onLogout }) => {
 
   const handleFixConnection = async () => {
     const adminBypass = localStorage.getItem('budgetrent_admin_bypass');
+    const hiddenProperties = localStorage.getItem(HIDDEN_PROPERTIES_KEY);
     await supabase.auth.signOut();
     Object.keys(localStorage).forEach(key => {
       if (key.startsWith('sb-')) localStorage.removeItem(key);
     });
     if (adminBypass) localStorage.setItem('budgetrent_admin_bypass', adminBypass);
+    if (hiddenProperties) localStorage.setItem(HIDDEN_PROPERTIES_KEY, hiddenProperties);
     window.location.reload();
   };
 
@@ -51,11 +130,16 @@ const AdminPanel = ({ onBack, onLogout }) => {
       const { data: vData, error: vError } = await supabase.from('verification_requests').select('*').order('created_at', { ascending: false });
       if (propError) throw propError;
       if (vError) throw vError;
+      const normalizedProperties = normalizePropertyOwnerProfiles(propData || []);
+      const hiddenIds = getHiddenPropertyIds();
+      const hiddenPropertyIdSet = new Set(hiddenIds);
+      setHiddenPropertyIdsState(hiddenIds);
+      const visiblePropertyRows = normalizedProperties.filter(p => !hiddenPropertyIdSet.has(p.id));
 
       // Create a unique list of landlords from listings, prioritizing those with avatars
       const landlordMap = {};
       
-      (propData || []).forEach(p => {
+      normalizedProperties.forEach(p => {
         const email = p.email;
         if (!email) return;
 
@@ -81,6 +165,7 @@ const AdminPanel = ({ onBack, onLogout }) => {
             landlord_key: email,
             owner_name: p.owner_name || 'Landlord',
             owner_avatar: p.owner_avatar,
+            owner_business_name: p.owner_business_name || '',
             email: email,
             subscription_status: subStatus,
             subscription_date: subDate,
@@ -97,16 +182,12 @@ const AdminPanel = ({ onBack, onLogout }) => {
 
       // Auto-expiry check — also update Supabase so the badge is removed app-wide
       const checkedLandlords = uniqueLandlords.map(l => {
-        // Specific Fallback Avatars for different accounts to ensure they look magkaiba (different)
-        if (!l.owner_avatar) {
-          if (l.email === 'edgarxmendoxa74@gmail.com') {
-            l.owner_avatar = 'https://ui-avatars.com/api/?name=Edgar+M&background=003366&color=fff&bold=true';
-          } else if (l.email === 'mendozajakong@gmail.com') {
-            l.owner_avatar = 'https://ui-avatars.com/api/?name=Mendoza+J&background=FFD700&color=003366&bold=true';
-          } else {
-            l.owner_avatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(l.owner_name)}&background=random`;
-          }
-        }
+        l.owner_avatar =
+          l.owner_avatar ||
+          getAdminAvatarFallback({
+            ownerName: l.owner_name,
+            businessName: l.owner_business_name
+          });
 
         if (l.subscription_expiry && new Date(l.subscription_expiry) < now && l.is_verified) {
           // Push the deactivation to Supabase (fire and forget)
@@ -117,7 +198,7 @@ const AdminPanel = ({ onBack, onLogout }) => {
       });
 
       // Also update allProperties to reflect expired badges
-      const checkedProperties = (propData || []).map(p => {
+      const checkedProperties = normalizedProperties.map(p => {
         const landlord = checkedLandlords.find(l => l.email === p.email);
         if (landlord && !landlord.is_verified && p.is_verified) {
           return { ...p, is_verified: false };
@@ -167,6 +248,26 @@ const AdminPanel = ({ onBack, onLogout }) => {
     }
   };
 
+  const handlePaymentMethodChange = (idx, field, value) => {
+    setPaymentMethods(prev => prev.map((pm, pmIdx) => (
+      pmIdx === idx ? { ...pm, [field]: value } : pm
+    )));
+  };
+
+  const handlePaymentQrUpload = (idx, file) => {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      handlePaymentMethodChange(idx, 'qrUrl', reader.result);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleSavePaymentDetails = () => {
+    localStorage.setItem(PAYMENT_METHODS_KEY, JSON.stringify(paymentMethods));
+    alert('Payment details updated successfully.');
+  };
+
   const approveRequest = async (requestId, userId, userEmail) => {
     try {
       const now = new Date();
@@ -194,18 +295,65 @@ const AdminPanel = ({ onBack, onLogout }) => {
     setIsManageModalOpen(true);
   };
 
-  const handleAdminDeleteProperty = async (propertyId) => {
-    if (!window.confirm("Are you sure you want to permanently delete this listing?")) return;
+  const handleHideProperty = (property) => {
+    const isHidden = hiddenPropertyIds.includes(property.id);
+    const actionLabel = isHidden ? 'unhide' : 'hide';
+    if (!window.confirm(`${isHidden ? 'Unhide' : 'Hide'} ${property.name || property.title || 'this listing'} ${isHidden ? 'and show it again in the app' : 'from the app'}?`)) return;
+
+    const hiddenIds = new Set(getHiddenPropertyIds());
+    if (isHidden) {
+      hiddenIds.delete(property.id);
+    } else {
+      hiddenIds.add(property.id);
+    }
+    const nextHiddenIds = [...hiddenIds];
+    setHiddenPropertyIds(nextHiddenIds);
+    setHiddenPropertyIdsState(nextHiddenIds);
+    alert(`Listing ${actionLabel}d successfully.`);
+  };
+
+  const handleDeleteLandlord = async (landlord) => {
+    const landlordPropertyIds = allProperties.filter(p => p.email === landlord.email).map(p => p.id);
+    const listingCount = landlordPropertyIds.length;
+    const confirmDelete = window.confirm(
+      `Delete landlord ${landlord.owner_name || landlord.email}?\n\nThis will permanently remove ${listingCount} listing(s) tied to ${landlord.email}.`
+    );
+    if (!confirmDelete) return;
+
     try {
-      const { error } = await supabase.from('properties').delete().eq('id', propertyId);
-      if (error) throw error;
-      
-      // Update states
-      setAllProperties(prev => prev.filter(p => p.id !== propertyId));
-      setSelectedLandlordListings(prev => prev.filter(p => p.id !== propertyId));
-      alert("Listing deleted successfully!");
+      const { error: propertiesError } = await supabase
+        .from('properties')
+        .delete()
+        .eq('email', landlord.email);
+
+      if (propertiesError) throw propertiesError;
+
+      // Best effort cleanup for matching verification requests shown in admin.
+      const matchingRequestIds = verificationRequests
+        .filter(req => req.email === landlord.email || req.user_id === landlord.user_id)
+        .map(req => req.id);
+
+      if (matchingRequestIds.length > 0) {
+        const { error: requestError } = await supabase
+          .from('verification_requests')
+          .delete()
+          .in('id', matchingRequestIds);
+
+        if (requestError) throw requestError;
+      }
+
+      setLandlords(prev => prev.filter(l => l.email !== landlord.email));
+      setAllProperties(prev => prev.filter(p => p.email !== landlord.email));
+      const nextHiddenIds = hiddenPropertyIds.filter(id => !landlordPropertyIds.includes(id));
+      setHiddenPropertyIds(nextHiddenIds);
+      setHiddenPropertyIdsState(nextHiddenIds);
+      setVerificationRequests(prev => prev.filter(req => req.email !== landlord.email && req.user_id !== landlord.user_id));
+      setSelectedLandlordListings(prev => prev.filter(item => item.email !== landlord.email));
+      setIsManageModalOpen(prev => (selectedLandlordListings.some(item => item.email === landlord.email) ? false : prev));
+
+      alert('Landlord deleted successfully.');
     } catch (err) {
-      alert("Error deleting property: " + err.message);
+      alert('Error deleting landlord: ' + err.message);
     }
   };
 
@@ -247,7 +395,7 @@ const AdminPanel = ({ onBack, onLogout }) => {
           <label>Management</label>
           <button className={activeTab === 'analytics' ? 'active' : ''} onClick={() => setActiveTab('analytics')}><BarChart3 size={18}/> Analytics</button>
           <button className={activeTab === 'landlords' ? 'active' : ''} onClick={() => setActiveTab('landlords')}><Users size={18}/> Landlords</button>
-          <button className={activeTab === 'requests' ? 'active' : ''} onClick={() => setActiveTab('requests')}><ClipboardList size={18}/> Pending Requests <span className="badge-count">{verificationRequests.filter(r => r.status === 'pending').length}</span></button>
+          <button className={activeTab === 'requests' ? 'active' : ''} onClick={() => setActiveTab('requests')}><ClipboardList size={18}/> Pending Requests <span className="badge-count">{pendingRequests.length}</span></button>
         </div>
 
         <div className="sidebar-group">
@@ -324,17 +472,17 @@ const AdminPanel = ({ onBack, onLogout }) => {
                    </div>
                    <div className="stat-card gold">
                       <Shield size={24} color="#003366" />
-                      <div><label>Active Badges</label><h3>{landlords.filter(l => l.is_verified).length}</h3></div>
+                      <div><label>Active Badges</label><h3>{activeBadgesCount}</h3></div>
                    </div>
                 </div>
                 <div className="stat-row" style={{ marginTop: '20px' }}>
                    <div className="stat-card white">
                       <Building2 size={24} color="#003366" />
-                      <div><label>Total Listings</label><h3>{allProperties.length}</h3></div>
+                      <div><label>Total Listings</label><h3>{visibleProperties.length}</h3></div>
                    </div>
                    <div className="stat-card navy">
                       <RefreshCw size={24} color="#FFD700" />
-                      <div><label>Pending Requests</label><h3>{verificationRequests.filter(r => r.status === 'pending').length}</h3></div>
+                      <div><label>Pending Requests</label><h3>{pendingRequests.length}</h3></div>
                    </div>
                 </div>
              </div>
@@ -342,7 +490,7 @@ const AdminPanel = ({ onBack, onLogout }) => {
 
           {activeTab === 'landlords' && (
             <div className="landlord-grid">
-              {landlords.filter(l => (l.owner_name || l.email)?.toLowerCase().includes(searchQuery.toLowerCase())).map(l => (
+              {filteredLandlords.map(l => (
                 <div key={l.email} className="premium-card landlord-card">
                   <div className="card-header">
                     <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: '#003366', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', overflow: 'hidden' }}>
@@ -359,7 +507,7 @@ const AdminPanel = ({ onBack, onLogout }) => {
                   </div>
                   <div className="card-stats" style={{ padding: '12px' }}>
                     <div className="stat-item"><span>Status</span><strong style={{color: l.is_verified ? '#10b981' : '#64748b'}}>{l.subscription_status || 'Regular'}</strong></div>
-                    <div className="stat-item"><span>Listings</span><strong>{allProperties.filter(p => p.email === l.email).length}</strong></div>
+                    <div className="stat-item"><span>Listings</span><strong>{visibleProperties.filter(p => p.email === l.email).length}</strong></div>
                     <div className="stat-item">
                       <span>Badge</span>
                       <button 
@@ -383,6 +531,7 @@ const AdminPanel = ({ onBack, onLogout }) => {
                   <div className="card-actions">
                     <button className="manage-btn" onClick={() => viewLandlordListings(l.email)}>Properties</button>
                     <button className={l.is_verified ? 'verify-btn verified' : 'verify-btn'} onClick={() => handleRenew(l.email)}>{l.is_verified ? 'Renew Plan' : 'Activate'}</button>
+                    <button className="landlord-delete-btn" onClick={() => handleDeleteLandlord(l)}><Trash2 size={15} /> Delete</button>
                   </div>
                 </div>
               ))}
@@ -397,7 +546,7 @@ const AdminPanel = ({ onBack, onLogout }) => {
                     <tr><th>Landlord Name</th><th>Plan Status</th><th>Availed Date</th><th>Expiry Date</th><th>Action</th></tr>
                   </thead>
                   <tbody>
-                    {landlords.filter(l => (l.owner_name || l.email)?.toLowerCase().includes(searchQuery.toLowerCase())).map(l => (
+                    {filteredLandlords.map(l => (
                       <tr key={l.email}>
                         <td style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                           <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: '#003366', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', flexShrink: 0, overflow: 'hidden' }}>
@@ -435,7 +584,7 @@ const AdminPanel = ({ onBack, onLogout }) => {
 
           {activeTab === 'requests' && (
             <div className="requests-stack">
-              {verificationRequests.filter(r => r.status === 'pending').map(req => {
+              {pendingRequests.map(req => {
                 const landlord = landlords.find(l => l.user_id === req.user_id);
                 const avatar = landlord?.owner_avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(req.full_name)}&background=random`;
                 
@@ -468,14 +617,46 @@ const AdminPanel = ({ onBack, onLogout }) => {
                    <div key={pm.id} className="premium-card config-slot">
                       <div className="slot-badge">SLOT {idx + 1}</div>
                       <div className="config-form" style={{ marginTop: '16px' }}>
-                         <label style={{ fontSize: '0.7rem', fontWeight: '800' }}>ACCOUNT NUMBER</label>
-                         <input type="text" value={pm.number} onChange={e => {
-                           const n = [...paymentMethods]; n[idx].number = e.target.value; setPaymentMethods(n);
-                         }} />
+                         <label style={{ fontSize: '0.7rem', fontWeight: '800' }}>PAYMENT METHOD</label>
+                         <input
+                           type="text"
+                           value={pm.method}
+                           placeholder="GCash"
+                           onChange={e => handlePaymentMethodChange(idx, 'method', e.target.value)}
+                         />
+                         <label style={{ fontSize: '0.7rem', fontWeight: '800' }}>ACCOUNT NAME</label>
+                         <input
+                           type="text"
+                           value={pm.accountName}
+                           placeholder="Juan Dela Cruz"
+                           onChange={e => handlePaymentMethodChange(idx, 'accountName', e.target.value)}
+                         />
+                         <label style={{ fontSize: '0.7rem', fontWeight: '800' }}>E-WALLET NUMBER</label>
+                         <input
+                           type="text"
+                           value={pm.accountNumber}
+                           placeholder="09XXXXXXXXX"
+                           onChange={e => handlePaymentMethodChange(idx, 'accountNumber', e.target.value)}
+                         />
+                         <label style={{ fontSize: '0.7rem', fontWeight: '800' }}>QR IMAGE</label>
+                         <input
+                           type="file"
+                           id={`payment-qr-${pm.id}`}
+                           hidden
+                           accept="image/*"
+                           onChange={e => handlePaymentQrUpload(idx, e.target.files?.[0])}
+                         />
+                         <label htmlFor={`payment-qr-${pm.id}`} className="qr-upload-box">
+                           {pm.qrUrl ? (
+                             <img src={pm.qrUrl} alt={`${pm.method} QR`} className="payment-qr-preview" />
+                           ) : (
+                             <span className="qr-upload-placeholder"><ImagePlus size={18} /> Upload QR</span>
+                           )}
+                         </label>
                       </div>
                    </div>
                 ))}
-                <button className="save-all-btn" onClick={() => alert('Saved!')}>Update Payment Details</button>
+                <button className="save-all-btn" onClick={handleSavePaymentDetails}>Update Payment Details</button>
              </div>
           )}
         </section>
@@ -484,19 +665,41 @@ const AdminPanel = ({ onBack, onLogout }) => {
       {/* Modal - Manage Listings */}
       {isManageModalOpen && (
         <div className="modal-overlay" onClick={() => setIsManageModalOpen(false)}>
-          <div className="modal-content animate-slide-up" style={{ width: '400px', padding: '24px' }} onClick={e => e.stopPropagation()}>
+          <div className="modal-content animate-slide-up admin-listings-modal" onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
                <h3 style={{ margin: 0 }}>Listings</h3>
                <button onClick={() => setIsManageModalOpen(false)} style={{ border: 'none', background: 'none' }}><X size={20}/></button>
             </div>
-            <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
+            <div className="admin-listings-scroll">
               {selectedLandlordListings.length === 0 ? (
                 <div style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '20px' }}>No properties found for this landlord.</div>
               ) : (
                 selectedLandlordListings.map(item => (
-                  <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '12px', borderBottom: '1px solid #f1f5f9' }}>
-                     <div><strong>{item.name || item.title}</strong></div>
-                     <button className="delete-btn" onClick={() => handleAdminDeleteProperty(item.id)}><Trash2 size={16}/></button>
+                  <div key={item.id} className="admin-listing-item">
+                     <div className="admin-listing-info">
+                       <div className="admin-listing-header">
+                         <div>
+                           <strong>{item.name || item.title}</strong>
+                           <p className="admin-listing-subtext">{item.type || 'Property'} • ₱{item.price?.toLocaleString() || 0}/month</p>
+                         </div>
+                         <button className="hide-btn" onClick={() => handleHideProperty(item)}>
+                           {hiddenPropertyIds.includes(item.id) ? 'Unhide' : 'Hide'}
+                         </button>
+                       </div>
+                       <p className="admin-listing-location">{item.location || 'No location provided'}</p>
+                       <div className="admin-listing-chips">
+                         {hiddenPropertyIds.includes(item.id) && <span className="admin-listing-chip-hidden">Hidden</span>}
+                         <span>{item.rooms || 1} Room(s)</span>
+                         <span>{item.cr || 'Shared'} CR</span>
+                         <span>{item.parking || 'No'} Parking</span>
+                         <span>{Number(item.kitchen) > 0 ? `${item.kitchen} Kitchen` : 'No Kitchen'}</span>
+                         <span>{item.wifi || 'No'} WiFi</span>
+                         <span>{item.secured || 'No'} Security</span>
+                       </div>
+                       {item.description && (
+                         <p className="admin-listing-description">{item.description}</p>
+                       )}
+                     </div>
                   </div>
                 ))
               )}

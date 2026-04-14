@@ -14,19 +14,51 @@ const ProfileModal = ({ session, onClose, isEditingInitial = false, onProfileUpd
     checkVerification();
   }, [session]);
 
+  const getVerificationRow = async () => {
+    const baseQuery = supabase
+      .from('properties')
+      .eq('user_id', session.user.id)
+      .limit(1);
+
+    const withExpiry = await baseQuery.select('is_verified, subscription_expiry, email');
+    if (!withExpiry.error) return withExpiry;
+
+    const message = withExpiry.error.message?.toLowerCase() || '';
+    if (!message.includes('subscription_expiry') && !message.includes('column')) {
+      throw withExpiry.error;
+    }
+
+    return await supabase
+      .from('properties')
+      .select('is_verified, email')
+      .eq('user_id', session.user.id)
+      .limit(1);
+  };
+
   const checkVerification = async () => {
     if (!session?.user?.id) return;
     try {
-      const { data, error } = await supabase
-        .from('properties')
-        .select('is_verified')
-        .eq('user_id', session.user.id)
-        .eq('is_verified', true)
-        .limit(1);
-      
-      if (data && data.length > 0) {
-        setIsVerified(true);
+      const { data, error } = await getVerificationRow();
+
+      if (error) throw error;
+
+      const latestProperty = data?.[0];
+      if (!latestProperty) {
+        setIsVerified(false);
+        return;
       }
+
+      const isExpired = latestProperty.subscription_expiry && new Date(latestProperty.subscription_expiry) < new Date();
+      if (latestProperty.is_verified && isExpired) {
+        setIsVerified(false);
+        await supabase
+          .from('properties')
+          .update({ is_verified: false, subscription_status: 'Expired' })
+          .eq('user_id', session.user.id);
+        return;
+      }
+
+      setIsVerified(Boolean(latestProperty.is_verified));
     } catch (err) {
       console.error('Error checking verification:', err);
     }
