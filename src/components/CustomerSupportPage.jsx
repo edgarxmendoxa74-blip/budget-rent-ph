@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { MessageSquare, CheckCircle2, ArrowLeft, Send, Loader2 } from 'lucide-react';
+import { CheckCircle2, ArrowLeft, Send, Loader2 } from 'lucide-react';
 
 const CustomerSupportPage = ({ onDone }) => {
   const [step, setStep] = useState(1);
@@ -39,7 +39,6 @@ const CustomerSupportPage = ({ onDone }) => {
         {step === 1 ? (
           <>
             <div className="verification-intro">
-              <MessageSquare size={48} className="text-primary" style={{ margin: '0 auto', display: 'block' }} />
               <h3>Contact Support</h3>
               <p>Please fill up the form below and we will get back to you as soon as possible.</p>
             </div>
