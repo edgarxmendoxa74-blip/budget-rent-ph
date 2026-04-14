@@ -1,60 +1,58 @@
-# Fixed Capacitor Android Dependency
 name: Build Android APK
 
 on:
   push:
-    branches: [ main ]
+    branches:
+      - main
   workflow_dispatch:
 
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-
 jobs:
-  build:
+  build-apk:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    env:
+      VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL != '' && secrets.VITE_SUPABASE_URL || 'https://utdarqyhkiexotouqjkz.supabase.co' }}
+      VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY != '' && secrets.VITE_SUPABASE_ANON_KEY || 'sb_publishable_e9GTC0ectIpgy1kBi_dCew_EphQdDVT' }}
 
     steps:
-      - name: Checkout Code
+      - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 22
-
-      - name: Install Dependencies
-        run: npm install --legacy-peer-deps
-
-      - name: Generate Web Assets
-        run: npm run build
-        env:
-          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL || 'https://utdarqyhkiexotouqjkz.supabase.co' }}
-          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY || 'sb_publishable_e9GTC0ectIpgy1kBi_dCew_EphQdDVT' }}
+          cache: npm
 
       - name: Set up Java
         uses: actions/setup-java@v4
         with:
-          distribution: 'zulu'
-          java-version: '21'
+          distribution: temurin
+          java-version: 21
+          cache: gradle
 
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Install Capacitor Core & Android
-        run: npm install @capacitor/core @capacitor/cli @capacitor/android --legacy-peer-deps
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps
 
-      - name: Add Android Platform
+      - name: Build web assets
+        run: npm run build
+
+      - name: Sync Capacitor Android project
+        run: npx cap sync android
+
+      - name: Build debug APK
+        working-directory: android
         run: |
-          if [ ! -d "android" ]; then
-            npx cap add android
-          fi
-          npx cap sync
-          cd android
           chmod +x gradlew
           ./gradlew assembleDebug --stacktrace
 
-      - name: Upload APK
+      - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: budget-rent-ph-apk
+          name: budget-rent-ph-debug-apk
           path: android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
