@@ -1,16 +1,32 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, Suspense, lazy } from 'react';
 import { Search, MapPin, Bed, Bath, Wifi, Shield, Star, Menu, X, Heart, MessageCircle, Phone, LogOut, Building2, User, Users, Loader2, ClipboardList, Mail, BadgeCheck, Headset, ArrowLeft, Home, Navigation, Globe, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { clearSupabaseSessionStorage, recoverFromJwtError, supabase, validateCurrentSession } from './lib/supabase';
-import Auth from './components/Auth';
-import PropertyForm from './components/PropertyForm';
-import ProfileModal from './components/ProfileModal';
-import EditListings from './components/EditListings';
-import VerificationPage from './components/VerificationPage';
-import CustomerSupportPage from './components/CustomerSupportPage';
-import FindNearbyPage from './components/FindNearbyPage';
-import AdminPanel from './components/AdminPanel';
-import AdminLogin from './components/AdminLogin';
 import './App.css';
+
+// Lazy loaded components
+const Auth = lazy(() => import('./components/Auth'));
+const PropertyForm = lazy(() => import('./components/PropertyForm'));
+const ProfileModal = lazy(() => import('./components/ProfileModal'));
+const EditListings = lazy(() => import('./components/EditListings'));
+const VerificationPage = lazy(() => import('./components/VerificationPage'));
+const CustomerSupportPage = lazy(() => import('./components/CustomerSupportPage'));
+const FindNearbyPage = lazy(() => import('./components/FindNearbyPage'));
+const AdminPanel = lazy(() => import('./components/AdminPanel'));
+const AdminLogin = lazy(() => import('./components/AdminLogin'));
+
+// Custom Debounce Hook
+function useDebounce(value, delay) {
+  const [debouncedValue, setDebouncedValue] = useState(value);
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [value, delay]);
+  return debouncedValue;
+}
 
 const CATEGORIES = ["All", "Boarding House", "Bed Space", "Apartment", "Studio"];
 const HIDDEN_PROPERTIES_KEY = 'budgetrent_hidden_properties';
@@ -74,6 +90,7 @@ function App() {
   const [isEditListingsOpen, setIsEditListingsOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
+  const debouncedSearchQuery = useDebounce(searchQuery, 400); // 400ms debounce
   const [selectedProperty, setSelectedProperty] = useState(null);
   const [viewingLandlord, setViewingLandlord] = useState(null);
   const [activeTab, setActiveTab] = useState('home'); // 'home' or 'explore'
@@ -89,6 +106,10 @@ function App() {
   useEffect(() => {
     validateCurrentSession().then((session) => {
       setSession(session);
+      if (session) {
+        setIsGuest(false);
+        localStorage.removeItem('budgetrent_guest');
+      }
     });
 
     // Secret Admin Shortcut: visit yoursite.com/?admin=true to unlock admin tools
@@ -103,6 +124,10 @@ function App() {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, session) => {
       setSession(session);
+      if (session) {
+        setIsGuest(false);
+        localStorage.removeItem('budgetrent_guest');
+      }
       if (event === 'SIGNED_OUT') {
         const hiddenProperties = localStorage.getItem(HIDDEN_PROPERTIES_KEY);
         clearSupabaseSessionStorage();
@@ -126,7 +151,8 @@ function App() {
       const { data, error } = await supabase
         .from('properties')
         .select('*')
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .limit(100); // Pagination / Limit applied
       
       if (error) throw error;
       const hiddenPropertyIds = new Set(getHiddenPropertyIds());
@@ -173,13 +199,16 @@ function App() {
     }
   };
 
-  const filteredListings = properties.filter(item => {
-    const matchesCategory = selectedCategory === "All" || (item.type || "") === selectedCategory || (item.category || "") === selectedCategory;
-    const matchesSearch = (item.name || item.title || "").toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          (item.location || "").toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesMyListings = activeTab === 'mylistings' ? (item.user_id === session?.user?.id) : true;
-    return matchesCategory && matchesSearch && matchesMyListings;
-  });
+  const filteredListings = useMemo(() => {
+    return properties.filter(item => {
+      const matchesCategory = selectedCategory === "All" || (item.type || "") === selectedCategory || (item.category || "") === selectedCategory;
+      const q = debouncedSearchQuery.toLowerCase();
+      const matchesSearch = (item.name || item.title || "").toLowerCase().includes(q) || 
+                            (item.location || "").toLowerCase().includes(q);
+      const matchesMyListings = activeTab === 'mylistings' ? (item.user_id === session?.user?.id) : true;
+      return matchesCategory && matchesSearch && matchesMyListings;
+    });
+  }, [properties, selectedCategory, debouncedSearchQuery, activeTab, session?.user?.id]);
 
   const isUserVerified = properties.some(p => p.user_id === session?.user?.id && p.is_verified);
 
@@ -188,20 +217,30 @@ function App() {
 
 
   if (!session && !isGuest && window.location.pathname !== '/admin') {
-    return <Auth onAuthSuccess={() => { setIsGuest(true); localStorage.setItem('budgetrent_guest', 'true'); }} />;
+    return (
+      <Suspense fallback={<div className="text-center py-10"><Loader2 className="animate-spin text-primary mx-auto" size={40} /></div>}>
+        <Auth onAuthSuccess={() => { setIsGuest(true); localStorage.setItem('budgetrent_guest', 'true'); }} />
+      </Suspense>
+    );
   }
 
   // If visiting /admin specifically, override rendering to show AdminPanel if authorized (or AdminLogin if not)
   if (window.location.pathname === '/admin') {
     if (!isOwner) {
       return (
-        <AdminLogin 
-          onLoginSuccess={() => window.location.reload()} 
-          onBack={() => window.location.href = '/'} 
-        />
+        <Suspense fallback={<div className="text-center py-10"><Loader2 className="animate-spin text-primary mx-auto" size={40} /></div>}>
+          <AdminLogin 
+            onLoginSuccess={() => window.location.reload()} 
+            onBack={() => window.location.href = '/'} 
+          />
+        </Suspense>
       );
     }
-    return <AdminPanel onBack={() => window.location.pathname = '/'} onLogout={handleLogout} />;
+    return (
+      <Suspense fallback={<div className="text-center py-10"><Loader2 className="animate-spin text-primary mx-auto" size={40} /></div>}>
+        <AdminPanel onBack={() => window.location.pathname = '/'} onLogout={handleLogout} />
+      </Suspense>
+    );
   }
 
   return (
@@ -251,6 +290,9 @@ function App() {
             <div className="menu-items">
               {isGuest && (
                 <>
+                  <button className="menu-link" onClick={() => { setIsMenuOpen(false); setActiveTab('home'); }}>
+                    <div className="icon-container-mini"><Home size={18} /></div> Home
+                  </button>
                   <button className="menu-link" onClick={() => { setIsMenuOpen(false); setActiveTab('explore'); }}>
                     <div className="icon-container-mini"><MapPin size={18} /></div> Phone Location
                   </button>
@@ -344,7 +386,18 @@ function App() {
             </div>
             
             {loading ? (
-              <div className="text-center py-10"><Loader2 className="animate-spin" size={32} /> Loading...</div>
+              <div className="listing-grid">
+                {[1, 2, 3, 4].map(n => (
+                  <div key={n} className="listing-card skeleton-card">
+                    <div className="skeleton-img"></div>
+                    <div className="card-info" style={{ marginTop: '12px' }}>
+                      <div className="skeleton-title"></div>
+                      <div className="skeleton-subtitle"></div>
+                      <div className="skeleton-footer"></div>
+                    </div>
+                  </div>
+                ))}
+              </div>
             ) : (
               <div className="listing-grid">
                 {filteredListings.map(item => (
@@ -354,7 +407,7 @@ function App() {
                     onClick={() => setSelectedProperty(item)}
                   >
                     <div className="image-container">
-                      <img src={item.image || '/placeholder.png'} alt={item.name || item.title} />
+                      <img src={item.image || '/placeholder.png'} alt={item.name || item.title} loading="lazy" />
                     </div>
                     <div className="card-info">
                       <div className="card-header-row">
@@ -379,7 +432,7 @@ function App() {
                       >
                         <div className="mini-avatar-wrapper">
                           {shouldShowOwnerAvatar(item) ? (
-                            <img src={item.owner_avatar} alt="" className="mini-avatar" />
+                            <img src={item.owner_avatar} alt="" className="mini-avatar" loading="lazy" />
                           ) : (
                             <div className="mini-avatar-placeholder">
                               {(item.owner_name || 'L').charAt(0).toUpperCase()}
@@ -405,19 +458,21 @@ function App() {
       )}
 
       {activeTab === 'explore' && (
-        <FindNearbyPage 
-          listings={filteredListings}
-          onSelectProperty={setSelectedProperty}
-          onViewLandlord={setViewingLandlord}
-          isLandlord={!isGuest && session?.user?.user_metadata?.user_role === 'landlord'}
-          onBack={() => {
-            if (!isGuest && session?.user?.user_metadata?.user_role === 'landlord') {
-              setActiveTab('mylistings');
-            } else {
-              setActiveTab('home');
-            }
-          }}
-        />
+        <Suspense fallback={<div className="text-center py-10"><Loader2 className="animate-spin text-primary mx-auto" size={40} /></div>}>
+          <FindNearbyPage 
+            listings={filteredListings}
+            onSelectProperty={setSelectedProperty}
+            onViewLandlord={setViewingLandlord}
+            isLandlord={!isGuest && session?.user?.user_metadata?.user_role === 'landlord'}
+            onBack={() => {
+              if (!isGuest && session?.user?.user_metadata?.user_role === 'landlord') {
+                setActiveTab('mylistings');
+              } else {
+                setActiveTab('home');
+              }
+            }}
+          />
+        </Suspense>
       )}
 
 
@@ -438,7 +493,18 @@ function App() {
               <span>{filteredListings.length} properties</span>
             </div>
             {loading ? (
-              <div className="text-center py-10"><Loader2 className="animate-spin" size={32} /> Loading...</div>
+              <div className="listing-grid">
+                {[1, 2].map(n => (
+                  <div key={n} className="listing-card skeleton-card">
+                    <div className="skeleton-img"></div>
+                    <div className="card-info" style={{ marginTop: '12px' }}>
+                      <div className="skeleton-title"></div>
+                      <div className="skeleton-subtitle"></div>
+                      <div className="skeleton-footer"></div>
+                    </div>
+                  </div>
+                ))}
+              </div>
             ) : filteredListings.length === 0 ? (
               <div className="text-center py-10" style={{ color: 'var(--text-muted)' }}>
                 You haven't listed any properties yet. Use the "List your property" button to start!
@@ -451,7 +517,7 @@ function App() {
                     className="listing-card animate-slide-up"
                   >
                     <div className="image-container">
-                      <img src={item.image || '/placeholder.png'} alt={item.name || item.title} />
+                      <img src={item.image || '/placeholder.png'} alt={item.name || item.title} loading="lazy" />
                       <div className="rating-tag" style={{ background: 'var(--primary)', color: 'white' }}>
                         <Shield size={12} fill="currentColor" /> Manage Listing
                       </div>
@@ -476,7 +542,7 @@ function App() {
                       >
                         <div style={{ position: 'relative' }}>
                           {shouldShowOwnerAvatar(item) ? (
-                            <img src={item.owner_avatar} alt="" style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover', border: '1.5px solid var(--primary)' }} />
+                            <img src={item.owner_avatar} alt="" style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover', border: '1.5px solid var(--primary)' }} loading="lazy" />
                           ) : (
                             <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'var(--primary)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.85rem', fontWeight: 'bold' }}>
                               {(item.owner_name || 'L').charAt(0).toUpperCase()}
@@ -601,17 +667,21 @@ function App() {
       )}
 
       {activeTab === 'verified' && (
-        <VerificationPage session={session} onDone={() => setActiveTab('mylistings')} />
+        <Suspense fallback={<div className="text-center py-10"><Loader2 className="animate-spin text-primary mx-auto" size={40} /></div>}>
+          <VerificationPage session={session} onDone={() => setActiveTab('mylistings')} />
+        </Suspense>
       )}
 
       {activeTab === 'support' && (
-        <CustomerSupportPage onDone={() => {
-          if (!isGuest && session?.user?.user_metadata?.user_role === 'landlord') {
-            setActiveTab('mylistings');
-          } else {
-            setActiveTab('home');
-          }
-        }} />
+        <Suspense fallback={<div className="text-center py-10"><Loader2 className="animate-spin text-primary mx-auto" size={40} /></div>}>
+          <CustomerSupportPage onDone={() => {
+            if (!isGuest && session?.user?.user_metadata?.user_role === 'landlord') {
+              setActiveTab('mylistings');
+            } else {
+              setActiveTab('home');
+            }
+          }} />
+        </Suspense>
       )}
 
       {activeTab === 'admin' && isOwner && (
@@ -774,7 +844,7 @@ function App() {
                 className={`nav-item ${activeTab === 'home' || activeTab !== 'explore' ? 'active' : ''}`}
                 onClick={() => setActiveTab('home')}
               >
-                <div className={`nav-icon-box ${activeTab === 'home' ? 'active' : ''}`}><Home size={22} /></div>
+              <div className={`nav-icon-box ${activeTab === 'home' ? 'active' : ''}`}><Home size={22} /></div>
                 <span>Home</span>
               </button>
             </>
@@ -784,26 +854,32 @@ function App() {
 
       {/* Property Listing Form Modal */}
       {isPropertyFormOpen && (
-        <PropertyForm 
-          onClose={() => setIsPropertyFormOpen(false)} 
-          session={session} 
-          onListingAdded={fetchProperties} 
-        />
+        <Suspense fallback={<div className="modal-overlay centered"><Loader2 className="animate-spin" color="white" size={40} /></div>}>
+          <PropertyForm 
+            onClose={() => setIsPropertyFormOpen(false)} 
+            session={session} 
+            onListingAdded={fetchProperties} 
+          />
+        </Suspense>
       )}
 
       {/* Edit Profile Modal */}
       {isProfileModalOpen && (
-        <ProfileModal session={session} onClose={() => setIsProfileModalOpen(false)} isEditingInitial={isProfileEditing} onProfileUpdated={fetchProperties} />
+        <Suspense fallback={<div className="modal-overlay centered"><Loader2 className="animate-spin" color="white" size={40} /></div>}>
+          <ProfileModal session={session} onClose={() => setIsProfileModalOpen(false)} isEditingInitial={isProfileEditing} onProfileUpdated={fetchProperties} />
+        </Suspense>
       )}
 
       {/* Edit Listings Modal */}
       {isEditListingsOpen && (
-        <EditListings 
-          session={session} 
-          onClose={() => { setIsEditListingsOpen(false); setEditingListingItem(null); }} 
-          onListingUpdated={fetchProperties}
-          initialEditingItem={editingListingItem}
-        />
+        <Suspense fallback={<div className="modal-overlay centered"><Loader2 className="animate-spin" color="white" size={40} /></div>}>
+          <EditListings 
+            session={session} 
+            onClose={() => { setIsEditListingsOpen(false); setEditingListingItem(null); }} 
+            onListingUpdated={fetchProperties}
+            initialEditingItem={editingListingItem}
+          />
+        </Suspense>
       )}
 
       {/* Public Landlord Profile Modal */}
@@ -813,7 +889,7 @@ function App() {
             <button className="close-btn" onClick={() => setViewingLandlord(null)}><X size={24} /></button>
             
             <div className="profile-header">
-              <div className="profile-avatar" style={{ position: 'relative' }}>
+              <div className="profile-avatar">
                 {shouldShowOwnerAvatar(viewingLandlord) ? (
                   <img src={viewingLandlord.owner_avatar} alt="Avatar" className="avatar-img" />
                 ) : (
@@ -824,26 +900,27 @@ function App() {
                 {viewingLandlord.is_verified && (
                   <div style={{ 
                     position: 'absolute', 
-                    bottom: '8px', 
-                    right: '8px', 
+                    bottom: '0', 
+                    right: '-10px', 
                     background: 'white', 
                     borderRadius: '50%', 
-                    width: '28px', 
-                    height: '28px', 
+                    width: '32px', 
+                    height: '32px', 
                     display: 'flex', 
                     alignItems: 'center', 
                     justifyContent: 'center',
-                    boxShadow: '0 4px 10px rgba(0,0,0,0.2)',
-                    zIndex: 2
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                    zIndex: 2,
+                    border: '1.5px solid var(--border)'
                   }}>
-                    <BadgeCheck size={20} fill="#0066ff" color="white" />
+                    <BadgeCheck size={24} fill="#0066ff" color="white" />
                   </div>
                 )}
               </div>
                <span className={`role-badge ${viewingLandlord.is_verified ? 'verified' : 'landlord'}`}>
-                 {viewingLandlord.is_verified ? 'VERIFIED OWNER' : 'LANDLORD'}
+                 {viewingLandlord.is_verified ? (<><BadgeCheck size={12} fill="white" color="var(--primary)" /> VERIFIED OWNER</>) : 'LANDLORD'}
                </span>
-               <h2 style={{ display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'center' }}>
+               <h2 style={{ marginBottom: '4px' }}>
                  {viewingLandlord.owner_name || 'Landlord'}
                </h2>
                <a href={`mailto:${viewingLandlord.email}`} className="profile-email">{viewingLandlord.email}</a>
@@ -868,18 +945,16 @@ function App() {
                 </div>
               )}
 
-              <div className="info-grid">
-                <div className="info-group">
-                  <Globe size={18} />
-                  <div className="info-content">
-                    <label>Facebook / Social</label>
-                    <p>{viewingLandlord.owner_facebook || 'Search on Facebook'}</p>
-                  </div>
+              <div className="info-group">
+                <Globe size={18} />
+                <div className="info-content">
+                  <label>Facebook / Social</label>
+                  <p style={{ wordBreak: 'break-all' }}>{viewingLandlord.owner_facebook || 'Search on Facebook'}</p>
                 </div>
               </div>
 
               {viewingLandlord.owner_whatsapp && (
-                <div className="info-group" style={{marginTop: '12px'}}>
+                <div className="info-group">
                   <MessageCircle size={18} />
                   <div className="info-content">
                     <label>WhatsApp</label>
@@ -888,15 +963,8 @@ function App() {
                 </div>
               )}
             </div>
-
-            <div className="modal-actions" style={{ padding: '0 24px 24px', position: 'static', background: 'transparent' }}>
-               <a href={`tel:${viewingLandlord.contact}`} className="contact-btn call">
-                  <Phone size={20} /> Call Now
-               </a>
-               <a href={`mailto:${viewingLandlord.email}`} className="contact-btn email">
-                  <Mail size={20} /> Message
-               </a>
-            </div>
+            
+            {/* Profile details only, contact actions removed as requested */}
           </div>
         </div>
       )}

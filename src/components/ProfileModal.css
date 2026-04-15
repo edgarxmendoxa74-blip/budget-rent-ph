@@ -93,16 +93,16 @@
 .profile-details {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 12px;
+  gap: 8px;
 }
 
 .info-group {
   display: flex;
   align-items: center;
-  gap: 16px;
-  padding: 14px 18px;
+  gap: 12px;
+  padding: 10px 14px;
   background: #f8fafc;
-  border-radius: 16px;
+  border-radius: 12px;
   border: 1px solid transparent;
   width: 100%;
 }
@@ -110,6 +110,8 @@
 .info-group svg {
   color: var(--primary);
   flex-shrink: 0;
+  width: 16px;
+  height: 16px;
 }
 
 .info-content {
@@ -118,16 +120,16 @@
 
 .info-content label {
   display: block;
-  font-size: 9px;
+  font-size: 8px;
   font-weight: 800;
   text-transform: uppercase;
   color: var(--text-muted);
   letter-spacing: 0.5px;
-  margin-bottom: 1px;
+  margin-bottom: 2px;
 }
 
 .info-content p {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 700;
   color: var(--text-main);
   margin: 0;
@@ -136,7 +138,7 @@
 .info-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 12px;
+  gap: 8px;
 }
 
 /* Edit Mode Styles */
@@ -208,8 +210,9 @@
     grid-template-columns: 1fr;
   }
   .profile-modal {
-    padding: 24px 16px;
-    width: 96%;
+    padding: 24px 20px;
+    width: 100%;
+    border-radius: 24px 24px 0 0;
   }
 
   .profile-header {
@@ -223,6 +226,6 @@
   }
 
   .info-group {
-    padding: 12px 14px;
+    padding: 8px 12px;
   }
 }

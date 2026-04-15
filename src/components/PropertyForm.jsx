@@ -112,6 +112,7 @@ const PropertyForm = ({ onClose, session, onListingAdded }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!session?.user) return alert('Dapat kang naka-log in!');
+    if (!image) return alert('Paki-upload muna ang litrato ng iyong property!');
     
     setLoading(true);
     
@@ -246,7 +247,7 @@ const PropertyForm = ({ onClose, session, onListingAdded }) => {
             </div>
 
             <div className="form-group image-upload-group">
-               <label>Main Property Image</label>
+               <label>Main Property Image <span style={{ color: '#ef4444' }}>(Required)</span></label>
                <span className="upload-hint">Mag-upload ng malinaw na litrato para mas madaling mapansin ng mga tenants.</span>
                <div className="image-upload-container">
                   <input type="file" id="prop-image" accept="image/*" hidden onChange={handleImageUpload} disabled={uploading} />

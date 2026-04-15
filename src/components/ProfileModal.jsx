@@ -250,16 +250,16 @@ const ProfileModal = ({ session, onClose, isEditingInitial = false, onProfileUpd
                 </div>
               </div>
             )}
-            <div className="info-grid">
+            <div className="info-grid" style={{ display: 'block' }}>
               <div className="info-group">
                 <Globe size={18} />
                 <div className="info-content">
                   <label>Social Link</label>
-                  <p>{formData.facebook || 'Not set'}</p>
+                  <p style={{ fontSize: '11px', wordBreak: 'break-all' }}>{formData.facebook || 'Not set'}</p>
                 </div>
               </div>
             </div>
-            <div className="info-group" style={{marginTop: '12px'}}>
+            <div className="info-group" style={{ marginTop: '8px' }}>
               <MessageCircle size={18} />
               <div className="info-content">
                 <label>WhatsApp</label>
