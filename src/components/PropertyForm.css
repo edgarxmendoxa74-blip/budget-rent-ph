@@ -127,6 +127,29 @@
   gap: 12px;
 }
 
+@media (max-width: 520px) {
+  .property-modal {
+    width: 96%;
+    padding: 22px 16px !important;
+  }
+
+  .modal-header-section {
+    margin-bottom: 18px;
+  }
+
+  .modal-header-section h2 {
+    font-size: 1.35rem;
+  }
+
+  .form-grid {
+    gap: 20px;
+  }
+
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+}
+
 .submit-listing-btn {
   background: var(--primary);
   color: white;

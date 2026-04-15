@@ -29,24 +29,16 @@ const PropertyForm = ({ onClose, session, onListingAdded }) => {
   const [isVerified, setIsVerified] = useState(false);
 
   const getVerificationRow = async () => {
-    const withExpiry = await supabase
-      .from('properties')
-      .select('is_verified, subscription_expiry')
-      .eq('user_id', session.user.id)
-      .limit(1);
-
-    if (!withExpiry.error) return withExpiry;
-
-    const message = withExpiry.error.message?.toLowerCase() || '';
-    if (!message.includes('subscription_expiry') && !message.includes('column')) {
-      throw withExpiry.error;
-    }
-
-    return await supabase
+    // Standard query for landlord verification status
+    // Requesting only is_verified first to avoid 400 errors if subscription_expiry is missing
+    const { data, error } = await supabase
       .from('properties')
       .select('is_verified')
       .eq('user_id', session.user.id)
       .limit(1);
+
+    if (error) throw error;
+    return { data, error: null };
   };
 
   // Sync session data if it changes

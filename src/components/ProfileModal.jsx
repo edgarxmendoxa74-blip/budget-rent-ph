@@ -15,24 +15,16 @@ const ProfileModal = ({ session, onClose, isEditingInitial = false, onProfileUpd
   }, [session]);
 
   const getVerificationRow = async () => {
-    const baseQuery = supabase
+    // Standard query for landlord verification status
+    // Requesting only is_verified first to avoid 400 errors if subscription_expiry is missing
+    const { data, error } = await supabase
       .from('properties')
+      .select('is_verified')
       .eq('user_id', session.user.id)
       .limit(1);
 
-    const withExpiry = await baseQuery.select('is_verified, subscription_expiry, email');
-    if (!withExpiry.error) return withExpiry;
-
-    const message = withExpiry.error.message?.toLowerCase() || '';
-    if (!message.includes('subscription_expiry') && !message.includes('column')) {
-      throw withExpiry.error;
-    }
-
-    return await supabase
-      .from('properties')
-      .select('is_verified, email')
-      .eq('user_id', session.user.id)
-      .limit(1);
+    if (error) throw error;
+    return { data, error: null };
   };
 
   const checkVerification = async () => {

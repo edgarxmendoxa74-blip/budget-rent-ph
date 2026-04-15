@@ -190,8 +190,6 @@ const AdminPanel = ({ onLogout }) => {
           });
 
         if (l.subscription_expiry && new Date(l.subscription_expiry) < now && l.is_verified) {
-          // Push the deactivation to Supabase (fire and forget)
-          supabase.from('properties').update({ is_verified: false }).eq('email', l.email);
           return { ...l, is_verified: false, subscription_status: 'Expired' };
         }
         return l;

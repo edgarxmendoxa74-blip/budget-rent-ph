@@ -27,18 +27,37 @@
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
 }
 
 @keyframes slideUp {
-  from { opacity: 0; transform: translateY(20px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @keyframes slideUp {
-  from { opacity: 0; transform: translateY(20px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* SIDEBAR */
@@ -291,7 +310,8 @@
   background: #fecaca;
 }
 
-.verify-btn.verified, .verify-pill.verified-pill {
+.verify-btn.verified,
+.verify-pill.verified-pill {
   background: #dcfce7;
   color: #166534;
 }
@@ -423,8 +443,15 @@
   text-transform: uppercase;
 }
 
-.status-badge.pending { background: #fef9c3; color: #854d0e; }
-.status-badge.approved { background: #dcfce7; color: #166534; }
+.status-badge.pending {
+  background: #fef9c3;
+  color: #854d0e;
+}
+
+.status-badge.approved {
+  background: #dcfce7;
+  color: #166534;
+}
 
 .req-actions {
   display: flex;
@@ -494,8 +521,15 @@
   font-weight: 800;
 }
 
-.status-pill.active { background: #dcfce7; color: #166534; }
-.status-pill.inactive { background: #f1f5f9; color: #64748b; }
+.status-pill.active {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.status-pill.inactive {
+  background: #f1f5f9;
+  color: #64748b;
+}
 
 /* ANALYTICS */
 .analytics-dashboard {
@@ -516,15 +550,35 @@
   display: flex;
   align-items: center;
   gap: 24px;
-  box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
 }
 
-.stat-card.navy { background: var(--admin-navy); color: white; }
-.stat-card.white { background: white; border: 1px solid var(--admin-border); }
-.stat-card.gold { background: var(--admin-gold); color: var(--admin-navy); }
+.stat-card.navy {
+  background: var(--admin-navy);
+  color: white;
+}
 
-.stat-card label { font-size: 0.8rem; font-weight: 800; opacity: 0.8; }
-.stat-card h3 { font-size: 2.5rem; margin: 4px 0 0; font-weight: 900; }
+.stat-card.white {
+  background: white;
+  border: 1px solid var(--admin-border);
+}
+
+.stat-card.gold {
+  background: var(--admin-gold);
+  color: var(--admin-navy);
+}
+
+.stat-card label {
+  font-size: 0.8rem;
+  font-weight: 800;
+  opacity: 0.8;
+}
+
+.stat-card h3 {
+  font-size: 2.5rem;
+  margin: 4px 0 0;
+  font-weight: 900;
+}
 
 /* PAYMENT CONFIG */
 .payment-config-grid {
@@ -563,7 +617,8 @@
   color: var(--admin-navy);
 }
 
-.config-form input, .input-field input {
+.config-form input,
+.input-field input {
   padding: 10px 12px;
   border-radius: 10px;
   border: 1.5px solid var(--admin-border);
@@ -572,7 +627,8 @@
   transition: border-color 0.2s;
 }
 
-.config-form input:focus, .input-field input:focus {
+.config-form input:focus,
+.input-field input:focus {
   border-color: var(--admin-navy);
 }
 
@@ -650,7 +706,10 @@
 /* MODAL */
 .modal-overlay {
   position: fixed;
-  top: 0; left: 0; right: 0; bottom: 0;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
   background: rgba(0, 51, 102, 0.6);
   -webkit-backdrop-filter: blur(8px);
   backdrop-filter: blur(8px);
@@ -698,16 +757,93 @@
   background: #cbd5e1;
 }
 
-@media (max-width: 900px) {
+@media (max-width: 1024px) {
   .admin-sidebar {
-    width: 80px;
+    width: 200px;
+  }
+}
+
+@media (max-width: 768px) {
+  .admin-sidebar {
+    width: 70px;
     padding: 24px 8px;
   }
-  .admin-logo span, .sidebar-group label, .sidebar-group button span {
+
+  .admin-logo span,
+  .sidebar-group label,
+  .sidebar-group button span {
     display: none;
   }
-  .stat-row { grid-template-columns: 1fr; }
-  .admin-listing-item {
+
+  .sidebar-group button {
+    justify-content: center;
+    padding: 12px 0;
+  }
+
+  .admin-main {
+    padding: 20px;
+  }
+
+  .admin-header {
     flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+
+  .admin-header .search-bar {
+    width: 100%;
+  }
+
+  .stat-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+  .admin-sidebar {
+    position: fixed;
+    bottom: 0;
+    top: auto;
+    width: 100%;
+    height: 60px;
+    flex-direction: row;
+    padding: 0;
+    justify-content: space-around;
+  }
+
+  .admin-logo,
+  .sidebar-group label,
+  .sidebar-footer {
+    display: none;
+  }
+
+  .sidebar-group {
+    margin: 0;
+    display: flex;
+    width: 100%;
+    justify-content: space-around;
+  }
+
+  .sidebar-group button {
+    width: 50px;
+    height: 50px;
+    margin: 0;
+  }
+
+  .admin-main {
+    padding: 16px 16px 80px;
+  }
+
+  .landlord-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .card-stats {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .stat-card h3 {
+    font-size: 1.75rem;
   }
 }

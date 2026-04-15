@@ -14,6 +14,7 @@
   --radius: 16px;
   --font-main: 'Outfit', sans-serif;
   --font-heading: 'Montserrat', sans-serif;
+  --container-padding: 20px;
 }
 
 * {
@@ -31,6 +32,10 @@ body {
   overflow-x: hidden;
 }
 
+#root {
+  width: 100%;
+}
+
 h1, h2, h3, h4 {
   font-family: var(--font-heading);
   font-weight: 700;
@@ -38,6 +43,7 @@ h1, h2, h3, h4 {
 }
 
 .app-container {
+  width: 100%;
   max-width: 500px;
   margin: 0 auto;
   background: var(--background);

@@ -60,7 +60,30 @@
   margin: 32px 0;
 }
 
-@media (max-width: 380px) {
+@media (max-width: 420px) {
+  .auth-container {
+    padding: 14px;
+  }
+
+  .auth-card {
+    padding: 28px 18px;
+    border-radius: 20px;
+  }
+
+  .auth-header {
+    margin-bottom: 24px;
+  }
+
+  .auth-logo {
+    width: 64px;
+    height: 64px;
+    margin-bottom: 18px;
+  }
+
+  .auth-header h2 {
+    font-size: 24px;
+  }
+
   .auth-choice-grid {
     grid-template-columns: 1fr;
   }

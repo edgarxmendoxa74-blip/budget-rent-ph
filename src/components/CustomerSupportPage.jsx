@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { CheckCircle2, ArrowLeft, Send, Loader2 } from 'lucide-react';
+import { CheckCircle2, ArrowLeft, Send, Loader2, User, Phone, MessageSquare, Mail, Info } from 'lucide-react';
 
 const CustomerSupportPage = ({ onDone }) => {
   const [step, setStep] = useState(1);
@@ -13,57 +13,188 @@ const CustomerSupportPage = ({ onDone }) => {
     // Create mailto link
     const subject = encodeURIComponent('Customer Support Request');
     const body = encodeURIComponent(`Name: ${formData.name}\nPhone Number: ${formData.phone}\nIssue / Concern:\n${formData.issue}`);
-    window.location.href = `mailto:mendozajakong@gmail.com?subject=${subject}&body=${body}`;
-
+    
+    // Using setTimeout to simulate processing before redirecting
     setTimeout(() => {
+      window.location.href = `mailto:mendozajakong@gmail.com?subject=${subject}&body=${body}`;
       setLoading(false);
       setStep(2);
-    }, 1000);
+    }, 1200);
   };
 
   return (
-    <div className="page-section animate-fade-in">
-      <header className="hero" style={{ position: 'relative' }}>
-        <button 
-          onClick={onDone} 
-          style={{ position: 'absolute', top: '16px', left: '16px', color: 'white', background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: '50%', width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', backdropFilter: 'blur(4px)' }}
-        >
-          <ArrowLeft size={24} />
-        </button>
+    <div className="page-section animate-fade-in support-page-wrapper">
+      <style>{`
+        .support-page-wrapper {
+          background-color: white;
+        }
+        .support-card {
+          background: white;
+          padding: 32px 24px;
+          border-radius: 20px;
+          margin-top: -40px;
+          box-shadow: 0 10px 25px -5px rgba(0, 51, 102, 0.08);
+          position: relative;
+          z-index: 10;
+          width: calc(100% - 32px);
+          max-width: 460px;
+          margin-left: auto;
+          margin-right: auto;
+          /* Border removed as per request */
+        }
+        .support-header {
+          text-align: center;
+          margin-bottom: 28px;
+        }
+        .support-header h3 {
+          font-size: 1.4rem;
+          color: var(--primary);
+          margin-bottom: 8px;
+        }
+        .support-header p {
+          color: var(--text-muted);
+          font-size: 0.95rem;
+          line-height: 1.5;
+        }
+        .styled-input-group {
+          position: relative;
+          margin-bottom: 20px;
+        }
+        .input-icon {
+          position: absolute;
+          left: 14px;
+          top: 50%;
+          transform: translateY(-50%);
+          color: var(--text-muted);
+          pointer-events: none;
+          transition: color 0.3s;
+        }
+        .styled-input-group:focus-within .input-icon {
+          color: var(--primary);
+        }
+        .styled-input, .styled-textarea {
+          width: 100%;
+          padding: 14px 14px 14px 44px;
+          border-radius: 14px;
+          border: none; /* Border removed */
+          outline: none;
+          font-family: inherit;
+          font-size: 1rem;
+          background: #f1f5f9; /* Subtle background instead of border */
+          transition: all 0.3s ease;
+          color: var(--text-main);
+        }
+        .styled-input:focus, .styled-textarea:focus {
+          background: white;
+          box-shadow: 0 0 0 2px var(--primary); /* Subtle ring instead of border */
+        }
+        .styled-textarea {
+          min-height: 120px;
+          resize: vertical;
+          padding-top: 14px;
+        }
+        .textarea-icon {
+          top: 24px;
+          transform: none;
+        }
+        .support-submit-btn {
+          width: 100%;
+          padding: 16px;
+          border-radius: 14px;
+          font-size: 1rem;
+          font-weight: 700;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 10px;
+          background: var(--primary);
+          color: white;
+          border: none;
+          cursor: pointer;
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          box-shadow: 0 4px 15px rgba(0, 51, 102, 0.15);
+          margin-top: 8px;
+        }
+        .support-submit-btn:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 8px 20px rgba(0, 51, 102, 0.2);
+          background: #004080;
+        }
+        .support-submit-btn:active {
+          transform: translateY(0);
+        }
+        .success-box {
+          text-align: center;
+          padding: 20px 0;
+        }
+      `}</style>
+
+      <header className="hero branding-hero">
         <div className="hero-content">
-          <h2>Chat Customer Support</h2>
-          <p>We are here to help you</p>
+          <span className="branding-kicker">Help Center</span>
+          <h2>Customer Support</h2>
+          <p>Tell us how we can assist you today</p>
         </div>
       </header>
-      <main className="info-page-container" style={{ background: 'white', padding: '32px', borderRadius: '16px', marginTop: '-32px', boxShadow: '0 4px 12px rgba(0,0,0,0.05)', position: 'relative', zIndex: 1 }}>
+
+      <main className="support-card animate-slide-up">
         {step === 1 ? (
           <>
-            <div className="verification-intro">
-              <h3>Contact Support</h3>
-              <p>Please fill up the form below and we will get back to you as soon as possible.</p>
+            <div className="support-header">
+              <h3>Send a Message</h3>
+              <p>Fill out the details below so our team can help.</p>
             </div>
-            <form onSubmit={handleSubmit} className="verification-form">
-              <div className="input-group" style={{ marginBottom: '16px' }}>
-                <input type="text" placeholder="Your Name" required value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} style={{ width: '100%', padding: '12px', borderRadius: '12px', border: '1px solid var(--border)', outline: 'none' }} />
+
+            <form onSubmit={handleSubmit}>
+              <div className="styled-input-group">
+                <User size={18} className="input-icon" />
+                <input 
+                  type="text" 
+                  placeholder="Full Name" 
+                  className="styled-input"
+                  required 
+                  value={formData.name} 
+                  onChange={e => setFormData({...formData, name: e.target.value})} 
+                />
               </div>
-              <div className="input-group" style={{ marginBottom: '16px' }}>
-                <input type="tel" placeholder="Phone Number" required value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} style={{ width: '100%', padding: '12px', borderRadius: '12px', border: '1px solid var(--border)', outline: 'none' }} />
+
+              <div className="styled-input-group">
+                <Phone size={18} className="input-icon" />
+                <input 
+                  type="tel" 
+                  placeholder="Contact Number" 
+                  className="styled-input"
+                  required 
+                  value={formData.phone} 
+                  onChange={e => setFormData({...formData, phone: e.target.value})} 
+                />
               </div>
-              <div className="input-group" style={{ marginBottom: '16px' }}>
-                <textarea placeholder="Issue / Concern" rows={5} required value={formData.issue} onChange={e => setFormData({...formData, issue: e.target.value})} style={{ width: '100%', padding: '12px', borderRadius: '12px', border: '1px solid var(--border)', fontFamily: 'inherit', outline: 'none' }}></textarea>
+
+              <div className="styled-input-group">
+                <MessageSquare size={18} className="input-icon textarea-icon" />
+                <textarea 
+                  placeholder="Describe your issue or concern..." 
+                  className="styled-textarea"
+                  rows={5} 
+                  required 
+                  value={formData.issue} 
+                  onChange={e => setFormData({...formData, issue: e.target.value})}
+                ></textarea>
               </div>
-              <button type="submit" className="submit-btn" disabled={loading} style={{marginTop: '8px', width: '100%', padding: '14px', borderRadius: '12px', fontSize: '1.05rem', fontWeight: '600', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', background: 'var(--primary)', color: 'white', border: 'none', cursor: 'pointer', transition: 'all 0.2s', boxShadow: '0 4px 12px rgba(0, 51, 102, 0.2)'}}>
-                {loading ? <><Loader2 size={20} className="animate-spin" /> Opening Email...</> : <><Send size={20} /> Send to Support</>}
+
+              <button type="submit" className="support-submit-btn" disabled={loading}>
+                {loading ? <Loader2 size={20} className="animate-spin" /> : <Mail size={20} />}
+                {loading ? ' Submitting...' : ' Submit Ticket'}
               </button>
             </form>
           </>
         ) : (
-          <div className="verification-success">
-            <CheckCircle2 size={64} className="text-secondary" style={{ margin: '0 auto 16px', display: 'block' }} />
-            <h3>Request Sent!</h3>
-            <p>Your email client was opened to send the support ticket. We will respond to your query shortly.</p>
-            <button className="submit-btn" onClick={onDone} style={{marginTop: '16px', width: '100%', padding: '14px', borderRadius: '12px', fontSize: '1.05rem', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', background: 'var(--secondary)', color: 'var(--primary)', border: 'none', cursor: 'pointer', transition: 'all 0.3s ease', boxShadow: '0 4px 15px rgba(255, 215, 0, 0.2)'}}>
-              <CheckCircle2 size={20} /> Return Home
+          <div className="success-box animate-fade-in">
+            <CheckCircle2 size={64} color="#16a34a" style={{ margin: '0 auto 16px', display: 'block' }} />
+            <h3>Request Processed!</h3>
+            <p>Please check your email app to send the request.</p>
+            <button className="support-submit-btn" onClick={onDone} style={{ background: 'var(--secondary)', color: 'var(--primary)', marginTop: '24px' }}>
+              <ArrowLeft size={20} /> Back to Dashboard
             </button>
           </div>
         )}
@@ -73,3 +204,4 @@ const CustomerSupportPage = ({ onDone }) => {
 };
 
 export default CustomerSupportPage;
+

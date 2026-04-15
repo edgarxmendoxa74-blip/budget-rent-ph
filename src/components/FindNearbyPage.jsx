@@ -87,7 +87,7 @@ const FindNearbyPage = ({ listings, onSelectProperty, onViewLandlord, isLandlord
   };
 
   return (
-    <div className="page-section animate-fade-in" style={{ paddingBottom: '80px', background: 'white' }}>
+    <div className="page-section animate-fade-in" style={{ paddingBottom: '80px', backgroundColor: 'white' }}>
       <header className="hero" style={{ position: 'relative', background: 'white', color: 'var(--text-color)', borderBottom: '1px solid var(--border)', paddingBottom: '32px' }}>
         <div className="hero-content">
           {!isLandlord && (
@@ -130,7 +130,7 @@ const FindNearbyPage = ({ listings, onSelectProperty, onViewLandlord, isLandlord
         }
       `}</style>
 
-      <main className="info-page-container" style={{ width: '100%', maxWidth: '800px', padding: '24px' }}>
+      <main className="info-page-container" style={{ width: '100%', maxWidth: '800px', padding: '6px' }}>
         {!locationFound ? (
           <div style={{ textAlign: 'center', padding: '20px 0' }}>
             {errorType === 'denied' ? (
@@ -163,59 +163,72 @@ const FindNearbyPage = ({ listings, onSelectProperty, onViewLandlord, isLandlord
           </div>
         ) : (
           <div className="listings">
-            <div className="section-header" style={{ marginBottom: '24px' }}>
+            <div className="section-header" style={{ marginBottom: '16px', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', display: 'flex' }}>
               <div>
-                <h3 style={{ fontSize: '1.3rem', color: 'var(--primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <h3 style={{ fontSize: '1.2rem', color: 'var(--primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
                   Best Matches Nearby
                 </h3>
-                <p style={{ fontSize: '0.9rem', color: '#16a34a', fontWeight: '600' }}>GPS Connected • Updating Live</p>
+                <p style={{ fontSize: '0.8rem', color: '#16a34a', fontWeight: '600', margin: 0 }}>GPS Connected • Updating Live</p>
               </div>
               <button 
                 onClick={() => { setLocationFound(false); setErrorType(null); if (watchId.current) navigator.geolocation.clearWatch(watchId.current); }} 
-                style={{ background: '#f1f5f9', border: 'none', padding: '8px 16px', borderRadius: '100px', color: 'var(--text-muted)', fontWeight: '600', cursor: 'pointer', fontSize: '0.85rem' }}
+                style={{ background: '#f1f5f9', border: 'none', padding: '6px 12px', borderRadius: '6px', color: 'var(--text-muted)', fontWeight: '600', cursor: 'pointer', fontSize: '0.75rem' }}
               >
-                Stop Live GPS
+                Stop GPS
               </button>
             </div>
             
-            <div className="listing-column" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            <div className="listing-grid">
               {nearListings.map(item => (
-                <div key={item.id} className="listing-card-vertical animate-slide-up" onClick={() => onSelectProperty(item)} style={{ 
-                  display: 'flex', 
-                  flexDirection: 'column',
-                  background: 'white',
-                  borderRadius: '20px',
-                  overflow: 'hidden',
-                  boxShadow: '0 4px 15px rgba(0,0,0,0.08)',
-                  border: '1px solid var(--border)'
-                }}>
+                <div 
+                  key={item.id} 
+                  className="listing-card animate-slide-up" 
+                  onClick={() => onSelectProperty(item)}
+                >
                   <div className="image-container">
                     <img src={item.image || '/placeholder.png'} alt={item.name || item.title} />
-                    <div className="rating-tag" style={{ background: '#16a34a', padding: '6px 12px', borderRadius: '20px' }}>
-                      <Navigation size={12} style={{ display: 'inline', marginRight: '4px' }} />
-                      {item.distance ? `${item.distance} km away` : 'Nearby'}
-                    </div>
                   </div>
                   <div className="card-info">
-                    <h4>{item.name || item.title}</h4>
-                    <p className="card-desc">{item.description}</p>
-                    <div className="price">₱{item.price?.toLocaleString() || 0}<span>/month</span></div>
-                    <div className="location"><MapPin size={14} /> {item.location}</div>
-                    
-                    <div className="property-specs">
-                      <span><div className="spec-icon"><Wifi size={10} /></div> {item.wifi || 'No'}</span>
-                      <span><div className="spec-icon"><Building2 size={10} /></div> {item.rooms || 1} Room</span>
-                      <span><div className="spec-icon"><Star size={10} /></div> {item.cr || 'Shared'}</span>
+                    <div className="card-header-row">
+                      <h4 className="card-title">{item.location?.split(',')[0] || item.name}</h4>
                     </div>
-
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: '16px 0 8px', cursor: 'pointer' }} onClick={(e) => { e.stopPropagation(); onViewLandlord && onViewLandlord(item); }}>
-                      {shouldShowOwnerAvatar(item) ? <img src={item.owner_avatar} alt="" style={{ width: '28px', height: '28px', borderRadius: '50%', objectFit: 'cover', border: '1.5px solid var(--primary)' }} /> : <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'var(--primary)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: 'bold' }}>{(item.owner_name || 'L').charAt(0).toUpperCase()}</div>}
-                      <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: '500', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <p className="card-subtitle">
+                      {item.type || 'Rental'} • {item.distance ? `${item.distance} km` : 'Nearby'}
+                    </p>
+                    <div className="card-footer">
+                      <div className="price">
+                        ₱{item.price?.toLocaleString() || 0}<span> month</span>
+                      </div>
+                      <button 
+                        className="card-inquire-btn"
+                        onClick={(e) => { e.stopPropagation(); onSelectProperty(item); }}
+                      >
+                        Inquire
+                      </button>
+                    </div>
+                    
+                    <div 
+                      className="card-landlord-info"
+                      onClick={(e) => { e.stopPropagation(); onViewLandlord(item); }}
+                    >
+                      <div className="mini-avatar-wrapper">
+                        {shouldShowOwnerAvatar(item) ? (
+                          <img src={item.owner_avatar} alt="" className="mini-avatar" />
+                        ) : (
+                          <div className="mini-avatar-placeholder">
+                            {(item.owner_name || 'L').charAt(0).toUpperCase()}
+                          </div>
+                        )}
+                        {item.is_verified && (
+                          <div className="mini-verify-badge">
+                            <BadgeCheck size={10} fill="#0066ff" color="white" />
+                          </div>
+                        )}
+                      </div>
+                      <span className="landlord-name-small">
                         {item.owner_name || 'Landlord'}
-                        {item.is_verified && <BadgeCheck size={14} className="verified-badge" />}
                       </span>
                     </div>
-                    <button className="inquire-btn" style={{ width: '100%', marginTop: '8px' }}>Inquire Now</button>
                   </div>
                 </div>
               ))}

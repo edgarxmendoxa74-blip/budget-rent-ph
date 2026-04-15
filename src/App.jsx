@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, MapPin, Bed, Bath, Wifi, Shield, Star, Menu, X, Heart, MessageCircle, Phone, LogOut, Building2, User, Loader2, ClipboardList, Mail, BadgeCheck, Headset, ArrowLeft, Home, Navigation, Globe, Trash2 } from 'lucide-react';
+import { Search, MapPin, Bed, Bath, Wifi, Shield, Star, Menu, X, Heart, MessageCircle, Phone, LogOut, Building2, User, Users, Loader2, ClipboardList, Mail, BadgeCheck, Headset, ArrowLeft, Home, Navigation, Globe, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { clearSupabaseSessionStorage, recoverFromJwtError, supabase, validateCurrentSession } from './lib/supabase';
 import Auth from './components/Auth';
 import PropertyForm from './components/PropertyForm';
@@ -52,24 +52,13 @@ const normalizePropertyOwnerProfiles = (items) => {
   });
 };
 
-const applySubscriptionExpiry = (items) => {
-  const now = new Date();
-
-  return items.map((item) => {
-    const isExpired = item.subscription_expiry && new Date(item.subscription_expiry) < now;
-    if (!isExpired || !item.is_verified) return item;
-
-    // Reflect expiry immediately in the UI even before admin manually opens the dashboard.
-    supabase.from('properties').update({
-      is_verified: false,
-      subscription_status: 'Expired'
-    }).eq('email', item.email);
-
-    return {
-      ...item,
-      is_verified: false,
-      subscription_status: 'Expired'
-    };
+export const applySubscriptionExpiry = (properties) => {
+  return properties.map(item => {
+    if (item.is_verified && item.subscription_expiry && new Date(item.subscription_expiry) < new Date()) {
+      console.log(`[Auto-Expiry] ${item.name} has expired (locally).`);
+      return { ...item, is_verified: false, subscription_status: 'Expired' };
+    }
+    return item;
   });
 };
 
@@ -77,7 +66,7 @@ function App() {
   const [session, setSession] = useState(null);
   const [properties, setProperties] = useState([]); // Dynamic properties state
   const [loading, setLoading] = useState(true);
-  const [isGuest, setIsGuest] = useState(false);
+  const [isGuest, setIsGuest] = useState(localStorage.getItem('budgetrent_guest') === 'true');
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isPropertyFormOpen, setIsPropertyFormOpen] = useState(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
@@ -176,6 +165,7 @@ function App() {
   const handleLogout = async () => {
     await supabase.auth.signOut();
     localStorage.removeItem('budgetrent_admin_bypass');
+    localStorage.removeItem('budgetrent_guest');
     setIsGuest(false);
     setIsMenuOpen(false);
     if (window.location.pathname === '/admin') {
@@ -184,19 +174,21 @@ function App() {
   };
 
   const filteredListings = properties.filter(item => {
-    const matchesCategory = selectedCategory === "All" || (item.type || "") === selectedCategory;
+    const matchesCategory = selectedCategory === "All" || (item.type || "") === selectedCategory || (item.category || "") === selectedCategory;
     const matchesSearch = (item.name || item.title || "").toLowerCase().includes(searchQuery.toLowerCase()) || 
                           (item.location || "").toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesMyListings = activeTab === 'mylistings' ? item.user_id === session?.user?.id : true;
+    const matchesMyListings = activeTab === 'mylistings' ? (item.user_id === session?.user?.id) : true;
     return matchesCategory && matchesSearch && matchesMyListings;
   });
+
+  const isUserVerified = properties.some(p => p.user_id === session?.user?.id && p.is_verified);
 
   const shouldShowOwnerAvatar = (item) => Boolean(item?.owner_avatar);
 
 
 
   if (!session && !isGuest && window.location.pathname !== '/admin') {
-    return <Auth onAuthSuccess={() => setIsGuest(true)} />;
+    return <Auth onAuthSuccess={() => { setIsGuest(true); localStorage.setItem('budgetrent_guest', 'true'); }} />;
   }
 
   // If visiting /admin specifically, override rendering to show AdminPanel if authorized (or AdminLogin if not)
@@ -249,7 +241,9 @@ function App() {
             <div className="menu-header">
               <div className="logo-section">
                 <img src="/logo.png" alt="Logo" className="logo-img" />
-                <h1 className="brand-name">BudgetRent<span>PH</span></h1>
+                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                  <h1 className="brand-name" style={{ margin: 0 }}>BudgetRent<span>PH</span></h1>
+                </div>
               </div>
               <button className="close-menu" onClick={() => setIsMenuOpen(false)}><X size={24} /></button>
             </div>
@@ -284,10 +278,10 @@ function App() {
               <div className="menu-divider"></div>
               
               <button className="menu-link" onClick={() => { setIsMenuOpen(false); setActiveTab('about'); }}>
-                <Building2 size={20} /> About Us
+                <div className="icon-container-mini"><Building2 size={18} /></div> About Us
               </button>
               <button className="menu-link" onClick={() => { setIsMenuOpen(false); setActiveTab('terms'); }}>
-                <Shield size={20} /> Terms & Policies
+                <div className="icon-container-mini"><Shield size={18} /></div> Terms & Policies
               </button>
               <button className="menu-link" onClick={() => { setIsMenuOpen(false); setActiveTab('support'); }}>
                 <div className="icon-container-mini"><Headset size={18} /></div> Chat Customer Support
@@ -314,30 +308,33 @@ function App() {
         <>
           <header className={`hero ${activeTab === 'saved' ? 'saved-hero' : ''}`}>
             <div className="hero-content">
-              <h2>Find your next home</h2>
-              <p>Affordable rentals across the Philippines</p>
-              <div className="search-bar">
-                <Search className="search-icon" size={20} />
-                <input 
-                  type="text" 
-                  placeholder="Search by city or area..." 
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />
-              </div>
+              <h2>Find your <span>next home</span></h2>
+              <p>Rent smart, live better.</p>
+                <div className="search-bar">
+                  <Search className="search-icon" size={20} />
+                  <input 
+                    type="text" 
+                    placeholder="Search by city or area..." 
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                  />
+                  <button className="search-btn">Search</button>
+                </div>
             </div>
           </header>
 
-          <div className="category-scroll">
-            {CATEGORIES.map(cat => (
-              <button 
-                key={cat} 
-                className={`category-chip ${selectedCategory === cat ? 'active' : ''}`}
-                onClick={() => setSelectedCategory(cat)}
-              >
-                {cat}
-              </button>
-            ))}
+          <div className="category-section" style={{ position: 'relative' }}>
+            <div className="category-scroll" id="main-category-scroll">
+              {CATEGORIES.map(cat => (
+                <button 
+                  key={cat} 
+                  className={`category-chip ${selectedCategory === cat ? 'active' : ''}`}
+                  onClick={() => setSelectedCategory(cat)}
+                >
+                  {cat}
+                </button>
+              ))}
+            </div>
           </div>
 
           <main className="listings">
@@ -358,41 +355,46 @@ function App() {
                   >
                     <div className="image-container">
                       <img src={item.image || '/placeholder.png'} alt={item.name || item.title} />
-                      <div className="rating-tag">
-                        <Star size={12} fill="currentColor" /> {item.rating || 4.5}
-                      </div>
                     </div>
                     <div className="card-info">
-                      <h4>{item.name || item.title}</h4>
-                      <p className="card-desc">{item.description}</p>
-                      <div className="price">
-                        ₱{item.price?.toLocaleString() || 0}<span>/month</span>
+                      <div className="card-header-row">
+                        <h4 className="card-title">{item.location?.split(',')[0] || item.name}</h4>
                       </div>
-                      <div className="location">
-                        <MapPin size={14} /> {item.location}
+                      <p className="card-subtitle">{item.type || item.category || 'Rental Property'}</p>
+                      <div className="card-footer">
+                        <div className="price">
+                          ₱{item.price?.toLocaleString() || 0}<span> month</span>
+                        </div>
+                        <button 
+                          className="card-inquire-btn"
+                          onClick={(e) => { e.stopPropagation(); setSelectedProperty(item); }}
+                        >
+                          Inquire
+                        </button>
                       </div>
-                      <div className="property-specs">
-                        <span><div className="spec-icon"><Wifi size={10} /></div> {item.wifi || 'No'}</span>
-                        <span><div className="spec-icon"><Building2 size={10} /></div> {item.rooms || 1} Room</span>
-                        <span><div className="spec-icon"><Star size={10} /></div> {item.cr || 'Shared'}</span>
-                      </div>
+                      
                       <div 
-                        style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: '8px 0', cursor: 'pointer' }}
+                        className="card-landlord-info"
                         onClick={(e) => { e.stopPropagation(); setViewingLandlord(item); }}
                       >
-                        {shouldShowOwnerAvatar(item) ? (
-                          <img src={item.owner_avatar} alt="" style={{ width: '28px', height: '28px', borderRadius: '50%', objectFit: 'cover', border: '1.5px solid var(--primary)' }} />
-                        ) : (
-                          <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'var(--primary)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: 'bold' }}>
-                            {(item.owner_name || 'L').charAt(0).toUpperCase()}
-                          </div>
-                        )}
-                        <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <div className="mini-avatar-wrapper">
+                          {shouldShowOwnerAvatar(item) ? (
+                            <img src={item.owner_avatar} alt="" className="mini-avatar" />
+                          ) : (
+                            <div className="mini-avatar-placeholder">
+                              {(item.owner_name || 'L').charAt(0).toUpperCase()}
+                            </div>
+                          )}
+                          {item.is_verified && (
+                            <div className="mini-verify-badge">
+                              <BadgeCheck size={10} fill="#0066ff" color="white" />
+                            </div>
+                          )}
+                        </div>
+                        <span className="landlord-name-small">
                           {item.owner_name || 'Landlord'}
-                          {item.is_verified && <BadgeCheck size={14} className="verified-badge" />}
                         </span>
                       </div>
-                      <button className="inquire-btn">Inquire Now</button>
                     </div>
                   </div>
                 ))}
@@ -424,7 +426,9 @@ function App() {
         <>
           <header className={`hero saved-hero`} style={{ position: 'relative' }}>
             <div className="hero-content">
-              <h2>My Properties</h2>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: '8px' }}>
+                <h2>My Properties</h2>
+              </div>
               <p>View properties you've listed on our platform</p>
             </div>
           </header>
@@ -470,25 +474,43 @@ function App() {
                         style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: '8px 0', cursor: 'pointer' }}
                         onClick={(e) => { e.stopPropagation(); setViewingLandlord(item); }}
                       >
-                        {shouldShowOwnerAvatar(item) ? (
-                          <img src={item.owner_avatar} alt="" style={{ width: '28px', height: '28px', borderRadius: '50%', objectFit: 'cover', border: '1.5px solid var(--primary)' }} />
-                        ) : (
-                          <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'var(--primary)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: 'bold' }}>
-                            {(item.owner_name || 'L').charAt(0).toUpperCase()}
-                          </div>
-                        )}
-                        <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <div style={{ position: 'relative' }}>
+                          {shouldShowOwnerAvatar(item) ? (
+                            <img src={item.owner_avatar} alt="" style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover', border: '1.5px solid var(--primary)' }} />
+                          ) : (
+                            <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'var(--primary)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.85rem', fontWeight: 'bold' }}>
+                              {(item.owner_name || 'L').charAt(0).toUpperCase()}
+                            </div>
+                          )}
+                          {item.is_verified && (
+                            <div style={{ 
+                              position: 'absolute', 
+                              bottom: '-2px', 
+                              right: '-2px', 
+                              background: 'white', 
+                              borderRadius: '50%', 
+                              width: '14px', 
+                              height: '14px', 
+                              display: 'flex', 
+                              alignItems: 'center', 
+                              justifyContent: 'center',
+                              boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                            }}>
+                              <BadgeCheck size={12} fill="#0066ff" color="white" />
+                            </div>
+                          )}
+                        </div>
+                        <span style={{ fontSize: '0.85rem', color: 'var(--text-main)', fontWeight: '600' }}>
                           {item.owner_name || 'Landlord'}
-                          {item.is_verified && <BadgeCheck size={14} className="verified-badge" />}
                         </span>
                       </div>
                       <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
-                        <button className="inquire-btn" style={{ flex: 1, margin: 0 }} onClick={(e) => { e.stopPropagation(); setEditingListingItem(item); setIsEditListingsOpen(true); }}>
+                        <button className="action-btn-outline" style={{ flex: 1, margin: 0 }} onClick={(e) => { e.stopPropagation(); setEditingListingItem(item); setIsEditListingsOpen(true); }}>
                           Edit
                         </button>
                         <button 
-                          className="inquire-btn" 
-                          style={{ flex: 1, margin: 0, background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444' }} 
+                          className="action-btn-outline" 
+                          style={{ flex: 1, margin: 0, background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', borderColor: 'rgba(239, 68, 68, 0.2)' }} 
                           onClick={(e) => { e.stopPropagation(); setPropertyToDelete(item); }}
                         >
                           Delete
@@ -505,20 +527,9 @@ function App() {
 
       {activeTab === 'about' && (
         <div className="page-section animate-fade-in">
-          <header className="hero" style={{ position: 'relative' }}>
-            <button 
-              onClick={() => {
-                if (!isGuest && session?.user?.user_metadata?.user_role === 'landlord') {
-                  setActiveTab('mylistings');
-                } else {
-                  setActiveTab('home');
-                }
-              }} 
-              style={{ position: 'absolute', top: '16px', left: '16px', color: 'white', background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: '50%', width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', backdropFilter: 'blur(4px)' }}
-            >
-              <ArrowLeft size={24} />
-            </button>
+          <header className="hero branding-hero">
             <div className="hero-content">
+              <span className="branding-kicker">Get to know us</span>
               <h2>About BudgetRentPH</h2>
               <p>Your partner in finding affordable housing</p>
             </div>
@@ -546,40 +557,44 @@ function App() {
 
       {activeTab === 'terms' && (
         <div className="page-section animate-fade-in">
-          <header className="hero" style={{ position: 'relative' }}>
-            <button 
-              onClick={() => {
-                if (!isGuest && session?.user?.user_metadata?.user_role === 'landlord') {
-                  setActiveTab('mylistings');
-                } else {
-                  setActiveTab('home');
-                }
-              }} 
-              style={{ position: 'absolute', top: '16px', left: '16px', color: 'white', background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: '50%', width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', backdropFilter: 'blur(4px)' }}
-            >
-              <ArrowLeft size={24} />
-            </button>
+          <header className="hero branding-hero">
             <div className="hero-content">
+              <span className="branding-kicker">Guidelines</span>
               <h2>Terms & Policies</h2>
-              <p>Our guidelines and agreements</p>
+              <p>Simple rules for shared safety</p>
             </div>
           </header>
-          <main className="info-page-container terms-body">
-            <section>
-              <h3>1. Introduction</h3>
-              <p>Welcome to BudgetRentPH. By using our services, you agree to these terms. Please read them carefully.</p>
+          <main className="info-page-container terms-shell">
+            <div className="terms-intro-card">
+              <span className="terms-kicker">Read Before You Use</span>
+              <h3>Platform rules and privacy.</h3>
+            </div>
+            <section className="terms-card">
+              <div className="terms-icon-box"><ClipboardList size={20} /></div>
+              <div className="terms-content">
+                <p>By using <strong>BudgetRentPH</strong>, you agree to these basic rules:</p>
+              </div>
             </section>
-            <section>
-              <h3>2. For Tenants</h3>
-              <p>Tenants can browse listings for free. All inquiries are direct between the tenant and the property owner. BudgetRentPH does not handle payments between parties.</p>
+            <section className="terms-card">
+              <div className="terms-icon-box"><Users size={20} /></div>
+              <div className="terms-content">
+                <h3>Direct Deals</h3>
+                <p>We are a listing site. All inquiries and payments are made directly between tenants and landlords.</p>
+              </div>
             </section>
-            <section>
-              <h3>3. For Landlords</h3>
-              <p>Landlords are responsible for providing accurate information about their properties. False representation may lead to account suspension.</p>
+            <section className="terms-card">
+              <div className="terms-icon-box"><Shield size={20} /></div>
+              <div className="terms-content">
+                <h3>Honesty</h3>
+                <p>Landlords must provide real photos and prices. Misleading listings will be removed.</p>
+              </div>
             </section>
-            <section>
-              <h3>4. Privacy Policy</h3>
-              <p>We respect your privacy. Contact information is only shared when you explicitly choose to inquire or list a property.</p>
+            <section className="terms-card">
+              <div className="terms-icon-box"><BadgeCheck size={20} /></div>
+              <div className="terms-content">
+                <h3>Privacy</h3>
+                <p>Your data is only used for inquiries. We never sell your personal information.</p>
+              </div>
             </section>
           </main>
         </div>
@@ -628,17 +643,35 @@ function App() {
               {/* Owner Profile */}
               <div className="divider"></div>
               <div className="owner-profile-card clickable property-owner-card" onClick={() => setViewingLandlord(selectedProperty)}>
-                {shouldShowOwnerAvatar(selectedProperty) ? (
-                  <img src={selectedProperty.owner_avatar} alt="Owner" className="property-owner-avatar" />
-                ) : (
-                  <div className="property-owner-avatar property-owner-placeholder">
-                    {(selectedProperty.owner_name || 'L').charAt(0).toUpperCase()}
-                  </div>
-                )}
+                <div style={{ position: 'relative' }}>
+                  {shouldShowOwnerAvatar(selectedProperty) ? (
+                    <img src={selectedProperty.owner_avatar} alt="Owner" className="property-owner-avatar" />
+                  ) : (
+                    <div className="property-owner-avatar property-owner-placeholder">
+                      {(selectedProperty.owner_name || 'L').charAt(0).toUpperCase()}
+                    </div>
+                  )}
+                  {selectedProperty.is_verified && (
+                    <div style={{ 
+                      position: 'absolute', 
+                      bottom: '4px', 
+                      right: '4px', 
+                      background: 'white', 
+                      borderRadius: '50%', 
+                      width: '18px', 
+                      height: '18px', 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      justifyContent: 'center',
+                      boxShadow: '0 2px 6px rgba(0,0,0,0.2)'
+                    }}>
+                      <BadgeCheck size={14} fill="#0066ff" color="white" />
+                    </div>
+                  )}
+                </div>
                 <div className="property-owner-info">
                   <p className="property-owner-name">
                     {selectedProperty.owner_name || 'Landlord'}
-                    {selectedProperty.is_verified && <BadgeCheck size={16} className="verified-badge" />}
                   </p>
                   <span className="property-owner-meta">Tap to view full profile</span>
                 </div>
@@ -780,12 +813,30 @@ function App() {
             <button className="close-btn" onClick={() => setViewingLandlord(null)}><X size={24} /></button>
             
             <div className="profile-header">
-              <div className="profile-avatar">
+              <div className="profile-avatar" style={{ position: 'relative' }}>
                 {shouldShowOwnerAvatar(viewingLandlord) ? (
                   <img src={viewingLandlord.owner_avatar} alt="Avatar" className="avatar-img" />
                 ) : (
                   <div className="avatar-placeholder">
                     {viewingLandlord.owner_name ? viewingLandlord.owner_name.charAt(0).toUpperCase() : <User />}
+                  </div>
+                )}
+                {viewingLandlord.is_verified && (
+                  <div style={{ 
+                    position: 'absolute', 
+                    bottom: '8px', 
+                    right: '8px', 
+                    background: 'white', 
+                    borderRadius: '50%', 
+                    width: '28px', 
+                    height: '28px', 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'center',
+                    boxShadow: '0 4px 10px rgba(0,0,0,0.2)',
+                    zIndex: 2
+                  }}>
+                    <BadgeCheck size={20} fill="#0066ff" color="white" />
                   </div>
                 )}
               </div>
@@ -794,7 +845,6 @@ function App() {
                </span>
                <h2 style={{ display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'center' }}>
                  {viewingLandlord.owner_name || 'Landlord'}
-                 {viewingLandlord.is_verified && <BadgeCheck size={24} className="verified-badge" />}
                </h2>
                <a href={`mailto:${viewingLandlord.email}`} className="profile-email">{viewingLandlord.email}</a>
             </div>
