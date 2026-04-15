@@ -13,7 +13,7 @@ jobs:
 
     env:
       VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL != '' && secrets.VITE_SUPABASE_URL || 'https://utdarqyhkiexotouqjkz.supabase.co' }}
-      VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY != '' && secrets.VITE_SUPABASE_ANON_KEY || 'sb_publishable_e9GTC0ectIpgy1kBi_dCew_EphQdDVT' }}
+      VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY != '' && secrets.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV0ZGFycXloa2lleG90b3Vxamt6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU3NjAxODEsImV4cCI6MjA5MTMzNjE4MX0.cPQmNILfU7qD_0CGUvRKQGTbXc3QmY2YSjj46E5YWdg' }}
 
     steps:
       - name: Checkout repository
