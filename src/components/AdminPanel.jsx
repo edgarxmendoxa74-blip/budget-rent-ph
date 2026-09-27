@@ -385,7 +385,7 @@ const AdminPanel = ({ onLogout }) => {
     <div className="admin-dashboard-root animate-fade-in">
       <nav className="admin-sidebar shadow-lg">
         <div className="admin-logo">
-          <Shield color="#FFD700" size={32} />
+          <img src="/logo.png" alt="BudgetRentPH" style={{ width: '36px', height: '36px', objectFit: 'contain' }} />
           <span>BudgetRent <strong>PH</strong></span>
         </div>
         

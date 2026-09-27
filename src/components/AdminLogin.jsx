@@ -51,7 +51,7 @@ const AdminLogin = ({ onLoginSuccess, onBack }) => {
       <div className="auth-card animate-fade-in text-center">
         <div className="auth-header">
           <div className="auth-logo">
-            <Shield className="text-primary" size={48} style={{ margin: '0 auto 16px' }} />
+            <img src="/logo.png" alt="BudgetRentPH" style={{ width: '70px', height: '70px', objectFit: 'contain', margin: '0 auto 12px' }} />
           </div>
           <h2>Admin Portal</h2>
           <p>Sign in to access the management dashboard.</p>

@@ -9,8 +9,10 @@ const PropertyForm = ({ onClose, session, onListingAdded }) => {
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
-    type: 'Boarding House',
+    type: 'Paupahan',
     price: '',
+    advanceMonths: '1',
+    depositMonths: '2',
     location: '',
     description: '',
     contact: session?.user?.user_metadata?.phone || '',
@@ -129,6 +131,8 @@ const PropertyForm = ({ onClose, session, onListingAdded }) => {
           name: formData.name,
           type: formData.type,
           price: parseFloat(formData.price || 0),
+          advance_months: parseInt(formData.advanceMonths || 1),
+          deposit_months: parseInt(formData.depositMonths || 2),
           location: formData.location,
           description: formData.description,
           contact: formData.contact,
@@ -227,12 +231,10 @@ const PropertyForm = ({ onClose, session, onListingAdded }) => {
 
             <div className="form-row">
               <div className="form-group">
-                <label>Type</label>
-                <select name="type" onChange={handleChange}>
-                  <option>Boarding House</option>
-                  <option>Bed Space</option>
-                  <option>Apartment</option>
-                  <option>Studio</option>
+                <label>Category</label>
+                <select name="type" value={formData.type} onChange={handleChange}>
+                  <option>Paupahan</option>
+                  <option>Staycation</option>
                 </select>
               </div>
               <div className="form-group">

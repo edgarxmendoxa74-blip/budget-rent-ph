@@ -1,19 +1,42 @@
-@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&family=Outfit:wght@300;400;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Outfit:wght@400;500;600;700;800&display=swap');
 
 :root {
-  --primary: #003366;
-  --secondary: #FFD700;
-  --accent: #FF5A5F;
+  /* Brand Palette from Logo */
+  --primary: #003B7A;
+  --primary-dark: #002652;
+  --primary-gradient: linear-gradient(135deg, #003B7A 0%, #00224A 100%);
+  --primary-light: #F0F6FF;
+  
+  --secondary: #F59E0B;
+  --secondary-gold: #FFB800;
+  --secondary-dark: #D97706;
+  --secondary-gradient: linear-gradient(135deg, #FFC107 0%, #F59E0B 100%);
+  
+  --accent: #10B981;
+  --accent-light: #ECFDF5;
+  
   --background: #F8FAFC;
   --card-bg: #FFFFFF;
-  --text-main: #1E293B;
+  --surface-glass: rgba(255, 255, 255, 0.88);
+  
+  --text-main: #0F172A;
   --text-muted: #64748B;
   --border: #E2E8F0;
-  --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
-  --radius: 16px;
-  --font-main: 'Outfit', sans-serif;
-  --font-heading: 'Montserrat', sans-serif;
+  --border-subtle: #F1F5F9;
+  
+  --shadow-sm: 0 2px 8px -2px rgba(0, 59, 122, 0.06);
+  --shadow-md: 0 8px 24px -4px rgba(0, 59, 122, 0.12);
+  --shadow-lg: 0 16px 40px -8px rgba(0, 59, 122, 0.18);
+  --shadow-gold: 0 8px 24px -4px rgba(245, 158, 11, 0.38);
+  --shadow-glow: 0 0 24px rgba(0, 59, 122, 0.2);
+  
+  --ease-pop: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
+  --ring: 0 0 0 4px rgba(0, 59, 122, 0.15);
+  --radius: 18px;
+  
+  --font-main: 'Plus Jakarta Sans', 'Outfit', system-ui, -apple-system, sans-serif;
+  --font-heading: 'Outfit', 'Plus Jakarta Sans', sans-serif;
   --container-padding: 20px;
 }
 
@@ -26,20 +49,108 @@
 
 body {
   font-family: var(--font-main);
-  background-color: var(--background);
+  background-color: #CBD5E1;
   color: var(--text-main);
   line-height: 1.5;
   overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-heading);
+  font-weight: 700;
+}
+
+input, textarea, select, button, optgroup {
+  font-family: var(--font-main);
+}
+
+::selection {
+  background: var(--secondary-gold);
+  color: var(--primary-dark);
+}
+
+/* Global Button & Interactive System */
+button,
+[role="button"],
+input[type="button"],
+input[type="submit"],
+input[type="reset"],
+a {
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  font-family: var(--font-main);
+  transition:
+    scale 0.25s var(--ease-pop),
+    transform 0.25s var(--ease-pop),
+    box-shadow 0.25s var(--ease-smooth),
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease;
+}
+
+button:hover:not(:disabled),
+[role="button"]:hover {
+  scale: 1.03;
+}
+
+button:active:not(:disabled),
+[role="button"]:active,
+a:active {
+  scale: 0.95;
+}
+
+button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  filter: grayscale(20%);
+}
+
+button:focus-visible,
+[role="button"]:focus-visible,
+a:focus-visible {
+  outline: none;
+  box-shadow: var(--ring);
+}
+
+@keyframes pop {
+  0% { transform: scale(0.88); opacity: 0; }
+  60% { transform: scale(1.04); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.animate-pop {
+  animation: pop 0.35s var(--ease-pop) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  button:hover:not(:disabled),
+  [role="button"]:hover,
+  button:active:not(:disabled),
+  [role="button"]:active,
+  a:active {
+    scale: 1;
+  }
 }
 
 #root {
   width: 100%;
 }
 
-h1, h2, h3, h4 {
+h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-heading);
   font-weight: 700;
   color: var(--primary);
+  letter-spacing: -0.02em;
 }
 
 .app-container {
@@ -49,20 +160,29 @@ h1, h2, h3, h4 {
   background: var(--background);
   min-height: 100vh;
   position: relative;
-  box-shadow: 0 0 100px rgba(0,0,0,0.05);
+  box-shadow: 0 0 60px rgba(0, 38, 82, 0.15);
+}
+
+@media (max-width: 500px) {
+  body {
+    background-color: var(--background);
+  }
+  .app-container {
+    box-shadow: none;
+  }
 }
 
 /* Glassmorphism */
 .glass {
-  background: rgba(255, 255, 255, 0.7);
-  -webkit-backdrop-filter: blur(12px);
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: var(--surface-glass);
+  -webkit-backdrop-filter: blur(20px) saturate(190%);
+  backdrop-filter: blur(20px) saturate(190%);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.6);
 }
 
 /* Animations */
 @keyframes slideUp {
-  from { transform: translateY(20px); opacity: 0; }
+  from { transform: translateY(22px); opacity: 0; }
   to { transform: translateY(0); opacity: 1; }
 }
 
@@ -71,22 +191,31 @@ h1, h2, h3, h4 {
   to { opacity: 1; }
 }
 
+@keyframes pulseGlow {
+  0%, 100% { box-shadow: 0 0 15px rgba(245, 158, 11, 0.4); }
+  50% { box-shadow: 0 0 28px rgba(245, 158, 11, 0.7); }
+}
+
 .animate-slide-up {
-  animation: slideUp 0.5s ease-out forwards;
+  animation: slideUp 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 .animate-fade-in {
-  animation: fadeIn 0.4s ease-out forwards;
+  animation: fadeIn 0.35s ease-out forwards;
 }
 
 /* Custom Scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
+  height: 6px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: var(--border);
+  background: #CBD5E1;
   border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94A3B8;
 }

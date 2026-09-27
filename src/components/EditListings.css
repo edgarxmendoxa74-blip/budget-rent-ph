@@ -1,9 +1,9 @@
 .edit-listings-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.5);
-  -webkit-backdrop-filter: blur(4px);
-  backdrop-filter: blur(4px);
+  background: rgba(15, 23, 42, 0.65);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
   z-index: 1000;
   display: flex;
   align-items: center;
@@ -13,14 +13,14 @@
 
 .edit-listings-modal {
   width: 100%;
-  max-width: 500px;
+  max-width: 520px;
   max-height: 90vh;
   overflow-y: auto;
   background: white;
-  border-radius: 24px;
+  border-radius: 28px;
   padding: 0;
   position: relative;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 20px 60px rgba(0, 38, 82, 0.25);
 }
 
 .edit-listings-top {
@@ -29,43 +29,49 @@
   background: white;
   z-index: 5;
   padding: 24px 24px 16px;
-  border-bottom: 1px solid var(--border);
-  border-radius: 24px 24px 0 0;
+  border-bottom: 1px solid var(--border-subtle);
+  border-radius: 28px 28px 0 0;
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
 }
 
 .edit-listings-top .close-edit-btn {
-  background: var(--background);
-  border: none;
-  width: 36px;
-  height: 36px;
+  background: var(--primary-light);
+  border: 1px solid var(--border);
+  width: 38px;
+  height: 38px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  color: var(--text-muted);
+  color: var(--primary);
   flex-shrink: 0;
+  transition: all 0.2s;
+}
+
+.edit-listings-top .close-edit-btn:hover {
+  background: var(--primary);
+  color: white;
 }
 
 .edit-listings-header h2 {
-  font-size: 1.3rem;
+  font-size: 1.35rem;
   color: var(--primary);
   margin: 0;
+  font-weight: 800;
 }
 
 .edit-listings-header p {
-  color: var(--primary);
-  opacity: 0.7;
-  font-size: 0.85rem;
+  color: var(--text-muted);
+  font-size: 0.88rem;
   margin: 4px 0 0;
   font-weight: 500;
 }
 
 .edit-listings-body {
-  padding: 16px 24px 24px;
+  padding: 20px 24px 28px;
 }
 
 .edit-loading, .edit-empty {
@@ -85,25 +91,33 @@
 .my-listings-list {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 14px;
 }
 
 .my-listing-item {
   display: flex;
   align-items: center;
-  gap: 12px;
-  background: var(--background);
-  border-radius: 14px;
-  padding: 12px;
-  transition: all 0.2s;
+  gap: 14px;
+  background: #F8FAFC;
+  border: 1px solid var(--border-subtle);
+  border-radius: 18px;
+  padding: 14px;
+  transition: all 0.25s var(--ease-smooth);
+}
+
+.my-listing-item:hover {
+  background: white;
+  border-color: var(--primary);
+  box-shadow: var(--shadow-md);
 }
 
 .my-listing-img {
-  width: 70px;
-  height: 70px;
-  border-radius: 10px;
+  width: 72px;
+  height: 72px;
+  border-radius: 14px;
   overflow: hidden;
   flex-shrink: 0;
+  background: #E2E8F0;
 }
 
 .my-listing-img img {
@@ -118,7 +132,9 @@
 }
 
 .my-listing-info h4 {
-  font-size: 0.95rem;
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--text-main);
   margin: 0 0 2px;
   white-space: nowrap;
   overflow: hidden;
@@ -126,11 +142,11 @@
 }
 
 .my-listing-type {
-  font-size: 0.65rem;
-  font-weight: 700;
+  font-size: 0.68rem;
+  font-weight: 800;
   color: var(--primary);
-  background: rgba(0, 51, 102, 0.08);
-  padding: 2px 8px;
+  background: var(--primary-light);
+  padding: 3px 10px;
   border-radius: 100px;
   text-transform: uppercase;
 }
@@ -139,15 +155,15 @@
   display: flex;
   align-items: center;
   gap: 4px;
-  font-size: 0.75rem;
+  font-size: 0.78rem;
   color: var(--text-muted);
   margin-top: 4px;
 }
 
 .my-listing-price {
-  font-size: 0.95rem;
-  font-weight: 700;
-  color: var(--primary);
+  font-size: 1rem;
+  font-weight: 800;
+  color: #059669;
   margin-top: 2px;
 }
 
@@ -159,42 +175,46 @@
 }
 
 .edit-action-btn {
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
   border: none;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.25s var(--ease-pop);
 }
 
 .edit-action-btn.edit {
-  background: rgba(0, 51, 102, 0.1);
+  background: var(--primary-light);
   color: var(--primary);
 }
 
 .edit-action-btn.edit:hover {
   background: var(--primary);
   color: white;
+  transform: scale(1.08);
 }
 
 .edit-action-btn.delete {
-  background: rgba(239, 68, 68, 0.1);
-  color: #ef4444;
+  background: #FEF2F2;
+  color: #EF4444;
 }
 
 .edit-action-btn.delete:hover {
-  background: #ef4444;
+  background: #EF4444;
   color: white;
+  transform: scale(1.08);
 }
 
 /* Edit Form Overlay */
 .edit-form-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.6);
+  background: rgba(15, 23, 42, 0.65);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
   z-index: 2000;
   display: flex;
   align-items: center;
@@ -205,43 +225,44 @@
 .edit-form-content {
   background: white;
   width: 100%;
-  max-width: 500px;
-  max-height: 85vh;
+  max-width: 520px;
+  max-height: 88vh;
   overflow-y: auto;
-  border-radius: 24px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  border-radius: 28px;
+  box-shadow: 0 20px 60px rgba(0, 38, 82, 0.25);
 }
 
 .edit-form-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 20px 20px 0;
+  padding: 24px 24px 0;
 }
 
 .edit-form-header h3 {
-  font-size: 1.2rem;
+  font-size: 1.25rem;
   color: var(--primary);
+  font-weight: 800;
 }
 
 .edit-form-header button {
-  background: var(--background);
+  background: var(--primary-light);
   border: none;
-  width: 36px;
-  height: 36px;
+  width: 38px;
+  height: 38px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--text-muted);
+  color: var(--primary);
   cursor: pointer;
 }
 
 .edit-form-body {
-  padding: 16px 20px 32px;
+  padding: 18px 24px 34px;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 16px;
 }
 
 .edit-form-image {
@@ -250,53 +271,58 @@
 
 .edit-form-image img {
   width: 100%;
-  max-height: 160px;
+  max-height: 180px;
   object-fit: cover;
-  border-radius: 12px;
-  margin-bottom: 8px;
+  border-radius: 16px;
+  margin-bottom: 10px;
 }
 
 .change-image-btn {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  background: #22c55e;
+  background: linear-gradient(135deg, #10B981, #059669);
   color: white;
-  padding: 6px 16px;
-  border-radius: 8px;
-  font-size: 0.8rem;
-  font-weight: 600;
+  padding: 8px 18px;
+  border-radius: 100px;
+  font-size: 0.82rem;
+  font-weight: 800;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.25s var(--ease-pop);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
 }
 
 .change-image-btn:hover {
-  background: #16a34a;
+  box-shadow: 0 8px 18px rgba(16, 185, 129, 0.45);
+  transform: translateY(-2px);
 }
 
 .edit-form-group {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
 }
 
 .edit-form-group label {
   font-size: 0.75rem;
-  font-weight: 700;
+  font-weight: 800;
   color: var(--text-muted);
   text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 .edit-form-group input,
 .edit-form-group select,
 .edit-form-group textarea {
-  padding: 10px 12px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
+  padding: 12px;
+  border: 1.5px solid var(--border);
+  border-radius: 12px;
   font-family: inherit;
-  font-size: 0.9rem;
-  background: white;
-  transition: border-color 0.2s;
+  font-size: 0.92rem;
+  background: #F8FAFC;
+  transition: all 0.2s ease;
+  color: var(--text-main);
+  font-weight: 500;
 }
 
 .edit-form-group input:focus,
@@ -304,37 +330,35 @@
 .edit-form-group textarea:focus {
   outline: none;
   border-color: var(--primary);
+  background: white;
+  box-shadow: var(--ring);
 }
 
 .edit-form-row {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
-  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: 12px;
 }
 
 .save-edit-btn {
-  background: var(--primary);
+  background: var(--primary-gradient);
   color: white;
   border: none;
-  padding: 14px;
-  border-radius: 12px;
-  font-weight: 700;
-  font-size: 1rem;
+  padding: 15px;
+  border-radius: 14px;
+  font-weight: 800;
+  font-size: 0.95rem;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
   cursor: pointer;
-  transition: all 0.3s;
-  margin-top: 8px;
+  transition: all 0.25s var(--ease-pop);
+  margin-top: 10px;
+  box-shadow: 0 6px 20px rgba(0, 59, 122, 0.3);
 }
 
 .save-edit-btn:hover {
-  background: #002347;
+  box-shadow: 0 10px 26px rgba(0, 59, 122, 0.45);
   transform: translateY(-2px);
-}
-
-.save-edit-btn:disabled {
-  opacity: 0.7;
-  cursor: not-allowed;
 }

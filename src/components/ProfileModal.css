@@ -1,6 +1,8 @@
 .profile-modal {
-  max-width: 450px;
-  padding: 32px;
+  max-width: 480px;
+  padding: 34px 28px;
+  border-radius: 28px !important;
+  box-shadow: 0 20px 60px rgba(0, 38, 82, 0.25);
 }
 
 .profile-header {
@@ -8,23 +10,23 @@
   flex-direction: column;
   align-items: center;
   text-align: center;
-  padding-bottom: 24px;
-  border-bottom: 2px solid #f1f5f9;
-  margin-bottom: 24px;
+  padding-bottom: 22px;
+  border-bottom: 1.5px solid var(--border-subtle);
+  margin-bottom: 22px;
 }
 
 .profile-avatar {
-  width: 90px;
-  height: 90px;
+  width: 96px;
+  height: 96px;
   border-radius: 50%;
-  border: 4px solid var(--secondary);
+  border: 4px solid var(--secondary-gold);
   position: relative;
-  margin-bottom: 12px;
+  margin-bottom: 14px;
   background: white;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: var(--shadow);
+  box-shadow: var(--shadow-gold);
 }
 
 .avatar-img {
@@ -35,7 +37,7 @@
 }
 
 .avatar-placeholder {
-  font-size: 32px;
+  font-size: 34px;
   color: var(--primary);
   font-weight: 800;
 }
@@ -44,22 +46,27 @@
   position: absolute;
   bottom: 0;
   right: 0;
-  background: var(--primary);
+  background: var(--primary-gradient);
   color: white;
-  width: 30px;
-  height: 30px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   border: 2px solid white;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  box-shadow: var(--shadow-md);
+  transition: all 0.25s var(--ease-pop);
+}
+
+.change-photo:hover {
+  transform: scale(1.1);
 }
 
 .role-badge {
   display: inline-block;
-  padding: 4px 14px;
+  padding: 5px 16px;
   border-radius: 100px;
   font-size: 10px;
   font-weight: 800;
@@ -69,19 +76,28 @@
 }
 
 .role-badge.landlord {
-  background: var(--secondary);
-  color: var(--primary);
+  background: var(--secondary-gradient);
+  color: var(--primary-dark);
+}
+
+.role-badge.verified {
+  background: var(--accent-light);
+  color: var(--accent);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
 }
 
 .role-badge.tenant {
-  background: #e2e8f0;
-  color: #475569;
+  background: var(--primary-light);
+  color: var(--primary);
 }
 
 .profile-email {
-  font-size: 13px;
+  font-size: 14px;
   color: var(--text-muted);
   margin-top: 2px;
+  font-weight: 500;
   text-decoration: none;
 }
 
@@ -93,25 +109,32 @@
 .profile-details {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 8px;
+  gap: 10px;
 }
 
 .info-group {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 10px 14px;
-  background: #f8fafc;
-  border-radius: 12px;
-  border: 1px solid transparent;
+  gap: 14px;
+  padding: 12px 16px;
+  background: #F8FAFC;
+  border-radius: 16px;
+  border: 1px solid var(--border-subtle);
   width: 100%;
+  transition: all 0.2s ease;
+}
+
+.info-group:hover {
+  background: white;
+  border-color: var(--primary);
+  box-shadow: var(--shadow-sm);
 }
 
 .info-group svg {
   color: var(--primary);
   flex-shrink: 0;
-  width: 16px;
-  height: 16px;
+  width: 18px;
+  height: 18px;
 }
 
 .info-content {
@@ -129,7 +152,7 @@
 }
 
 .info-content p {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 700;
   color: var(--text-main);
   margin: 0;
@@ -138,7 +161,7 @@
 .info-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 8px;
+  gap: 10px;
 }
 
 /* Edit Mode Styles */
@@ -150,33 +173,40 @@
 
 .form-group label {
   display: block;
-  font-size: 10px;
-  font-weight: 700;
+  font-size: 11px;
+  font-weight: 800;
   color: var(--text-muted);
   margin-bottom: 6px;
   text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 .profile-form input {
   width: 100%;
-  padding: 12px;
+  padding: 12px 14px;
   border-radius: 12px;
-  border: 1px solid #e2e8f0;
+  border: 1.5px solid var(--border);
   font-size: 14px;
+  font-weight: 500;
   outline: none;
+  background: #F8FAFC;
+  transition: all 0.2s ease;
 }
 
 .profile-form input:focus {
   border-color: var(--primary);
+  background: white;
+  box-shadow: var(--ring);
 }
 
 .save-btn {
-  background: var(--primary);
+  background: var(--primary-gradient);
   color: white;
-  padding: 14px 40px;
+  padding: 14px 44px;
   border-radius: 100px;
   border: none;
-  font-weight: 700;
+  font-weight: 800;
+  font-size: 0.95rem;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -184,14 +214,13 @@
   cursor: pointer;
   margin: 24px auto 0;
   width: fit-content;
-  box-shadow: 0 4px 12px rgba(0, 51, 102, 0.2);
-  transition: all 0.3s;
+  box-shadow: 0 6px 20px rgba(0, 59, 122, 0.3);
+  transition: all 0.25s var(--ease-pop);
 }
 
 .save-btn:hover {
-  background: #1d4ed8;
+  box-shadow: 0 10px 26px rgba(0, 59, 122, 0.45);
   transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(0, 51, 102, 0.3);
 }
 
 .success-msg {
@@ -199,10 +228,10 @@
   align-items: center;
   justify-content: center;
   gap: 6px;
-  color: #10b981;
-  font-size: 13px;
-  margin-top: 12px;
-  font-weight: 600;
+  color: #10B981;
+  font-size: 14px;
+  margin-top: 14px;
+  font-weight: 700;
 }
 
 @media (max-width: 520px) {
@@ -210,22 +239,8 @@
     grid-template-columns: 1fr;
   }
   .profile-modal {
-    padding: 24px 20px;
+    padding: 28px 20px;
     width: 100%;
-    border-radius: 24px 24px 0 0;
-  }
-
-  .profile-header {
-    padding-bottom: 18px;
-    margin-bottom: 18px;
-  }
-
-  .profile-avatar {
-    width: 78px;
-    height: 78px;
-  }
-
-  .info-group {
-    padding: 8px 12px;
+    border-radius: 28px 28px 0 0 !important;
   }
 }

@@ -1,0 +1,8 @@
+# Supabase Edge Function configuration for health-check
+# This enables the cron job trigger
+
+[functions.health-check]
+# Schedule the function to run every 5 minutes
+# Cron format: "minute hour day month day-of-week"
+# */5 * * * * means every 5 minutes
+cron = "*/5 * * * *"

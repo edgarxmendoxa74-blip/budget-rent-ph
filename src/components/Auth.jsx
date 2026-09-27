@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { supabase } from '../lib/supabase';
-import { Mail, Lock, User, ArrowRight, Loader2, Building2, Users, Phone, MessageCircle, Globe, X, Heart, Eye, EyeOff, BadgeCheck } from 'lucide-react';
+import { Mail, Lock, User, ArrowRight, Loader2, Building2, Phone, MessageCircle, Globe, X, Heart, Eye, EyeOff, BadgeCheck, Lightbulb, Search, MapPin, PlusCircle, UserPlus, Pencil } from 'lucide-react';
 import './Auth.css';
 
 const Auth = ({ onAuthSuccess }) => {
@@ -39,11 +39,11 @@ const Auth = ({ onAuthSuccess }) => {
         if (!termsAgreed) {
           throw new Error('You must agree to the Terms and Policies to register.');
         }
-        const { error } = await supabase.auth.signUp({
+        const { data, error } = await supabase.auth.signUp({
           email: formData.email,
           password: formData.password,
           options: {
-            emailRedirectTo: window.location.origin,
+            emailRedirectTo: `${window.location.origin}?verified=true`,
             data: {
               full_name: formData.fullName,
               phone: formData.phone,
@@ -55,7 +55,19 @@ const Auth = ({ onAuthSuccess }) => {
           }
         });
         if (error) throw error;
-        alert('Landlord Account Created! Please verify your email.');
+        
+        // Check if email confirmation is required
+        if (data?.user?.identities?.length === 0) {
+          throw new Error('User already exists with this email.');
+        }
+        
+        if (data?.user?.email_confirmed_at === null && data?.user?.confirmation_sent_at) {
+          alert('✅ Verification email sent! Please check your inbox and click the link to confirm your email.');
+        } else if (data?.user?.email_confirmed_at) {
+          alert('✅ Account created and email verified! You can now login.');
+        } else {
+          alert('✅ Account created! Please verify your email.');
+        }
       }
     } catch (err) {
       setError(err.message);
@@ -68,6 +80,21 @@ const Auth = ({ onAuthSuccess }) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
+  const howToUseSteps = {
+    tenant: [
+      { icon: Search, title: 'Mag-browse', desc: 'Tingnan ang mga listahan ng murang boarding house, bedspace, at studio apartment sa buong Pilipinas.' },
+      { icon: MapPin, title: 'Nearby Search', desc: 'I-tap ang "Nearby" tab para makita ang mga paupahan na pinakamalapit sa iyong kasalukuyang pwesto.' },
+      { icon: Phone, title: 'Inquire Now', desc: 'I-tap ang "Inquire Now" button para direktang tumawag o mag-message sa property owner.' },
+      { icon: BadgeCheck, title: 'Verified Badge', desc: 'Hanapin ang badge na ito para makasiguro na dumaan sa validation ang landlord.' },
+    ],
+    landlord: [
+      { icon: UserPlus, title: 'Mag-register', desc: 'Gumawa ng libreng Landlord account gamit ang iyong email para makapagsimula.' },
+      { icon: PlusCircle, title: 'Mag-post', desc: 'I-tap ang (+) button, tapos ilagay ang kumpletong detalye at malinaw na litrato ng iyong paupahan.' },
+      { icon: Pencil, title: 'I-manage ang Listings', desc: 'Gamitin ang "My Listings" para mabilis na i-edit, i-update, o tanggalin ang iyong mga post.' },
+      { icon: BadgeCheck, title: 'Maging Verified', desc: 'I-tap ang "Get Verified" sa profile para tumaas ang tiwala ng mga tenant sa iyong mga post.' },
+    ],
+  };
+
   if (view === 'tenant') {
     return (
       <div className="auth-container">
@@ -76,16 +103,17 @@ const Auth = ({ onAuthSuccess }) => {
             <div className="auth-logo">
               <img src="/logo.png" alt="BudgetRentPH" />
             </div>
-            <h2>Welcome!</h2>
-            <p>Mag-explore ng mga abot-kayang boarding houses at bedspace dito sa Pilipinas.</p>
+            <h2>BudgetRentPH</h2>
+            <p className="auth-tagline">Mura. Malapit. Mapagkakatiwalaan.</p>
+            <p className="auth-sub">Mag-explore ng mga abot-kayang boarding houses at bedspace dito sa Pilipinas.</p>
           </div>
 
           <div className="auth-choice-grid">
             <button className="auth-submit-btn" onClick={onAuthSuccess}>
-              Enter as Tenant
+              <User size={19} strokeWidth={2.4} /> Enter as Tenant
             </button>
             <button className="auth-submit-btn secondary" onClick={() => setView('landlord')}>
-              Enter as Landlord
+              <Building2 size={19} strokeWidth={2.4} /> Enter as Landlord
             </button>
           </div>
 
@@ -94,50 +122,61 @@ const Auth = ({ onAuthSuccess }) => {
             <button 
               className="how-to-use-btn" 
               onClick={() => setIsHowToUseOpen(true)}
-              style={{ marginTop: '16px', width: '100%', padding: '12px', borderRadius: '12px', border: '1.5px solid var(--primary)', background: 'transparent', color: 'var(--primary)', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
             >
-              <Users size={18} /> Paano Gamitin?
+              <Lightbulb size={17} /> Paano Gamitin?
             </button>
           </div>
 
           {isHowToUseOpen && (
-            <div className="modal-overlay" style={{ zIndex: 1000 }} onClick={() => setIsHowToUseOpen(false)}>
-              <div className="modal-content animate-slide-up" style={{ padding: '24px', maxWidth: '400px' }} onClick={e => e.stopPropagation()}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                  <h3 style={{ margin: 0, color: 'var(--primary)' }}>Paano Gamitin?</h3>
-                  <button onClick={() => setIsHowToUseOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}><X size={24} /></button>
+            <div className="modal-overlay centered" style={{ zIndex: 1000 }} onClick={() => setIsHowToUseOpen(false)}>
+              <div className="how-to-use-modal animate-slide-up" onClick={e => e.stopPropagation()}>
+                <div className="how-to-use-header">
+                  <div className="how-to-use-icon">
+                    <Lightbulb size={22} />
+                  </div>
+                  <div className="how-to-use-title">
+                    <h3>Paano Gamitin?</h3>
+                    <p>Mabilis na gabay sa paggamit ng BudgetRentPH</p>
+                  </div>
+                  <button className="how-to-use-close" onClick={() => setIsHowToUseOpen(false)} aria-label="Isara">
+                    <X size={20} />
+                  </button>
                 </div>
 
-                <div className="how-to-use-tabs" style={{ display: 'flex', gap: '8px', marginBottom: '20px', background: '#f1f5f9', padding: '4px', borderRadius: '12px' }}>
+                <div className="how-to-use-tabs">
                   <button 
-                    style={{ flex: 1, padding: '10px', borderRadius: '8px', border: 'none', background: howToUseTab === 'tenant' ? 'white' : 'transparent', fontWeight: 'bold', color: howToUseTab === 'tenant' ? 'var(--primary)' : 'var(--text-muted)', cursor: 'pointer', boxShadow: howToUseTab === 'tenant' ? '0 2px 4px rgba(0,0,0,0.05)' : 'none' }}
+                    className={howToUseTab === 'tenant' ? 'active' : ''}
                     onClick={() => setHowToUseTab('tenant')}
                   >
-                    Tenant
+                    <Search size={15} /> Tenant
                   </button>
                   <button 
-                    style={{ flex: 1, padding: '10px', borderRadius: '8px', border: 'none', background: howToUseTab === 'landlord' ? 'white' : 'transparent', fontWeight: 'bold', color: howToUseTab === 'landlord' ? 'var(--primary)' : 'var(--text-muted)', cursor: 'pointer', boxShadow: howToUseTab === 'landlord' ? '0 2px 4px rgba(0,0,0,0.05)' : 'none' }}
+                    className={howToUseTab === 'landlord' ? 'active' : ''}
                     onClick={() => setHowToUseTab('landlord')}
                   >
-                    Landlord
+                    <Building2 size={15} /> Landlord
                   </button>
                 </div>
 
-                {howToUseTab === 'tenant' ? (
-                  <ul style={{ paddingLeft: '20px', fontSize: '0.9rem', color: 'var(--text-muted)', lineHeight: '1.8' }}>
-                    <li><strong>Mag-browse:</strong> Humanap ng mga murang boarding house, bedspace, at studio apartment malapit sa iyong target location.</li>
-                    <li><strong>Nearby Search:</strong> Gamitin ang "Nearby" tab para makita ang mga listings na pinakamalapit sa iyong kasalukuyang pwesto.</li>
-                    <li><strong>Inquire Now:</strong> I-click ang button para direktang makatawag o makapag-email sa property owner.</li>
-                    <li><strong>Verified Badge:</strong> Humanap ng <BadgeCheck size={14} style={{ display: 'inline', color: '#0066ff' }} /> icon para makasiguro na ang landlord ay dumaan sa aming validation.</li>
-                  </ul>
-                ) : (
-                  <ul style={{ paddingLeft: '20px', fontSize: '0.9rem', color: 'var(--text-muted)', lineHeight: '1.8' }}>
-                    <li><strong>Register:</strong> Gumawa ng Landlord account para makapagsimulang mag-post ng iyong mga paupahan.</li>
-                    <li><strong>Easy Post:</strong> I-click ang <strong>(+)</strong> button at ilagay ang kumpletong detalye at magagandang litrato ng iyong property.</li>
-                    <li><strong>Manage Tabs:</strong> Gamitin ang <strong>"My Listings"</strong> para sa mabilis na pag-edit o pag-update ng impormasyon.</li>
-                    <li><strong>Be Verified:</strong> I-click ang <strong>"Get Verified"</strong> sa menu para mapataas ang tiwala ng mga customers sa iyong mga post.</li>
-                  </ul>
-                )}
+                <div className="how-to-use-steps">
+                  {howToUseSteps[howToUseTab].map((step, index) => {
+                    const StepIcon = step.icon;
+                    return (
+                      <div className="how-to-use-step" key={step.title}>
+                        <div className="step-badge">{index + 1}</div>
+                        <div className="step-icon"><StepIcon size={18} /></div>
+                        <div className="step-body">
+                          <strong>{step.title}</strong>
+                          <p>{step.desc}</p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <button className="how-to-use-done" onClick={() => setIsHowToUseOpen(false)}>
+                  Naintindihan, Salamat!
+                </button>
               </div>
             </div>
           )}
@@ -271,7 +310,7 @@ const Auth = ({ onAuthSuccess }) => {
             {loading ? <Loader2 className="animate-spin" /> : (isLogin ? 'Sign In as Landlord' : 'Gumawa ng Account')}
           </button>
 
-          <button type="button" className="auth-back-btn" onClick={() => setView('tenant')}>
+          <button type="button" className="auth-back-btn auth-back-btn-yellow" onClick={() => setView('tenant')}>
             Bumalik sa Tenant View
           </button>
         </form>

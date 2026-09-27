@@ -3,6 +3,12 @@ import { X, Edit3, Trash2, Loader2, Save, MapPin, Camera } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import './EditListings.css';
 
+const CATEGORIES = ['Paupahan', 'Staycation'];
+const normalizeCategory = (type) =>
+  CATEGORIES.includes(type)
+    ? type
+    : String(type || '').toLowerCase().includes('staycation') ? 'Staycation' : 'Paupahan';
+
 const EditListings = ({ session, onClose, onListingUpdated, initialEditingItem = null }) => {
   const [myListings, setMyListings] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -28,7 +34,7 @@ const EditListings = ({ session, onClose, onListingUpdated, initialEditingItem =
       setMyListings(data || []);
       if (initialEditingItem) {
         const matchedItem = (data || []).find(item => item.id === initialEditingItem.id);
-        setEditingItem(matchedItem ? { ...matchedItem } : { ...initialEditingItem });
+        setEditingItem({ ...(matchedItem || initialEditingItem), type: normalizeCategory((matchedItem || initialEditingItem).type) });
       }
     } catch (err) {
       console.error('Error:', err.message);
@@ -59,7 +65,7 @@ const EditListings = ({ session, onClose, onListingUpdated, initialEditingItem =
   };
 
   const handleEdit = (item) => {
-    setEditingItem({ ...item });
+    setEditingItem({ ...item, type: normalizeCategory(item.type) });
   };
 
   const handleEditChange = (field, value) => {
@@ -212,12 +218,10 @@ const EditListings = ({ session, onClose, onListingUpdated, initialEditingItem =
               </div>
               <div className="edit-form-row">
                 <div className="edit-form-group">
-                  <label>Type</label>
-                  <select value={editingItem.type} onChange={e => handleEditChange('type', e.target.value)}>
-                    <option>Boarding House</option>
-                    <option>Bed Space</option>
-                    <option>Apartment</option>
-                    <option>Studio</option>
+                  <label>Category</label>
+                  <select value={editingItem.type || 'Paupahan'} onChange={e => handleEditChange('type', e.target.value)}>
+                    <option>Paupahan</option>
+                    <option>Staycation</option>
                   </select>
                 </div>
                 <div className="edit-form-group">
