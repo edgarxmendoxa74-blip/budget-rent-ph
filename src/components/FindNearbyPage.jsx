@@ -1,10 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Navigation, Loader2, MapPin, Wifi, Building2, Star, X, ShieldCheck, Search, AlertCircle, Signal, BadgeCheck, Plus } from 'lucide-react';
+import { Navigation, Loader2, MapPin, Wifi, Building2, Star, X, ShieldCheck, Search, AlertCircle, Signal } from 'lucide-react';
 import './FindNearbyPage.css';
 
-const shouldShowOwnerAvatar = (item) => Boolean(item?.owner_avatar);
-
-const FindNearbyPage = ({ listings, onSelectProperty, onViewLandlord, isLandlord }) => {
+const FindNearbyPage = ({ listings, reviewStats, onSelectProperty, isLandlord }) => {
   const [locating, setLocating] = useState(false);
   const [locationFound, setLocationFound] = useState(false);
   const [nearListings, setNearListings] = useState([]);
@@ -178,39 +176,26 @@ const FindNearbyPage = ({ listings, onSelectProperty, onViewLandlord, isLandlord
                       <div className="card-price-row">
                         <span className="price-tag">₱{item.price?.toLocaleString() || 0}</span>
                         <span className="price-period">/month</span>
+                        {reviewStats?.get(item.id)?.count > 0 && (
+                          <span
+                            className="card-rating"
+                            title={`${reviewStats.get(item.id).avg.toFixed(1)} out of 5`}
+                          >
+                            <Star size={11} fill="currentColor" strokeWidth={0} />
+                            {reviewStats.get(item.id).avg.toFixed(1)}
+                            <em>({reviewStats.get(item.id).count})</em>
+                          </span>
+                        )}
                       </div>
                       
                       <button 
                         className="card-inquire-btn"
-                        aria-label="Inquire"
-                        title="Inquire"
+                        aria-label="Book this listing"
+                        title="Book this listing"
                         onClick={(e) => { e.stopPropagation(); onSelectProperty(item); }}
                       >
-                        <Plus size={22} strokeWidth={3} />
+                        📅
                       </button>
-                    
-                    <div 
-                      className="card-landlord-info"
-                      onClick={(e) => { e.stopPropagation(); onViewLandlord(item); }}
-                    >
-                      <div className="mini-avatar-wrapper">
-                        {shouldShowOwnerAvatar(item) ? (
-                          <img src={item.owner_avatar} alt="" className="mini-avatar" />
-                        ) : (
-                          <div className="mini-avatar-placeholder">
-                            {(item.owner_name || 'L').charAt(0).toUpperCase()}
-                          </div>
-                        )}
-                        {item.is_verified && (
-                          <div className="mini-verify-badge">
-                            <BadgeCheck size={10} fill="#0066ff" color="white" />
-                          </div>
-                        )}
-                      </div>
-                      <span className="landlord-name-small">
-                        {item.owner_name || 'Landlord'}
-                      </span>
-                    </div>
                   </div>
                 </div>
               ))}

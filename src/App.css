@@ -651,29 +651,307 @@
   flex-shrink: 0;
 }
 
-.search-btn {
-  background: var(--primary-gradient);
-  color: white;
-  border: none;
-  align-self: stretch;
-  padding: 0 20px;
-  min-width: 94px;
-  border-radius: 100px;
+/* Hero search bar — kaparehong design ng budget input */
+.hero .search-bar {
+  gap: 7px;
+  max-width: 460px;
+  padding: 10px 14px;
+  box-shadow: 0 3px 10px rgba(0, 38, 82, 0.07);
+  transition: border-color 0.25s var(--ease-pop), box-shadow 0.25s var(--ease-pop);
+}
+
+.hero .search-bar:focus-within {
+  border-color: var(--primary);
+  box-shadow: 0 8px 18px -8px rgba(0, 59, 122, 0.45);
+  transform: none;
+}
+
+.hero .search-bar input {
   font-weight: 700;
-  font-size: 0.86rem;
-  line-height: 1;
+}
+
+.hero .search-bar input::placeholder {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  opacity: 0.75;
+}
+
+/* Staycation search bar (Where / When / Who) */
+.staycation-search {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  max-width: 560px;
+  margin: 0 auto;
+  padding: 5px;
+  background: #fff;
+  border: 1.5px solid var(--border);
+  border-radius: 100px;
+  box-shadow: 0 3px 10px rgba(0, 38, 82, 0.07);
+  transition: border-color 0.25s var(--ease-pop), box-shadow 0.25s var(--ease-pop);
+}
+
+.staycation-search:focus-within {
+  border-color: var(--primary);
+  box-shadow: 0 8px 18px -8px rgba(0, 59, 122, 0.45);
+}
+
+.stay-seg {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 5px 13px;
+  border-radius: 100px;
+  transition: background 0.2s var(--ease-pop);
   cursor: pointer;
-  transition: all 0.25s var(--ease-pop);
+}
+
+.stay-seg:hover {
+  background: rgba(0, 59, 122, 0.05);
+}
+
+.stay-seg:focus-within {
+  background: rgba(0, 59, 122, 0.07);
+}
+
+.stay-seg-where {
+  flex: 1.7;
+  cursor: text;
+}
+
+.stay-seg label {
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  color: var(--text-main);
+  line-height: 1.2;
+}
+
+.stay-seg input,
+.stay-seg select {
+  width: 100%;
+  min-width: 0;
+  border: none;
+  outline: none;
+  background: transparent;
+  padding: 0;
+  font-family: inherit;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  line-height: 1.4;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.stay-seg input::placeholder {
+  color: var(--text-muted);
+  opacity: 0.85;
+}
+
+.stay-input-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.stay-clear {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  box-shadow: 0 4px 14px rgba(0, 59, 122, 0.3);
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(0, 38, 82, 0.08);
+  color: var(--primary);
+  cursor: pointer;
+  flex-shrink: 0;
 }
 
-.search-btn:hover {
-  box-shadow: 0 8px 22px -4px rgba(0, 59, 122, 0.45);
-  transform: translateY(-1px);
+.stay-clear:hover {
+  background: var(--primary);
+  color: #fff;
+}
+
+.stay-sep {
+  width: 1px;
+  align-self: stretch;
+  margin: 6px 0;
+  background: var(--border);
+  flex-shrink: 0;
+}
+
+.stay-date {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.stay-date input[type="date"] {
+  color: var(--text-main);
+  font-weight: 700;
+  font-size: 0.78rem;
+}
+
+/* nakatago ang default na mm/dd/yyyy habang wala pang napiling petsa */
+.stay-date input[type="date"].is-empty,
+.stay-date input[type="date"].is-empty:focus {
+  color: transparent;
+}
+
+.stay-date input[type="date"].is-empty::-webkit-datetime-edit,
+.stay-date input[type="date"].is-empty:focus::-webkit-datetime-edit {
+  color: transparent;
+}
+
+.stay-date input[type="date"]::-webkit-calendar-picker-indicator {
+  opacity: 0.45;
+  cursor: pointer;
+}
+
+.stay-date span {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  pointer-events: none;
+}
+
+.stay-seg select {
+  cursor: pointer;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%237d8794' stroke-width='1.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0 center;
+  padding-right: 14px;
+}
+
+.stay-seg select.has-value {
+  color: var(--text-main);
+  font-weight: 700;
+}
+
+.stay-search-btn {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  border: none;
+  background: var(--primary-gradient);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  cursor: pointer;
+  box-shadow: 0 8px 18px -6px rgba(0, 59, 122, 0.5);
+  transition: all 0.25s var(--ease-pop);
+}
+
+.stay-search-btn:hover {
+  transform: scale(1.06);
+  box-shadow: 0 10px 22px -6px rgba(0, 59, 122, 0.65);
+}
+
+/* Budget Search (ilalim ng search bar) */
+.budget-search {
+  width: 100%;
+  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 9px;
+}
+
+.budget-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  width: 100%;
+  max-width: 460px;
+  padding: 10px 14px;
+  border-radius: 100px;
+  background: #fff;
+  border: 1.5px solid var(--border);
+  box-shadow: 0 3px 10px rgba(0, 38, 82, 0.07);
+  transition: border-color 0.25s var(--ease-pop), box-shadow 0.25s var(--ease-pop);
+}
+
+.budget-input-wrap:focus-within {
+  border-color: var(--primary);
+  box-shadow: 0 8px 18px -8px rgba(0, 59, 122, 0.45);
+}
+
+.budget-peso {
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--primary);
+}
+
+.budget-input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-family: inherit;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.budget-input::placeholder {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  opacity: 0.75;
+}
+
+/* tanggal ang spin buttons ng number input */
+.budget-input::-webkit-outer-spin-button,
+.budget-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.budget-input {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+.budget-suffix {
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.budget-clear {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: none;
+  background: var(--primary-light, rgba(0, 59, 122, 0.08));
+  color: var(--primary);
+  cursor: pointer;
+  transition: all 0.2s var(--ease-pop);
+}
+
+.budget-clear:hover {
+  background: var(--primary);
+  color: #fff;
 }
 
 /* Category Scroll */
@@ -742,7 +1020,7 @@
 
 /* Listings */
 .listings {
-  padding: 20px var(--container-padding) 110px;
+  padding: 20px var(--container-padding) 130px;
   max-width: 1160px;
   margin: 0 auto;
   width: 100%;
@@ -1063,6 +1341,27 @@
   font-weight: 700;
 }
 
+.card-rating {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.85);
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  color: #b45309;
+  font-size: 0.72rem;
+  font-weight: 800;
+  line-height: 1.4;
+}
+
+.card-rating em {
+  font-style: normal;
+  color: var(--text-muted);
+  font-weight: 700;
+}
+
 .card-title-group {
   flex: 1;
   min-width: 0;
@@ -1072,7 +1371,7 @@
 .card-inquire-btn {
   width: 40px;
   height: 40px;
-  padding: 0;
+  padding: 0 0 2px;
   background: var(--secondary-gradient);
   color: var(--primary);
   border: 2px solid #fff;
@@ -1080,6 +1379,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  font-size: 1.1rem;
+  line-height: 1;
   cursor: pointer;
   flex-shrink: 0;
   box-shadow: var(--shadow-gold);
@@ -1088,11 +1389,11 @@
 
 .card-inquire-btn:hover {
   box-shadow: 0 10px 24px -4px rgba(245, 158, 11, 0.6);
-  transform: scale(1.1) rotate(90deg);
+  transform: scale(1.1);
 }
 
 .card-inquire-btn:active {
-  transform: scale(0.95) rotate(90deg);
+  transform: scale(0.95);
 }
 
 .card-landlord-info {
@@ -1237,6 +1538,55 @@
   font-size: 0.75rem;
   font-weight: 800;
   margin-bottom: 12px;
+}
+
+/* Availability status (Available / Occupied) */
+.modal-badges {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.modal-badges .type-badge {
+  margin-bottom: 0;
+}
+
+.avail-badge {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 4;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 11px;
+  border-radius: 100px;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  backdrop-filter: blur(6px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.14);
+}
+
+.avail-badge.available {
+  background: rgba(16, 185, 129, 0.94);
+}
+
+.avail-badge.occupied {
+  background: rgba(239, 68, 68, 0.94);
+}
+
+.avail-badge.inline {
+  position: static;
+  border: none;
+  box-shadow: none;
+  backdrop-filter: none;
+  padding: 5px 14px;
+  font-size: 0.75rem;
 }
 
 .modal-price {
@@ -1434,11 +1784,11 @@
   transform: translateX(-50%);
   width: 100%;
   max-width: 500px;
-  height: 78px;
+  height: 100px;
   display: flex;
   justify-content: space-around;
   align-items: center;
-  padding-bottom: 12px;
+  padding-bottom: 14px;
   border-top: 1px solid rgba(226, 232, 240, 0.9);
   background: rgba(255, 255, 255, 0.92);
   -webkit-backdrop-filter: blur(20px) saturate(190%);
@@ -1452,15 +1802,15 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 5px;
+  gap: 6px;
   background: none;
   border: none;
   color: var(--text-muted);
-  font-size: 0.7rem;
+  font-size: 0.8rem;
   font-weight: 700;
   cursor: pointer;
   flex: 1;
-  padding: 6px 4px;
+  padding: 8px 6px;
   margin: 0 4px;
   border-radius: 16px;
   transition: all 0.25s var(--ease-pop);
@@ -1471,8 +1821,16 @@
   transform: translateY(-2px);
 }
 
+.nav-item.ico-nearby:hover {
+  color: #047857;
+}
+
+.nav-item.ico-wish:hover,
+.nav-item.ico-account:hover {
+  color: #b45309;
+}
+
 .nav-item.active {
-  color: var(--primary);
   font-weight: 800;
 }
 
@@ -1482,33 +1840,107 @@
   bottom: -4px;
   left: 50%;
   transform: translateX(-50%);
-  width: 20px;
+  width: 28px;
   height: 3px;
   border-radius: 100px;
-  background: var(--secondary-gradient);
-  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.55);
+  background: var(--primary-gradient);
+  box-shadow: 0 2px 8px rgba(0, 59, 122, 0.45);
 }
 
+/* Branded icon chips — bawat icon ay hinango sa brand palette:
+   Nearby = GPS green (accent), Home = navy (primary), Wishlist = gold (secondary) */
 .nav-icon-box {
-  width: 46px;
-  height: 30px;
+  width: 60px;
+  height: 42px;
   border-radius: 100px;
   display: flex;
   align-items: center;
   justify-content: center;
+  background: rgba(0, 59, 122, 0.07);
+  color: var(--primary);
+  border: 1px solid rgba(0, 59, 122, 0.1);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9);
   transition: all 0.25s var(--ease-pop);
 }
 
 .nav-icon-box:hover {
-  background: var(--primary-light);
-  color: var(--primary);
+  filter: saturate(1.1) brightness(1.02);
 }
 
 .nav-icon-box.active {
+  background: var(--primary-gradient);
+  color: #fff;
+  border-color: rgba(0, 34, 74, 0.45);
+  transform: scale(1.06);
+  box-shadow: 0 10px 20px -8px rgba(0, 59, 122, 0.7);
+}
+
+/* Nearby — GPS/aksent na berde */
+.nav-item.ico-nearby .nav-icon-box {
+  background: rgba(16, 185, 129, 0.12);
+  color: #047857;
+  border-color: rgba(16, 185, 129, 0.22);
+}
+
+.nav-item.ico-nearby.active {
+  color: #047857;
+}
+
+.nav-item.ico-nearby.active .nav-icon-box {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: #fff;
+  border-color: rgba(4, 120, 87, 0.45);
+  box-shadow: 0 10px 20px -8px rgba(16, 185, 129, 0.75);
+}
+
+.nav-item.ico-nearby.active::after {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.55);
+}
+
+/* Home — navy na brand core */
+.nav-item.ico-home.active {
+  color: var(--primary);
+}
+
+.nav-item.ico-home.active .nav-icon-box {
+  box-shadow: 0 10px 20px -8px rgba(0, 59, 122, 0.7);
+}
+
+.nav-item.ico-home.active::after {
+  box-shadow: 0 2px 8px rgba(0, 59, 122, 0.5);
+}
+
+/* Wishlist — gintong brand secondary */
+.nav-item.ico-wish .nav-icon-box,
+.nav-item.ico-account .nav-icon-box {
+  background: rgba(245, 158, 11, 0.14);
+  color: #b45309;
+  border-color: rgba(245, 158, 11, 0.26);
+}
+
+.nav-item.ico-wish.active,
+.nav-item.ico-account.active {
+  color: #b45309;
+}
+
+.nav-item.ico-wish.active .nav-icon-box,
+.nav-item.ico-account.active .nav-icon-box {
   background: var(--secondary-gradient);
   color: var(--primary);
+  border-color: rgba(217, 119, 6, 0.5);
   box-shadow: var(--shadow-gold);
-  transform: scale(1.06);
+}
+
+.nav-item.ico-wish.active::after,
+.nav-item.ico-account.active::after {
+  background: var(--secondary-gradient);
+  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.55);
+}
+
+/* My Listings — navy (landlord core) */
+.nav-item.ico-list.active {
+  color: var(--primary);
 }
 
 .nav-item:active {
@@ -1518,15 +1950,17 @@
 .circle-plus {
   background: var(--secondary-gradient);
   color: var(--primary-dark);
-  width: 52px;
-  height: 52px;
+  width: 58px;
+  height: 58px;
   border-radius: 50%;
-  font-size: 2.2rem;
+  font-size: 1.85rem;
+  line-height: 1;
   display: flex;
   align-items: center;
   justify-content: center;
+  padding-bottom: 2px;
   box-shadow: 0 8px 24px rgba(245, 158, 11, 0.5);
-  margin-top: -32px;
+  margin-top: -34px;
   flex: 0 0 auto;
   border: 3.5px solid white;
   transition: all 0.25s var(--ease-pop);
@@ -1589,7 +2023,7 @@
   flex-direction: column;
   min-height: 100vh;
   background: white;
-  padding-bottom: 110px;
+  padding-bottom: 130px;
 }
 
 .info-page-container {
@@ -1737,10 +2171,30 @@
     font-size: 1.5rem;
   }
   .listings {
-    padding: 16px var(--container-padding) 105px;
+    padding: 16px var(--container-padding) 125px;
   }
   .info-grid {
     grid-template-columns: 1fr;
+  }
+  .staycation-search {
+    max-width: 100%;
+    padding: 4px;
+  }
+  .stay-seg {
+    padding: 5px 9px;
+  }
+  .stay-seg label {
+    font-size: 0.55rem;
+    letter-spacing: 0.05em;
+  }
+  .stay-seg input,
+  .stay-seg select,
+  .stay-date span {
+    font-size: 0.72rem;
+  }
+  .stay-search-btn {
+    width: 38px;
+    height: 38px;
   }
 }
 

@@ -167,6 +167,40 @@
   margin-top: 2px;
 }
 
+/* Availability toggle (Available / Occupied) */
+.avail-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  margin-top: 8px;
+  padding: 5px 12px;
+  border-radius: 100px;
+  border: 1.5px solid transparent;
+  font-family: inherit;
+  font-size: 0.72rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 0.2s var(--ease-pop);
+}
+
+.avail-toggle.available {
+  background: rgba(16, 185, 129, 0.12);
+  color: #047857;
+  border-color: rgba(16, 185, 129, 0.3);
+}
+
+.avail-toggle.occupied {
+  background: rgba(239, 68, 68, 0.12);
+  color: #dc2626;
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+.avail-toggle:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(15, 23, 42, 0.1);
+}
+
 .my-listing-actions {
   display: flex;
   flex-direction: column;

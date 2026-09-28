@@ -11,6 +11,7 @@ const PropertyForm = ({ onClose, session, onListingAdded }) => {
     name: '',
     type: 'Paupahan',
     price: '',
+    availability: 'Available',
     advanceMonths: '1',
     depositMonths: '2',
     location: '',
@@ -125,34 +126,42 @@ const PropertyForm = ({ onClose, session, onListingAdded }) => {
       if (formData.cr === 'Private') amenities.push('Private CR');
       if (formData.secured === 'Yes') amenities.push('Secured');
 
-      const { error } = await supabase
-        .from('properties')
-        .insert({
-          name: formData.name,
-          type: formData.type,
-          price: parseFloat(formData.price || 0),
-          advance_months: parseInt(formData.advanceMonths || 1),
-          deposit_months: parseInt(formData.depositMonths || 2),
-          location: formData.location,
-          description: formData.description,
-          contact: formData.contact,
-          image: image || '/placeholder.png',
-          wifi: formData.wifi,
-          parking: formData.parking,
-          cr: formData.cr,
-          rooms: parseInt(formData.rooms || 1),
-          secured: formData.secured,
-          kitchen: parseInt(formData.kitchen || 0),
-          email: formData.email,
-          amenities: amenities,
-          user_id: session.user.id,
-          is_verified: isVerified,
-          owner_name: session.user.user_metadata?.full_name || 'Landlord',
-          owner_avatar: session.user.user_metadata?.avatar_url || '',
-          owner_business_name: formData.ownerBusinessName,
-          owner_facebook: formData.ownerFacebook,
-          owner_whatsapp: formData.ownerWhatsapp
-        });
+      const payload = {
+        name: formData.name,
+        type: formData.type,
+        price: parseFloat(formData.price || 0),
+        availability: formData.availability || 'Available',
+        advance_months: parseInt(formData.advanceMonths || 1),
+        deposit_months: parseInt(formData.depositMonths || 2),
+        location: formData.location,
+        description: formData.description,
+        contact: formData.contact,
+        image: image || '/placeholder.png',
+        wifi: formData.wifi,
+        parking: formData.parking,
+        cr: formData.cr,
+        rooms: parseInt(formData.rooms || 1),
+        secured: formData.secured,
+        kitchen: parseInt(formData.kitchen || 0),
+        email: formData.email,
+        amenities: amenities,
+        user_id: session.user.id,
+        is_verified: isVerified,
+        owner_name: session.user.user_metadata?.full_name || 'Landlord',
+        owner_avatar: session.user.user_metadata?.avatar_url || '',
+        owner_business_name: formData.ownerBusinessName,
+        owner_facebook: formData.ownerFacebook,
+        owner_whatsapp: formData.ownerWhatsapp
+      };
+
+      let { error } = await supabase.from('properties').insert(payload);
+
+      // Fallback kapag wala pa ang availability column sa database
+      if (error && (error.code === '42703' || /availability/i.test(error.message || ''))) {
+        const legacyPayload = { ...payload };
+        delete legacyPayload.availability;
+        ({ error } = await supabase.from('properties').insert(legacyPayload));
+      }
 
       if (error) throw error;
       
@@ -246,6 +255,15 @@ const PropertyForm = ({ onClose, session, onListingAdded }) => {
             <div className="form-group">
               <label>Location</label>
               <input name="location" placeholder="City or Landmarks" required onChange={handleChange} />
+            </div>
+
+            <div className="form-group">
+              <label>Availability Status</label>
+              <select name="availability" value={formData.availability} onChange={handleChange}>
+                <option value="Available">Available — may bakante pa</option>
+                <option value="Occupied">Occupied — na-accommodate na</option>
+              </select>
+              <span className="upload-hint">I-update ito kapag puno na o nabakante ang unit.</span>
             </div>
 
             <div className="form-group image-upload-group">

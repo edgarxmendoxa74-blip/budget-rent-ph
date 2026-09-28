@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useMemo, Suspense, lazy } from 'react';
-import { Search, MapPin, Bed, Bath, Wifi, Shield, Star, Menu, X, Heart, MessageCircle, Phone, LogOut, Building2, User, Users, Loader2, ClipboardList, Mail, BadgeCheck, Headset, ArrowLeft, Home, Navigation, Globe, Trash2, ChevronLeft, ChevronRight, Plus, Bell, FileText } from 'lucide-react';
+import React, { useState, useEffect, useMemo, useRef, Suspense, lazy } from 'react';
+import { Search, MapPin, Bed, Bath, Wifi, Shield, Star, Menu, X, Heart, MessageCircle, Phone, LogOut, Building2, User, Users, Loader2, ClipboardList, Mail, BadgeCheck, Headset, ArrowLeft, Home, Navigation, Globe, Trash2, ChevronLeft, ChevronRight, Bell, FileText } from 'lucide-react';
 import { clearSupabaseSessionStorage, recoverFromJwtError, supabase, validateCurrentSession } from './lib/supabase';
 import './App.css';
 import './components/ProfileModal.css';
@@ -16,6 +16,7 @@ const AdminPanel = lazy(() => import('./components/AdminPanel'));
 const AdminLogin = lazy(() => import('./components/AdminLogin'));
 const EmailVerificationHandler = lazy(() => import('./components/EmailVerificationHandler'));
 const AgreementDraft = lazy(() => import('./components/AgreementDraft'));
+const ReviewsSection = lazy(() => import('./components/ReviewsSection'));
 
 // Custom Debounce Hook
 function useDebounce(value, delay) {
@@ -33,7 +34,17 @@ function useDebounce(value, delay) {
 
 const CATEGORIES = ["Paupahan", "Staycation"];
 const CATEGORY_EMOJI = { Paupahan: "🏠", Staycation: "🌴" };
+
+// Budget input sa home search: max na presyo kada buwan (0/blank = lahat)
+const parseBudget = (value) => Math.max(0, Number(value) || 0);
 const isStaycation = (item) => String(item?.type || item?.category || '').toLowerCase().includes('staycation');
+
+// Availability status: 'Available' (default) o 'Occupied'/'Accommodated'
+const isOccupied = (item) => {
+  const value = String(item?.availability || '').toLowerCase().trim();
+  return value === 'occupied' || value === 'accommodated' || value === 'rented' || value === 'unavailable';
+};
+const availabilityLabel = (item) => (isOccupied(item) ? 'Occupied' : 'Available');
 const HIDDEN_PROPERTIES_KEY = 'budgetrent_hidden_properties';
 
 const getHiddenPropertyIds = () => {
@@ -93,7 +104,7 @@ export const getMoveInBreakdown = (item) => {
   return { price, advance, deposit, estimatedMoveIn };
 };
 
-function ListingCard({ item, isFav, onToggleFavorite, onOpen, onOpenLandlord }) {
+function ListingCard({ item, isFav, onToggleFavorite, onOpen, stats }) {
   return (
     <div
       className="listing-card animate-slide-up"
@@ -101,6 +112,9 @@ function ListingCard({ item, isFav, onToggleFavorite, onOpen, onOpenLandlord }) 
     >
       <div className="image-container">
         <img src={item.image || '/placeholder.png'} alt={item.name || item.title} loading="lazy" />
+        <span className={`avail-badge ${isOccupied(item) ? 'occupied' : 'available'}`}>
+          {availabilityLabel(item)}
+        </span>
         <button
           type="button"
           className={`fav-btn${isFav ? ' active' : ''}`}
@@ -124,40 +138,24 @@ function ListingCard({ item, isFav, onToggleFavorite, onOpen, onOpenLandlord }) 
           </div>
           <button
             className="card-inquire-btn"
-            aria-label="Inquire"
-            title="Inquire"
+            aria-label="Book this listing"
+            title="Book this listing"
             onClick={(e) => { e.stopPropagation(); onOpen(item); }}
           >
-            <Plus size={22} strokeWidth={3} />
+            📅
           </button>
         </div>
 
         <div className="card-price-row">
           <span className="price-tag">₱{item.price?.toLocaleString() || 0}</span>
           <span className="price-period">/month</span>
-        </div>
-
-        <div
-          className="card-landlord-info"
-          onClick={(e) => { e.stopPropagation(); onOpenLandlord(item); }}
-        >
-          <div className="mini-avatar-wrapper">
-            {item?.owner_avatar ? (
-              <img src={item.owner_avatar} alt="" className="mini-avatar" loading="lazy" />
-            ) : (
-              <div className="mini-avatar-placeholder">
-                {(item.owner_name || 'L').charAt(0).toUpperCase()}
-              </div>
-            )}
-            {item.is_verified && (
-              <div className="mini-verify-badge">
-                <BadgeCheck size={10} fill="#0066ff" color="white" />
-              </div>
-            )}
-          </div>
-          <span className="landlord-name-small">
-            {item.owner_name || 'Landlord'}
-          </span>
+          {stats?.count > 0 && (
+            <span className="card-rating" title={`${stats.avg.toFixed(1)} out of 5`}>
+              <Star size={11} fill="currentColor" strokeWidth={0} />
+              {stats.avg.toFixed(1)}
+              <em>({stats.count})</em>
+            </span>
+          )}
         </div>
       </div>
     </div>
@@ -167,6 +165,8 @@ function ListingCard({ item, isFav, onToggleFavorite, onOpen, onOpenLandlord }) 
 function App() {
   const [session, setSession] = useState(null);
   const [properties, setProperties] = useState([]); // Dynamic properties state
+  const [reviews, setReviews] = useState([]);
+  const [reviewsLoading, setReviewsLoading] = useState(true);
   const [loading, setLoading] = useState(true);
   const [isGuest, setIsGuest] = useState(localStorage.getItem('budgetrent_guest') === 'true');
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -183,6 +183,10 @@ function App() {
   const [isProfileEditing, setIsProfileEditing] = useState(false);
   const [isEditListingsOpen, setIsEditListingsOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState("Paupahan");
+  const [budgetMax, setBudgetMax] = useState('');
+  const [stayDate, setStayDate] = useState('');
+  const [stayGuests, setStayGuests] = useState('');
+  const stayWhereRef = useRef(null);
   const [searchQuery, setSearchQuery] = useState("");
   const debouncedSearchQuery = useDebounce(searchQuery, 400); // 400ms debounce
   const [selectedProperty, setSelectedProperty] = useState(null);
@@ -228,6 +232,7 @@ function App() {
     });
 
     fetchProperties(); // Initial fetch
+    fetchReviews(); // Customer reviews (kasing-batch ng properties fetch)
 
     // Check for /admin route
     if (window.location.pathname === '/admin') {
@@ -246,6 +251,25 @@ function App() {
     }
   }, [session, isGuest, activeTab]);
 
+  const fetchReviews = async () => {
+    try {
+      setReviewsLoading(true);
+      const { data, error } = await supabase
+        .from('property_reviews')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(500);
+
+      if (error) throw error;
+      setReviews(data || []);
+    } catch (error) {
+      console.error('Error fetching reviews:', error.message);
+      setReviews([]);
+    } finally {
+      setReviewsLoading(false);
+    }
+  };
+
   const fetchProperties = async () => {
     try {
       setLoading(true);
@@ -254,7 +278,7 @@ function App() {
         .select('*')
         .order('created_at', { ascending: false })
         .limit(100); // Pagination / Limit applied
-      
+
       if (error) throw error;
       const hiddenPropertyIds = new Set(getHiddenPropertyIds());
       const normalizedProperties = applySubscriptionExpiry(normalizePropertyOwnerProfiles(data || []));
@@ -301,6 +325,8 @@ function App() {
   };
 
   const filteredListings = useMemo(() => {
+    const maxBudget = parseBudget(budgetMax);
+    const skipBudget = activeTab === 'mylistings' || activeTab === 'admin';
     return properties.filter(item => {
       const matchesCategory = (activeTab === 'mylistings' || activeTab === 'admin')
         ? true
@@ -313,15 +339,35 @@ function App() {
       const matchesSearch = (item.name || item.title || "").toLowerCase().includes(q) || 
                             (item.location || "").toLowerCase().includes(q);
       const matchesMyListings = activeTab === 'mylistings' ? (item.user_id === session?.user?.id) : true;
-      return matchesCategory && matchesSearch && matchesMyListings;
+      const price = Number(item.price) || 0;
+      const matchesBudget = skipBudget || maxBudget <= 0 || price <= maxBudget;
+      return matchesCategory && matchesSearch && matchesMyListings && matchesBudget;
     });
-  }, [properties, selectedCategory, debouncedSearchQuery, activeTab, session?.user?.id]);
+  }, [properties, selectedCategory, debouncedSearchQuery, activeTab, session?.user?.id, budgetMax]);
 
   const shouldShowOwnerAvatar = (item) => Boolean(item?.owner_avatar);
 
   const wishlistListings = useMemo(
     () => properties.filter(item => favorites.includes(item.id)),
     [properties, favorites]
+  );
+
+  const reviewStats = useMemo(() => {
+    const map = new Map();
+    reviews.forEach(r => {
+      const stat = map.get(r.property_id) || { sum: 0, count: 0 };
+      stat.sum += Number(r.rating) || 0;
+      stat.count += 1;
+      map.set(r.property_id, stat);
+    });
+    const stats = new Map();
+    map.forEach((value, key) => stats.set(key, { avg: value.sum / value.count, count: value.count }));
+    return stats;
+  }, [reviews]);
+
+  const reviewsForSelected = useMemo(
+    () => (selectedProperty ? reviews.filter(r => r.property_id === selectedProperty.id) : []),
+    [reviews, selectedProperty]
   );
 
   const notifications = useMemo(() => {
@@ -540,6 +586,76 @@ function App() {
             <div className="hero-content">
               <h2>Welcome to <span>BudgetRentPH</span></h2>
               <p>Mura. Malapit. Mapagkakatiwalaan.</p>
+                {selectedCategory === 'Staycation' ? (
+                  <div className="staycation-search">
+                    <div className="stay-seg stay-seg-where">
+                      <label htmlFor="stay-where">Where</label>
+                      <div className="stay-input-row">
+                        <input
+                          id="stay-where"
+                          ref={stayWhereRef}
+                          type="text"
+                          placeholder="Search destinations"
+                          value={searchQuery}
+                          onChange={(e) => setSearchQuery(e.target.value)}
+                          onKeyDown={(e) => { if (e.key === 'Enter') e.target.blur(); }}
+                        />
+                        {searchQuery !== '' && (
+                          <button
+                            type="button"
+                            className="stay-clear"
+                            aria-label="Burahin ang search"
+                            onClick={() => setSearchQuery('')}
+                          >
+                            <X size={13} />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                    <span className="stay-sep" />
+                    <div className="stay-seg">
+                      <label htmlFor="stay-when">When</label>
+                      <div className="stay-date">
+                        <input
+                          id="stay-when"
+                          type="date"
+                          className={stayDate ? '' : 'is-empty'}
+                          value={stayDate}
+                          onChange={(e) => setStayDate(e.target.value)}
+                        />
+                        {!stayDate && <span>Add dates</span>}
+                      </div>
+                    </div>
+                    <span className="stay-sep" />
+                    <div className="stay-seg">
+                      <label htmlFor="stay-who">Who</label>
+                      <select
+                        id="stay-who"
+                        className={stayGuests ? 'has-value' : ''}
+                        value={stayGuests}
+                        onChange={(e) => setStayGuests(e.target.value)}
+                      >
+                        <option value="">Add guests</option>
+                        <option value="1">1 guest</option>
+                        <option value="2">2 guests</option>
+                        <option value="3">3 guests</option>
+                        <option value="4">4 guests</option>
+                        <option value="5">5 guests</option>
+                        <option value="6">6 guests</option>
+                        <option value="7">7 guests</option>
+                        <option value="8">8+ guests</option>
+                      </select>
+                    </div>
+                    <button
+                      type="button"
+                      className="stay-search-btn"
+                      aria-label="Search destinations"
+                      onClick={() => stayWhereRef.current?.focus()}
+                    >
+                      <Search size={18} />
+                    </button>
+                  </div>
+                ) : (
                 <div className="search-bar">
                   <Search className="search-icon" size={20} />
                   <input 
@@ -548,7 +664,44 @@ function App() {
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                   />
-                  <button className="search-btn">Search</button>
+                  {searchQuery !== '' && (
+                    <button
+                      type="button"
+                      className="budget-clear"
+                      aria-label="Burahin ang search"
+                      onClick={() => setSearchQuery('')}
+                    >
+                      <X size={14} />
+                    </button>
+                  )}
+                </div>
+                )}
+
+                <div className="budget-search">
+                  <div className="budget-input-wrap">
+                    <span className="budget-peso">₱</span>
+                    <input
+                      type="number"
+                      min="0"
+                      step="100"
+                      inputMode="numeric"
+                      className="budget-input"
+                      placeholder="I-enter ang budget mo kada buwan"
+                      value={budgetMax}
+                      onChange={(e) => setBudgetMax(e.target.value)}
+                    />
+                    <span className="budget-suffix">/mo</span>
+                    {budgetMax !== '' && (
+                      <button
+                        type="button"
+                        className="budget-clear"
+                        aria-label="Burahin ang budget"
+                        onClick={() => setBudgetMax('')}
+                      >
+                        <X size={14} />
+                      </button>
+                    )}
+                  </div>
                 </div>
             </div>
           </header>
@@ -596,7 +749,7 @@ function App() {
                     isFav={favorites.includes(item.id)}
                     onToggleFavorite={toggleFavorite}
                     onOpen={setSelectedProperty}
-                    onOpenLandlord={setViewingLandlord}
+                    stats={reviewStats.get(item.id)}
                   />
                 ))}
               </div>
@@ -609,8 +762,8 @@ function App() {
         <Suspense fallback={<div className="text-center py-10"><Loader2 className="animate-spin text-primary mx-auto" size={40} /></div>}>
           <FindNearbyPage 
             listings={filteredListings}
+            reviewStats={reviewStats}
             onSelectProperty={setSelectedProperty}
-            onViewLandlord={setViewingLandlord}
             isLandlord={!isGuest && session?.user?.user_metadata?.user_role === 'landlord'}
             onBack={() => {
               if (!isGuest && session?.user?.user_metadata?.user_role === 'landlord') {
@@ -663,7 +816,7 @@ function App() {
                     isFav={favorites.includes(item.id)}
                     onToggleFavorite={toggleFavorite}
                     onOpen={setSelectedProperty}
-                    onOpenLandlord={setViewingLandlord}
+                    stats={reviewStats.get(item.id)}
                   />
                 ))}
               </div>
@@ -715,6 +868,9 @@ function App() {
                   >
                     <div className="image-container">
                       <img src={item.image || '/placeholder.png'} alt={item.name || item.title} loading="lazy" />
+                      <span className={`avail-badge ${isOccupied(item) ? 'occupied' : 'available'}`}>
+                        {availabilityLabel(item)}
+                      </span>
                       <div className="rating-tag" style={{ background: 'var(--primary)', color: 'white' }}>
                         <Shield size={12} fill="currentColor" /> Manage Listing
                       </div>
@@ -733,40 +889,6 @@ function App() {
                         <span><div className="spec-icon"><Wifi size={10} /></div> {item.wifi || 'No'}</span>
                         <span><div className="spec-icon"><Building2 size={10} /></div> {item.rooms || 1} Room</span>
                         <span><div className="spec-icon"><Star size={10} /></div> {item.cr || 'Shared'}</span>
-                      </div>
-                      <div 
-                        style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: '8px 0', cursor: 'pointer' }}
-                        onClick={(e) => { e.stopPropagation(); setViewingLandlord(item); }}
-                      >
-                        <div style={{ position: 'relative' }}>
-                          {shouldShowOwnerAvatar(item) ? (
-                            <img src={item.owner_avatar} alt="" style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover', border: '1.5px solid var(--primary)' }} loading="lazy" />
-                          ) : (
-                            <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'var(--primary)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.85rem', fontWeight: 'bold' }}>
-                              {(item.owner_name || 'L').charAt(0).toUpperCase()}
-                            </div>
-                          )}
-                          {item.is_verified && (
-                            <div style={{ 
-                              position: 'absolute', 
-                              bottom: '-2px', 
-                              right: '-2px', 
-                              background: 'white', 
-                              borderRadius: '50%', 
-                              width: '14px', 
-                              height: '14px', 
-                              display: 'flex', 
-                              alignItems: 'center', 
-                              justifyContent: 'center',
-                              boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-                            }}>
-                              <BadgeCheck size={12} fill="#0066ff" color="white" />
-                            </div>
-                          )}
-                        </div>
-                        <span style={{ fontSize: '0.85rem', color: 'var(--text-main)', fontWeight: '600' }}>
-                          {item.owner_name || 'Landlord'}
-                        </span>
                       </div>
                       <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
                         <button className="action-btn-outline" style={{ flex: 1, margin: 0 }} onClick={(e) => { e.stopPropagation(); setEditingListingItem(item); setIsEditListingsOpen(true); }}>
@@ -901,7 +1023,12 @@ function App() {
               <img src={selectedProperty.image} alt={selectedProperty.name || selectedProperty.title} />
             </div>
             <div className="modal-body">
-              <span className="type-badge">{selectedProperty.type}</span>
+              <div className="modal-badges">
+                <span className="type-badge">{selectedProperty.type}</span>
+                <span className={`avail-badge inline ${isOccupied(selectedProperty) ? 'occupied' : 'available'}`}>
+                  {availabilityLabel(selectedProperty)}
+                </span>
+              </div>
               <h2>{selectedProperty.name || selectedProperty.title}</h2>
               {(() => {
                 const { price, advance, deposit, estimatedMoveIn } = getMoveInBreakdown(selectedProperty);
@@ -1018,6 +1145,17 @@ function App() {
                 </>
               )}
 
+              <Suspense fallback={null}>
+                <ReviewsSection
+                  property={selectedProperty}
+                  session={session}
+                  isGuest={isGuest}
+                  reviews={reviewsForSelected}
+                  loading={reviewsLoading}
+                  onChanged={fetchReviews}
+                />
+              </Suspense>
+
               <div className="modal-actions">
                 <a href={`tel:${selectedProperty.contact}`} className="contact-btn call">
                   <Phone size={20} /> Call Owner
@@ -1037,32 +1175,38 @@ function App() {
           {!isGuest ? (
             /* Landlord Navigation */
             <>
-              <button className={`nav-item ${activeTab === 'mylistings' ? 'active' : ''}`} onClick={() => setActiveTab('mylistings')}><ClipboardList size={24} /> <span>My Listings</span></button>
-              <button className="nav-item circle-plus" onClick={() => setIsPropertyFormOpen(true)}>+</button>
-              <button className="nav-item" onClick={() => { setIsProfileEditing(false); setIsProfileModalOpen(true); }}><User size={24} /> <span>Account</span></button>
+              <button className={`nav-item ico-list ${activeTab === 'mylistings' ? 'active' : ''}`} onClick={() => setActiveTab('mylistings')}>
+                <span className={`nav-icon-box ${activeTab === 'mylistings' ? 'active' : ''}`}><ClipboardList size={24} /></span>
+                <span>My Listings</span>
+              </button>
+              <button className="nav-item circle-plus" onClick={() => setIsPropertyFormOpen(true)} aria-label="List your property" title="List your property">📅</button>
+              <button className="nav-item ico-account" onClick={() => { setIsProfileEditing(false); setIsProfileModalOpen(true); }}>
+                <span className="nav-icon-box"><User size={24} /></span>
+                <span>Account</span>
+              </button>
             </>
           ) : (
             /* Tenant Navigation */
             <>
               <button 
-                className={`nav-item ${activeTab === 'explore' ? 'active' : ''}`}
+                className={`nav-item ico-nearby ${activeTab === 'explore' ? 'active' : ''}`}
                 onClick={() => setActiveTab('explore')}
               >
-                <div className={`nav-icon-box ${activeTab === 'explore' ? 'active' : ''}`}><MapPin size={22} /></div>
+                <div className={`nav-icon-box ${activeTab === 'explore' ? 'active' : ''}`}><MapPin size={26} /></div>
                 <span>Nearby</span>
               </button>
               <button 
-                className={`nav-item ${activeTab === 'home' ? 'active' : ''}`}
+                className={`nav-item ico-home ${activeTab === 'home' ? 'active' : ''}`}
                 onClick={() => setActiveTab('home')}
               >
-              <div className={`nav-icon-box ${activeTab === 'home' ? 'active' : ''}`}><Home size={22} /></div>
+              <div className={`nav-icon-box ${activeTab === 'home' ? 'active' : ''}`}><Home size={26} /></div>
                 <span>Home</span>
               </button>
               <button 
-                className={`nav-item ${activeTab === 'wishlist' ? 'active' : ''}`}
+                className={`nav-item ico-wish ${activeTab === 'wishlist' ? 'active' : ''}`}
                 onClick={() => setActiveTab('wishlist')}
               >
-                <div className={`nav-icon-box ${activeTab === 'wishlist' ? 'active' : ''}`}><Heart size={22} /></div>
+                <div className={`nav-icon-box ${activeTab === 'wishlist' ? 'active' : ''}`}><Heart size={26} /></div>
                 <span>Wishlist</span>
               </button>
             </>

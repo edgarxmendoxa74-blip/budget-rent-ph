@@ -9,6 +9,11 @@ const normalizeCategory = (type) =>
     ? type
     : String(type || '').toLowerCase().includes('staycation') ? 'Staycation' : 'Paupahan';
 
+const isOccupiedItem = (item) => {
+  const value = String(item?.availability || '').toLowerCase().trim();
+  return value === 'occupied' || value === 'accommodated' || value === 'rented' || value === 'unavailable';
+};
+
 const EditListings = ({ session, onClose, onListingUpdated, initialEditingItem = null }) => {
   const [myListings, setMyListings] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -72,6 +77,27 @@ const EditListings = ({ session, onClose, onListingUpdated, initialEditingItem =
     setEditingItem(prev => ({ ...prev, [field]: value }));
   };
 
+  const handleToggleAvailability = async (item) => {
+    const next = isOccupiedItem(item) ? 'Available' : 'Occupied';
+    try {
+      const { error } = await supabase
+        .from('properties')
+        .update({ availability: next })
+        .eq('id', item.id);
+      if (error) throw error;
+
+      setMyListings(prev => prev.map(p => p.id === item.id ? { ...p, availability: next } : p));
+      setEditingItem(prev => (prev && prev.id === item.id ? { ...prev, availability: next } : prev));
+      if (onListingUpdated) onListingUpdated();
+    } catch (err) {
+      if (err?.code === '42703' || /availability/i.test(err?.message || '')) {
+        alert('Wala pa ang "availability" column sa database. Patakbuhin muna ang SQL migration sa Supabase SQL Editor.');
+      } else {
+        alert('Error updating availability: ' + err.message);
+      }
+    }
+  };
+
   const handleImageUpload = async (e) => {
     try {
       setUploading(true);
@@ -107,29 +133,43 @@ const EditListings = ({ session, onClose, onListingUpdated, initialEditingItem =
       if (editingItem.cr === 'Private') amenities.push('Private CR');
       if (editingItem.secured === 'Yes') amenities.push('Secured');
 
-      const { error } = await supabase
+      const payload = {
+        name: editingItem.name,
+        type: editingItem.type,
+        price: parseFloat(editingItem.price || 0),
+        location: editingItem.location,
+        description: editingItem.description,
+        contact: editingItem.contact,
+        image: editingItem.image,
+        wifi: editingItem.wifi,
+        parking: editingItem.parking,
+        cr: editingItem.cr,
+        rooms: parseInt(editingItem.rooms || 1),
+        secured: editingItem.secured,
+        kitchen: parseInt(editingItem.kitchen || 0),
+        email: editingItem.email,
+        availability: editingItem.availability || 'Available',
+        amenities: amenities,
+        owner_business_name: editingItem.owner_business_name,
+        owner_facebook: editingItem.owner_facebook,
+        owner_whatsapp: editingItem.owner_whatsapp
+      };
+
+      let { error } = await supabase
         .from('properties')
-        .update({
-          name: editingItem.name,
-          type: editingItem.type,
-          price: parseFloat(editingItem.price || 0),
-          location: editingItem.location,
-          description: editingItem.description,
-          contact: editingItem.contact,
-          image: editingItem.image,
-          wifi: editingItem.wifi,
-          parking: editingItem.parking,
-          cr: editingItem.cr,
-          rooms: parseInt(editingItem.rooms || 1),
-          secured: editingItem.secured,
-          kitchen: parseInt(editingItem.kitchen || 0),
-          email: editingItem.email,
-          amenities: amenities,
-          owner_business_name: editingItem.owner_business_name,
-          owner_facebook: editingItem.owner_facebook,
-          owner_whatsapp: editingItem.owner_whatsapp
-        })
+        .update(payload)
         .eq('id', editingItem.id);
+
+      // Fallback kapag wala pa ang availability column sa database
+      if (error && (error.code === '42703' || /availability/i.test(error.message || ''))) {
+        const legacyPayload = { ...payload };
+        delete legacyPayload.availability;
+        ({ error } = await supabase
+          .from('properties')
+          .update(legacyPayload)
+          .eq('id', editingItem.id));
+      }
+
       if (error) throw error;
 
       setMyListings(prev => prev.map(p => p.id === editingItem.id ? editingItem : p));
@@ -179,6 +219,14 @@ const EditListings = ({ session, onClose, onListingUpdated, initialEditingItem =
                       <MapPin size={12} /> {item.location}
                     </div>
                     <div className="my-listing-price">₱{item.price?.toLocaleString()}/mo</div>
+                    <button
+                      type="button"
+                      className={`avail-toggle ${isOccupiedItem(item) ? 'occupied' : 'available'}`}
+                      onClick={(e) => { e.stopPropagation(); handleToggleAvailability(item); }}
+                      title="I-toggle ang status: Available / Occupied"
+                    >
+                      {isOccupiedItem(item) ? 'Occupied' : 'Available'}
+                    </button>
                   </div>
                   <div className="my-listing-actions">
                     <button className="edit-action-btn edit" onClick={() => handleEdit(item)}>
@@ -232,6 +280,13 @@ const EditListings = ({ session, onClose, onListingUpdated, initialEditingItem =
               <div className="edit-form-group">
                 <label>Location</label>
                 <input value={editingItem.location || ''} onChange={e => handleEditChange('location', e.target.value)} />
+              </div>
+              <div className="edit-form-group">
+                <label>Availability Status</label>
+                <select value={editingItem.availability || 'Available'} onChange={e => handleEditChange('availability', e.target.value)}>
+                  <option value="Available">Available — may bakante pa</option>
+                  <option value="Occupied">Occupied — na-accommodate na</option>
+                </select>
               </div>
               <div className="edit-form-group">
                 <label>Description</label>
