@@ -3,7 +3,7 @@
   position: sticky;
   top: 0;
   z-index: 100;
-  height: 68px;
+  height: 58px;
   padding: 0 var(--container-padding);
   display: flex;
   align-items: center;
@@ -24,8 +24,8 @@
 }
 
 .logo-img {
-  width: 36px;
-  height: 36px;
+  width: 30px;
+  height: 30px;
   object-fit: contain;
   filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.12));
   transition: transform 0.3s var(--ease-pop);
@@ -36,7 +36,7 @@
 }
 
 .brand-name {
-  font-size: 1.3rem;
+  font-size: 1.05rem;
   font-weight: 800;
   color: var(--primary);
   min-width: 0;
@@ -52,7 +52,7 @@
 .nav-actions {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
 }
 
 .list-property-btn.desktop-only {
@@ -89,8 +89,8 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  padding: 9px;
-  border-radius: 16px;
+  padding: 6px;
+  border-radius: 12px;
   box-shadow: var(--shadow-gold);
   transition: all 0.25s var(--ease-pop);
 }
@@ -99,7 +99,7 @@
   content: "";
   position: absolute;
   inset: -3px;
-  border-radius: 19px;
+  border-radius: 15px;
   background: var(--secondary-gradient);
   opacity: 0;
   z-index: -1;
@@ -107,6 +107,8 @@
 }
 
 .menu-btn svg {
+  width: 18px;
+  height: 18px;
   transition: transform 0.25s var(--ease-pop);
 }
 
@@ -142,13 +144,13 @@
   position: absolute;
   top: -4px;
   right: -4px;
-  min-width: 18px;
-  height: 18px;
-  padding: 0 5px;
+  min-width: 15px;
+  height: 15px;
+  padding: 0 4px;
   border-radius: 100px;
   background: #EF4444;
   color: #fff;
-  font-size: 0.62rem;
+  font-size: 0.55rem;
   font-weight: 800;
   display: flex;
   align-items: center;
@@ -346,15 +348,58 @@
   gap: 10px;
 }
 
+.menu-logo-chip {
+  width: 46px;
+  height: 46px;
+  border-radius: 14px;
+  background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.25), 0 0 0 2px rgba(255, 184, 0, 0.7);
+}
+
+.menu-logo-chip .logo-img {
+  width: 36px;
+  height: 36px;
+  filter: none;
+}
+
+.menu-brand-text h1 { margin: 0; }
+
+.menu-brand-text p {
+  margin: 3px 0 0;
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: rgba(255, 255, 255, 0.78);
+}
+
 .menu-header .brand-name {
   color: #fff;
-  font-size: 1.15rem;
+  font-size: 1.2rem;
   letter-spacing: -0.02em;
 }
 
 .menu-header .brand-name span {
   color: var(--secondary-gold);
 }
+
+.menu-header {
+  border-bottom: 4px solid var(--secondary-gold);
+}
+
+.menu-section-label {
+  margin: 10px 8px 4px;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--secondary-dark);
+}
+
+.menu-section-label:first-child { margin-top: 2px; }
 
 .close-menu {
   position: relative;
@@ -380,10 +425,10 @@
 }
 
 .menu-items {
-  padding: 12px 11px;
+  padding: 12px 12px;
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 4px;
   flex: 1;
   overflow-y: auto;
 }
@@ -391,13 +436,13 @@
 .menu-link {
   display: flex;
   align-items: center;
-  gap: 9px;
-  padding: 6px 9px;
+  gap: 12px;
+  padding: 10px 12px;
   border: 1px solid transparent;
   background: none;
-  border-radius: 10px;
+  border-radius: 12px;
   color: var(--text-main);
-  font-size: 0.78rem;
+  font-size: 0.92rem;
   font-weight: 700;
   cursor: pointer;
   transition: all 0.22s var(--ease-pop);
@@ -425,10 +470,10 @@
 }
 
 .icon-container-mini {
-  width: 23px;
-  height: 23px;
-  border-radius: 7px;
-  background: var(--primary-light);
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #F0F6FF, #DCEBFF);
   color: var(--primary);
   display: flex;
   align-items: center;
@@ -439,8 +484,21 @@
 }
 
 .icon-container-mini svg {
-  width: 13px;
-  height: 13px;
+  width: 18px;
+  height: 18px;
+  stroke-width: 2.2;
+}
+
+.menu-link.active {
+  background: var(--primary-light);
+  color: var(--primary);
+  border-color: rgba(0, 59, 122, 0.14);
+  box-shadow: inset 4px 0 0 var(--secondary-gold);
+}
+
+.menu-link.active .icon-container-mini {
+  background: var(--primary);
+  color: #fff;
 }
 
 .menu-link:hover .icon-container-mini {
@@ -450,8 +508,16 @@
 }
 
 .icon-container-mini.secondary-icon {
-  background: rgba(245, 158, 11, 0.15);
-  color: var(--secondary-dark);
+  background: linear-gradient(135deg, #FFF3CC, #FFE08A);
+  color: var(--primary);
+  box-shadow: inset 0 0 0 1px rgba(245, 158, 11, 0.35);
+}
+
+.menu-link:hover .icon-container-mini.secondary-icon,
+.menu-link.active .icon-container-mini.secondary-icon {
+  background: var(--secondary-gradient);
+  color: var(--primary);
+  box-shadow: 0 4px 12px -4px rgba(245, 158, 11, 0.6);
 }
 
 .menu-link.highlight .icon-container-mini {
@@ -489,9 +555,12 @@
   background: linear-gradient(90deg, transparent, var(--border) 20%, var(--border) 80%, transparent);
 }
 
+.menu-footer strong { color: var(--primary); font-size: 0.85rem; font-weight: 800; }
+.menu-footer strong span { color: var(--secondary); }
+
 .menu-footer {
   padding: 16px 18px;
-  border-top: 1px solid var(--border-subtle);
+  border-top: 3px solid var(--secondary-gold);
   background: #F8FAFC;
   display: flex;
   justify-content: space-between;
@@ -1129,11 +1198,11 @@
 /* Guest favorite */
 .fav-btn {
   position: absolute;
-  top: 10px;
-  left: 10px;
+  top: 8px;
+  left: 8px;
   z-index: 4;
-  width: 36px;
-  height: 36px;
+  width: 28px;
+  height: 28px;
   padding: 0;
   border-radius: 50%;
   display: flex;
@@ -1320,7 +1389,8 @@
 
 .card-price-row {
   display: flex;
-  align-items: baseline;
+  align-items: center;
+  flex-wrap: wrap;
   gap: 4px;
   margin: 6px 0 4px;
   padding: 6px 10px;
@@ -1330,12 +1400,15 @@
 }
 
 .price-tag {
+  white-space: nowrap;
   font-size: 1.02rem;
   font-weight: 800;
   color: #047857;
 }
 
 .price-period {
+  white-space: nowrap;
+  line-height: 1;
   font-size: 0.7rem;
   color: #059669;
   font-weight: 700;
@@ -1515,6 +1588,7 @@
 
 .modal-image {
   height: 260px;
+  flex-shrink: 0; /* huwag maipit sa flex column kapag mahaba ang laman ng modal */
   overflow: hidden;
   background: #F1F5F9;
 }
@@ -1555,15 +1629,15 @@
 
 .avail-badge {
   position: absolute;
-  top: 10px;
-  right: 10px;
+  top: 8px;
+  right: 8px;
   z-index: 4;
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  padding: 5px 11px;
+  gap: 4px;
+  padding: 3px 8px;
   border-radius: 100px;
-  font-size: 0.68rem;
+  font-size: 0.6rem;
   font-weight: 800;
   letter-spacing: 0.02em;
   color: #fff;
@@ -2267,4 +2341,325 @@
 .wishlist-browse-btn:hover {
   transform: translateY(-2px);
   box-shadow: 0 10px 24px -4px rgba(245, 158, 11, 0.55);
+}
+
+/* Layo ng listing mula sa tenant */
+.card-distance {
+  color: var(--primary);
+  font-weight: 800;
+}
+
+.distance-prompt {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  margin: 0 0 14px;
+  padding: 10px 14px;
+  border-radius: 14px;
+  border: 1.5px dashed var(--primary);
+  background: var(--primary-light, #F0F6FF);
+  color: var(--primary);
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  text-align: left;
+}
+
+.distance-prompt:disabled {
+  opacity: 0.7;
+  cursor: default;
+}
+
+/* Notification panel: anchor to the navbar on small screens so it never overflows the viewport */
+@media (max-width: 640px) {
+  .notif-wrap {
+    position: static;
+  }
+
+  .notif-panel {
+    top: calc(100% + 8px);
+    left: 16px;
+    right: 16px;
+    width: auto;
+    max-width: 420px;
+    margin: 0 auto;
+  }
+
+  .notif-list {
+    max-height: min(320px, 60vh);
+  }
+}
+
+.fav-btn svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* Staycation search (Home): dalawang hilera sa phone — Where sa taas; When, Who, at Search sa ilalim */
+@media (max-width: 560px) {
+  .staycation-search {
+    display: grid;
+    grid-template-columns: 1fr 1fr 46px;
+    align-items: stretch;
+    gap: 2px 0;
+    padding: 6px;
+    border-radius: 26px;
+  }
+
+  .staycation-search .stay-sep {
+    display: none;
+  }
+
+  .staycation-search .stay-seg-where {
+    grid-column: 1 / -1;
+    padding: 8px 14px 9px;
+    border-radius: 18px 18px 8px 8px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .staycation-search .stay-seg:not(.stay-seg-where) {
+    padding: 7px 12px;
+    border-radius: 16px;
+  }
+
+  .staycation-search .stay-search-btn {
+    grid-column: 3;
+    align-self: center;
+    justify-self: center;
+    width: 42px;
+    height: 42px;
+  }
+
+  .staycation-search .stay-seg {
+    align-items: flex-start;
+    text-align: left;
+  }
+
+  .staycation-search .stay-seg label,
+  .staycation-search .stay-seg input,
+  .staycation-search .stay-seg select {
+    text-align: left;
+  }
+
+  .staycation-search .stay-seg-where .stay-input-row,
+  .staycation-search .stay-date,
+  .staycation-search .stay-seg select {
+    width: 100%;
+  }
+
+  .staycation-search .stay-seg label {
+    font-size: 0.64rem;
+  }
+
+  .staycation-search .stay-seg input,
+  .staycation-search .stay-seg select,
+  .staycation-search .stay-date span {
+    font-size: 0.86rem;
+  }
+}
+
+/* ===== Bottom nav polish (brand: navy / green / gold) ===== */
+.bottom-nav {
+  padding: 0 6px calc(14px + env(safe-area-inset-bottom, 0px));
+  height: calc(92px + env(safe-area-inset-bottom, 0px));
+  border-radius: 24px 24px 0 0;
+}
+
+.nav-item {
+  gap: 4px;
+  font-size: 0.7rem;
+  letter-spacing: 0.01em;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.nav-item .nav-label {
+  line-height: 1;
+  font-weight: 700;
+  transition: color 0.2s ease;
+}
+
+.nav-item .nav-icon-box {
+  width: 56px;
+  height: 36px;
+}
+
+.nav-item.active .nav-label {
+  font-weight: 800;
+}
+
+.nav-item.active .nav-icon-box svg {
+  stroke-width: 2.4;
+}
+
+.nav-item.ico-wish.active .nav-icon-box svg {
+  fill: currentColor;
+}
+
+.nav-item:focus-visible {
+  outline: 2px solid var(--secondary-gold);
+  outline-offset: 2px;
+}
+
+/* Landlord: My Listings = navy chip, Account = gold chip */
+.nav-item.ico-list .nav-icon-box {
+  background: rgba(0, 59, 122, 0.08);
+  color: var(--primary);
+  border-color: rgba(0, 59, 122, 0.14);
+}
+
+.nav-item.ico-list.active .nav-icon-box {
+  background: var(--primary-gradient);
+  color: #fff;
+  border-color: rgba(0, 34, 74, 0.45);
+  transform: scale(1.06);
+  box-shadow: 0 10px 20px -8px rgba(0, 59, 122, 0.7);
+}
+
+.nav-item.ico-list.active::after {
+  box-shadow: 0 2px 8px rgba(0, 59, 122, 0.5);
+}
+
+.nav-item.ico-home .nav-icon-box {
+  background: rgba(0, 59, 122, 0.08);
+  color: var(--primary);
+}
+
+.nav-item.ico-home.active .nav-icon-box {
+  background: var(--primary-gradient);
+  color: #fff;
+  border-color: rgba(0, 34, 74, 0.45);
+  transform: scale(1.06);
+}
+
+/* Center "+" — gold brand CTA with soft ring */
+.circle-plus {
+  width: 56px;
+  height: 56px;
+  margin-top: -30px;
+  font-weight: 700;
+  box-shadow: 0 10px 24px -4px rgba(245, 158, 11, 0.6), 0 0 0 5px rgba(245, 158, 11, 0.16);
+}
+
+.circle-plus:hover {
+  box-shadow: 0 14px 30px -4px rgba(245, 158, 11, 0.75), 0 0 0 7px rgba(245, 158, 11, 0.2);
+}
+
+.circle-plus:active {
+  transform: scale(0.92);
+}
+
+@media (hover: none) {
+  .nav-item:hover {
+    transform: none;
+  }
+}
+
+/* Budget search: hint at empty state */
+.budget-hint {
+  margin: 8px 6px 0;
+  font-size: 0.74rem;
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.budget-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  text-align: center;
+  margin: 4px 0 16px;
+  padding: 22px 16px;
+  border-radius: 20px;
+  background: #fff;
+  border: 1.5px dashed #cfdcee;
+}
+
+.budget-empty strong {
+  color: var(--primary-dark);
+  font-size: 0.98rem;
+}
+
+.budget-empty span {
+  color: var(--text-muted);
+  font-size: 0.82rem;
+}
+
+.budget-empty button {
+  margin-top: 6px;
+  border: none;
+  border-radius: 100px;
+  padding: 9px 18px;
+  background: var(--secondary-gradient);
+  color: var(--primary);
+  font-weight: 800;
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+
+/* ===== Bottom nav: lahat ng button ay brand blue, bahagyang pinalaki ===== */
+.bottom-nav {
+  height: calc(100px + env(safe-area-inset-bottom, 0px));
+}
+
+.nav-item {
+  gap: 5px;
+  font-size: 0.78rem;
+}
+
+.nav-item .nav-icon-box {
+  width: 66px;
+  height: 42px;
+}
+
+.nav-item .nav-icon-box svg {
+  width: 26px;
+  height: 26px;
+}
+
+.nav-item.ico-nearby .nav-icon-box,
+.nav-item.ico-home .nav-icon-box,
+.nav-item.ico-wish .nav-icon-box,
+.nav-item.ico-account .nav-icon-box,
+.nav-item.ico-list .nav-icon-box {
+  background: rgba(0, 59, 122, 0.08);
+  color: var(--primary);
+  border-color: rgba(0, 59, 122, 0.14);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
+.nav-item.ico-nearby.active .nav-icon-box,
+.nav-item.ico-home.active .nav-icon-box,
+.nav-item.ico-wish.active .nav-icon-box,
+.nav-item.ico-account.active .nav-icon-box,
+.nav-item.ico-list.active .nav-icon-box {
+  background: var(--primary-gradient);
+  color: #fff;
+  border-color: rgba(0, 34, 74, 0.45);
+  box-shadow: 0 10px 20px -8px rgba(0, 59, 122, 0.7);
+  transform: scale(1.06);
+}
+
+.nav-item.ico-nearby.active,
+.nav-item.ico-home.active,
+.nav-item.ico-wish.active,
+.nav-item.ico-account.active,
+.nav-item.ico-list.active,
+.nav-item.ico-nearby:hover,
+.nav-item.ico-wish:hover,
+.nav-item.ico-account:hover {
+  color: var(--primary);
+}
+
+.nav-item.ico-nearby.active::after,
+.nav-item.ico-home.active::after,
+.nav-item.ico-wish.active::after,
+.nav-item.ico-account.active::after,
+.nav-item.ico-list.active::after {
+  background: var(--primary-gradient);
+  box-shadow: 0 2px 8px rgba(0, 59, 122, 0.5);
 }

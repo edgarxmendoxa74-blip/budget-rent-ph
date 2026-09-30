@@ -1,11 +1,43 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { Navigation, Loader2, MapPin, Star, X, ShieldCheck, Search, AlertCircle, Signal, LocateFixed, Radar, BadgeCheck } from 'lucide-react';
-import { TILE_URL, TILE_OPTIONS, MAP_OPTIONS, toCoords, distanceKm, formatDistance, geocodeAddress, inBounds } from '../lib/geo';
+import { Navigation, Loader2, MapPin, Star, X, ShieldCheck, Search, AlertCircle, Signal, LocateFixed, Radar, BadgeCheck, House, TreePalm, Route as RouteIcon, Car, Bus, Bike, ChevronDown, CalendarCheck, Send } from 'lucide-react';
+import { TILE_URL, TILE_OPTIONS, MAP_OPTIONS, toCoords, distanceKm, formatDistance, geocodeAddress, inArea, getCurrentPosition } from '../lib/geo';
+import { useApproxCoords } from '../lib/useApproxCoords';
+import ListingActionSheet from './ListingActionSheet';
+import { fetchRoute, getEstimates, formatDuration, formatStepDistance, stepText } from '../lib/routing';
 import './FindNearbyPage.css';
 
 const RADIUS_OPTIONS = [1, 3, 5, 10];
+
+const isStay = (item) => String(item?.type || item?.category || '').toLowerCase().includes('staycation');
+
+// 3D tilt: sumusunod ang card sa daliri/mouse (CSS variables --rx/--ry)
+const tiltMove = (e) => {
+  const el = e.currentTarget;
+  const r = el.getBoundingClientRect();
+  const x = (e.clientX - r.left) / r.width - 0.5;
+  const y = (e.clientY - r.top) / r.height - 0.5;
+  el.style.setProperty('--ry', `${(x * 22).toFixed(1)}deg`);
+  el.style.setProperty('--rx', `${(-y * 18).toFixed(1)}deg`);
+};
+const tiltReset = (e) => {
+  e.currentTarget.style.setProperty('--ry', '0deg');
+  e.currentTarget.style.setProperty('--rx', '0deg');
+};
+
+const INTENTS = {
+  rent: { Icon: House, label: 'Find Rent', title: 'Rentals', tag: 'paupahan' },
+  staycation: { Icon: TreePalm, label: 'Staycation', title: 'Staycations', tag: 'staycation' }
+};
+
+// Lucide icon paths (para sa map markers na HTML string, hindi React)
+const MARKER_ICONS = {
+  rent: '<path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"/><path d="M3 10a2 2 0 0 1 .709-1.528l7-6a2 2 0 0 1 2.582 0l7 6A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>',
+  stay: '<path d="M13 8c0-2.76-2.46-5-5.5-5S2 5.24 2 8h2l1-1 1 1h4"/><path d="M13 7.14A5.82 5.82 0 0 1 16.5 6c3.04 0 5.5 2.24 5.5 5h-3l-1-1-1 1h-3"/><path d="M5.89 9.71c-2.15 2.15-2.3 5.47-.35 7.43l4.24-4.25.7-.7.71-.71 2.12-2.12c-1.95-1.96-5.27-1.8-7.42.35"/><path d="M11 15.5c.5 2.5-.17 4.5-1 6.5h4c2-5.5-.5-12-1-14"/>'
+};
+const markerIcon = (item) =>
+  `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">${isStay(item) ? MARKER_ICONS.stay : MARKER_ICONS.rent}</svg>`;
 
 // Device detection para sa tamang location instructions (phone vs desktop browser)
 const getDeviceInfo = () => {
@@ -59,7 +91,8 @@ const radiusToPixels = (map, center, radiusKm) => {
   return Math.max(24, Math.abs(a.y - b.y));
 };
 
-const RadarMap = ({ center, radiusKm, results, scanning, selectedId, onSelect, isLive, recenterKey, areaBounds }) => {
+const RadarMap = ({ center, radiusKm, results, scanning, selectedId, onSelect, isLive, recenterKey, areaBounds, route }) => {
+  const routeItemId = route?.status === 'ready' ? route.item.id : null;
   const mapEl = useRef(null);
   const mapRef = useRef(null);
   const layers = useRef({});
@@ -156,10 +189,10 @@ const RadarMap = ({ center, radiusKm, results, scanning, selectedId, onSelect, i
     if (!group) return;
     group.clearLayers();
     if (scanning) return;
-    results.filter((item) => item.coords).forEach((item, i) => {
+    results.filter((item) => item.coords && item.id !== routeItemId).forEach((item, i) => {
       const icon = L.divIcon({
         className: 'house-marker-wrap',
-        html: `<div class="house-marker ${item.id === selectedId ? 'selected' : ''} ${item.is_verified ? 'verified' : ''}" style="animation-delay:${Math.min(i * 90, 1200)}ms"><span class="hm-emoji">🏠</span><span class="hm-price">${escapeHtml(shortPrice(item.price))}</span></div>`,
+        html: `<div class="house-marker ${item.id === selectedId ? 'selected' : ''} ${item.is_verified ? 'verified' : ''} ${item.approx ? 'approx' : ''} ${isStay(item) ? 'stay' : ''}" style="animation-delay:${Math.min(i * 90, 1200)}ms"><span class="hm-icon">${markerIcon(item)}</span><span class="hm-price">${escapeHtml(shortPrice(item.price))}</span></div>`,
         iconSize: [78, 32],
         iconAnchor: [39, 32]
       });
@@ -167,7 +200,29 @@ const RadarMap = ({ center, radiusKm, results, scanning, selectedId, onSelect, i
         .on('click', () => onSelectRef.current(item.id))
         .addTo(group);
     });
-  }, [results, scanning, selectedId]);
+  }, [results, scanning, selectedId, routeItemId]);
+
+  // Ruta: linya ng daan, "Ikaw" (simula) at ang bahay (destinasyon)
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return undefined;
+    if (!route || route.status !== 'ready') return undefined;
+    const group = L.layerGroup();
+    L.polyline(route.data.coords, { color: '#ffffff', weight: 11, opacity: 0.95, lineCap: 'round', lineJoin: 'round', interactive: false }).addTo(group);
+    L.polyline(route.data.coords, { color: '#0a63ff', weight: 6, opacity: 1, lineCap: 'round', lineJoin: 'round', interactive: false }).addTo(group);
+    L.marker([route.from.lat, route.from.lng], {
+      icon: L.divIcon({ className: 'route-marker-wrap', html: '<div class="route-start"><span class="rs-dot"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span><span class="rs-label">Ikaw</span></div>', iconSize: [96, 36], iconAnchor: [18, 18] }),
+      zIndexOffset: 1200, interactive: false
+    }).addTo(group);
+    const endSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">${isStay(route.item) ? MARKER_ICONS.stay : MARKER_ICONS.rent}</svg>`;
+    L.marker([route.to.lat, route.to.lng], {
+      icon: L.divIcon({ className: 'route-marker-wrap', html: `<div class="route-end ${isStay(route.item) ? 'stay' : ''}"><span>${endSvg}</span></div>`, iconSize: [38, 46], iconAnchor: [19, 46] }),
+      zIndexOffset: 1100, interactive: false
+    }).addTo(group);
+    group.addTo(map);
+    map.fitBounds(L.latLngBounds(route.data.coords), { padding: [44, 44] });
+    return () => { group.remove(); };
+  }, [route]);
 
   // Pan sa napiling listing
   useEffect(() => {
@@ -180,12 +235,97 @@ const RadarMap = ({ center, radiusKm, results, scanning, selectedId, onSelect, i
   return <div ref={mapEl} className="radar-map" />;
 };
 
-const FindNearbyPage = ({ listings, reviewStats, onSelectProperty, isLandlord }) => {
+const MODE_ICONS = { tricycle: Bike, jeep: Bus, car: Car };
+
+const RoutePanel = ({ route, activeMode, onMode, onClose, showSteps, onToggleSteps }) => {
+  const name = route.item.name || route.item.location?.split(',')[0] || 'bahay';
+
+  if (route.status === 'loading') {
+    return (
+      <div className="route-panel">
+        <div className="route-loading"><Loader2 size={18} className="animate-spin" /> Hinahanap ang ruta papunta sa {name}...</div>
+      </div>
+    );
+  }
+
+  if (route.status === 'error') {
+    return (
+      <div className="route-panel error">
+        <p><AlertCircle size={16} /> {route.message}</p>
+        <button type="button" className="route-close-inline" onClick={onClose}>Isara</button>
+      </div>
+    );
+  }
+
+  const { data } = route;
+  const estimates = getEstimates(data);
+  const active = estimates.find((e) => e.key === activeMode) || estimates[estimates.length - 1];
+  const note = data.distanceKm > 150
+    ? 'Malayong biyahe ito — maaaring may sasakyang pandagat o eroplano. Tantiya lang ang oras.'
+    : data.distanceKm > 60
+      ? 'Malayo ito — karaniwang bus, van, o kotse ang gamit. Hindi na karaniwang biyahe ang tricycle at jeep.'
+      : data.distanceKm > 15
+        ? 'Malayo na para sa tricycle — jeep o kotse ang mas karaniwan.'
+        : 'Tantiya lang ang oras; nag-iiba ayon sa trapiko at hintuan.';
+
+  return (
+    <div className="route-panel animate-slide-up">
+      <div className="route-head">
+        <div>
+          <strong>Papunta sa {name}</strong>
+          <span>{formatDistance(data.distanceKm)} • ≈ {formatDuration(active.minutes)} sa {active.label}</span>
+        </div>
+        <button type="button" className="route-close" aria-label="Isara ang ruta" onClick={onClose}><X size={16} /></button>
+      </div>
+
+      <div className="route-modes" role="group" aria-label="Uri ng sasakyan">
+        {estimates.map((e) => {
+          const Icon = MODE_ICONS[e.key];
+          return (
+            <button
+              key={e.key}
+              type="button"
+              className={`route-mode ${e.key === active.key ? 'active' : ''} ${e.available ? '' : 'far'}`}
+              disabled={!e.available}
+              onClick={() => onMode(e.key)}
+            >
+              <Icon size={18} />
+              <strong>{e.label}</strong>
+              <span>{e.available ? `≈ ${formatDuration(e.minutes)}` : 'Malayo'}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      <p className="route-note">{note}{route.item.approx ? ' Tinatayang lokasyon din ng bahay ang destinasyon.' : ''}</p>
+
+      <div className="route-actions">
+        <button type="button" className="route-steps-toggle" onClick={onToggleSteps} aria-expanded={showSteps}>
+          {showSteps ? 'Itago' : 'Ipakita'} ang mga hakbang <ChevronDown size={15} className={showSteps ? 'flip' : ''} />
+        </button>
+      </div>
+
+      {showSteps && (
+        <ol className="route-steps">
+          {data.steps.map((step, i) => (
+            <li key={i}>
+              <span>{stepText(step)}</span>
+              {step.distance > 0 && <em>{formatStepDistance(step.distance)}</em>}
+            </li>
+          ))}
+        </ol>
+      )}
+    </div>
+  );
+};
+
+const FindNearbyPage = ({ listings, reviewStats, onSelectProperty, isLandlord, userLocation }) => {
   const [locating, setLocating] = useState(false);
   const [center, setCenter] = useState(null); // { lat, lng }
+  const [intent, setIntent] = useState(null); // null (hindi pa pumipili) | 'rent' | 'staycation'
   const [mode, setMode] = useState(null); // 'live' (GPS radar, malapit lang) | 'search' (buong lugar na hinanap)
   const [placeLabel, setPlaceLabel] = useState('');
-  const [area, setArea] = useState(null); // { bounds, query } ng hinanap na lugar
+  const [area, setArea] = useState(null); // { bounds, geometry, query } ng hinanap na lugar
   const [radiusKm, setRadiusKm] = useState(3);
   const [scanning, setScanning] = useState(false);
   const [selectedId, setSelectedId] = useState(null);
@@ -193,13 +333,55 @@ const FindNearbyPage = ({ listings, reviewStats, onSelectProperty, isLandlord })
   const [showConfirm, setShowConfirm] = useState(false);
   const [errorType, setErrorType] = useState(null);
   const [manualQuery, setManualQuery] = useState('');
+  const [route, setRoute] = useState(null); // { status: loading|ready|error, item, from, to, data, message }
+  const [routeMode, setRouteMode] = useState('car');
+  const [showSteps, setShowSteps] = useState(false);
+  const [actionSheet, setActionSheet] = useState(null); // { item, kind: 'book' | 'inquire' }
+  const routeSeq = useRef(0);
   const watchId = useRef(null);
   const scanTimer = useRef(null);
   const device = useMemo(getDeviceInfo, []);
 
   const locationFound = Boolean(center);
 
+  const clearRoute = () => {
+    routeSeq.current += 1;
+    setRoute(null);
+    setShowSteps(false);
+  };
+
+  // Directions: magsisimula sa kinaroroonan ng tenant papunta sa napiling bahay
+  const startDirections = async (item) => {
+    if (!item?.coords) return;
+    const seq = ++routeSeq.current;
+    setShowSteps(false);
+    setRoute({ status: 'loading', item });
+    try {
+      let from = mode === 'live' && center ? center : userLocation;
+      if (!from) {
+        const pos = await getCurrentPosition({ enableHighAccuracy: true, timeout: 15000 });
+        from = { lat: pos.lat, lng: pos.lng };
+      }
+      const data = await fetchRoute(from, item.coords);
+      if (seq !== routeSeq.current) return;
+      const first = getEstimates(data).find((e) => e.available);
+      setRouteMode(first ? first.key : 'car');
+      setRoute({ status: 'ready', item, from, to: item.coords, data });
+    } catch (err) {
+      if (seq !== routeSeq.current) return;
+      const message = err?.code === 1
+        ? 'Naka-block ang location. I-Allow ito sa browser/phone settings para malaman kung nasaan ka.'
+        : err?.code === 2 || err?.code === 3
+          ? 'Hindi makuha ang lokasyon mo. Siguraduhing naka-ON ang location, tapos subukan ulit.'
+          : err?.message === 'NoRoute'
+            ? 'Walang daan na maaabot ng sasakyan papunta rito.'
+            : 'Hindi makuha ang ruta ngayon. Subukan ulit mamaya.';
+      setRoute({ status: 'error', item, message });
+    }
+  };
+
   const runScan = () => {
+    clearRoute();
     clearTimeout(scanTimer.current);
     setScanning(true);
     setSelectedId(null);
@@ -295,7 +477,7 @@ const FindNearbyPage = ({ listings, reviewStats, onSelectProperty, isLandlord })
     setLocating(true);
     setErrorType(null);
     try {
-      const result = await geocodeAddress(q);
+      const result = await geocodeAddress(q, { withPolygon: true });
       if (!result) {
         setErrorType('notfound');
         return;
@@ -303,7 +485,7 @@ const FindNearbyPage = ({ listings, reviewStats, onSelectProperty, isLandlord })
       stopWatch();
       setMode('search');
       setPlaceLabel(q);
-      setArea({ bounds: result.bounds, query: q });
+      setArea({ bounds: result.bounds, geometry: result.geometry, query: q });
       setCenter({ lat: result.lat, lng: result.lng });
       setRecenterKey((k) => k + 1);
       runScan();
@@ -315,6 +497,7 @@ const FindNearbyPage = ({ listings, reviewStats, onSelectProperty, isLandlord })
   };
 
   const stopGps = () => {
+    clearRoute();
     stopWatch();
     setCenter(null);
     setMode(null);
@@ -328,24 +511,40 @@ const FindNearbyPage = ({ listings, reviewStats, onSelectProperty, isLandlord })
     runScan();
   };
 
+  // Listings na wala pang pin: tinatayang lokasyon mula sa address para may emoji pa rin sa mapa
+  // Listings ayon sa pinili ng tenant: Find Rent (Paupahan) o Staycation. Landlords ay Paupahan lang ang default.
+  const typeListings = useMemo(
+    () => listings.filter((item) => (intent === 'staycation' ? isStay(item) : !isStay(item))),
+    [listings, intent]
+  );
+  const approx = useApproxCoords(typeListings, Boolean(center) && Boolean(intent || isLandlord));
+
+  const mapListings = useMemo(
+    () => typeListings.map((item) => (!toCoords(item) && approx[item.id]
+      ? { ...item, latitude: approx[item.id].lat, longitude: approx[item.id].lng, approx: true }
+      : item)),
+    [typeListings, approx]
+  );
+
   const results = useMemo(() => {
     if (!center) return [];
 
     // Area search: lahat ng available sa buong lugar (nasa loob ng boundary, o tugma ang address text)
     if (mode === 'search' && area) {
       const place = area.query.split(',')[0].toLowerCase().replace(/\b(city|province|of)\b/g, '').trim();
-      return listings
+      return mapListings
         .filter((item) => Boolean(item?.user_id) && !isOccupied(item))
         .map((item) => {
           const coords = toCoords(item);
-          return { ...item, coords, distance: coords ? distanceKm(center, coords) : null };
+          // Layo mula sa mismong lokasyon ng tenant (hindi mula sa gitna ng hinanap na lugar)
+          return { ...item, coords, distance: coords && userLocation ? distanceKm(userLocation, coords) : null };
         })
-        .filter((item) => inBounds(item.coords, area.bounds) || (place && String(item.location || '').toLowerCase().includes(place)))
+        .filter((item) => inArea(item.coords, area) || (place && String(item.location || '').toLowerCase().includes(place)))
         .sort((a, b) => (a.distance ?? Infinity) - (b.distance ?? Infinity));
     }
 
     // GPS radar: malapit lang sa kinaroroonan
-    return listings
+    return mapListings
       .filter(isRadarEligible)
       .map((item) => {
         const coords = toCoords(item);
@@ -353,12 +552,52 @@ const FindNearbyPage = ({ listings, reviewStats, onSelectProperty, isLandlord })
       })
       .filter((item) => item.distance <= radiusKm)
       .sort((a, b) => a.distance - b.distance);
-  }, [listings, center, radiusKm, mode, area]);
+  }, [mapListings, center, radiusKm, mode, area, userLocation]);
 
   const isSearch = mode === 'search';
 
   const nextRadius = RADIUS_OPTIONS.find((r) => r > radiusKm);
   const selected = results.find((r) => r.id === selectedId);
+
+  const cfg = INTENTS[intent || 'rent'];
+  const chooseIntent = (next) => {
+    if (next === intent) return;
+    clearRoute();
+    setIntent(next);
+    setSelectedId(null);
+    if (center) runScan();
+  };
+
+  // Unang screen: pumili muna ang tenant kung Find Rent o Staycation bago gumana ang Nearby
+  if (!isLandlord && !intent) {
+    return (
+      <div className="page-section animate-fade-in" style={{ paddingBottom: '80px', backgroundColor: 'white' }}>
+        <header className="hero nearby-hero">
+          <div className="hero-content">
+            <div className="nearby-title-row">
+              <span className="nearby-icon"><Navigation size={22} /></span>
+              <h2>Ano ang hinahanap mo?</h2>
+            </div>
+            <p className="nearby-sub">Piliin muna para ipakita sa mapa ang tamang listings</p>
+          </div>
+        </header>
+        <main className="info-page-container" style={{ width: '100%', maxWidth: '800px', padding: '6px' }}>
+          <div className="intent-choices">
+            <button type="button" className="intent-card rent" onClick={() => chooseIntent('rent')} onPointerMove={tiltMove} onPointerLeave={tiltReset} onPointerUp={tiltReset}>
+              <span className="intent-icon rent"><span className="intent-glyph"><House size={34} strokeWidth={2.2} /></span></span>
+              <strong>Find Rent</strong>
+              <span>Paupahan, boarding house, bed space — buwan-buwan na upa</span>
+            </button>
+            <button type="button" className="intent-card stay" onClick={() => chooseIntent('staycation')} onPointerMove={tiltMove} onPointerLeave={tiltReset} onPointerUp={tiltReset}>
+              <span className="intent-icon stay"><span className="intent-glyph"><TreePalm size={34} strokeWidth={2.2} /></span></span>
+              <strong>Staycation</strong>
+              <span>Bakasyon o overnight stay — presyo kada gabi</span>
+            </button>
+          </div>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="page-section animate-fade-in" style={{ paddingBottom: '80px', backgroundColor: 'white' }}>
@@ -368,11 +607,11 @@ const FindNearbyPage = ({ listings, reviewStats, onSelectProperty, isLandlord })
             <>
               <div className="nearby-title-row">
                 <span className="nearby-icon"><Navigation size={22} /></span>
-                <h2>{isSearch ? `Rentals sa ${placeLabel}` : 'Rentals Near You'}</h2>
+                <h2>{isSearch ? `${cfg.title} sa ${placeLabel}` : `${cfg.title} Near You`}</h2>
                 {mode === 'live' && <span className="live-pill"><Signal size={12} className="pulse" /> LIVE</span>}
               </div>
               <p className="nearby-sub">
-                {mode === 'live' ? 'Ini-scan ang paligid mo para sa available na bahay' : isSearch ? `Lahat ng available na paupahan sa buong ${placeLabel}` : 'Mag-search ng lugar na lilipatan, o i-scan ang malapit sa iyo'}
+                {mode === 'live' ? `Ini-scan ang paligid mo para sa available na ${cfg.tag}` : isSearch ? `Lahat ng available na ${cfg.tag} sa buong ${placeLabel}` : 'Mag-search ng lugar na lilipatan, o i-scan ang malapit sa iyo'}
               </p>
 
               <form onSubmit={handleManualSearch} className="search-bar nearby-search">
@@ -472,6 +711,7 @@ const FindNearbyPage = ({ listings, reviewStats, onSelectProperty, isLandlord })
                 isLive={mode === 'live'}
                 recenterKey={recenterKey}
                 areaBounds={isSearch ? area?.bounds : null}
+                route={route}
               />
 
               {!isSearch && (
@@ -492,7 +732,7 @@ const FindNearbyPage = ({ listings, reviewStats, onSelectProperty, isLandlord })
                 <div className="scan-banner"><Radar size={15} className="spin-slow" /> {isSearch ? `Hinahanap ang available sa ${placeLabel}...` : 'Hinahanap ang mga available na bahay...'}</div>
               )}
 
-              {!scanning && selected && (
+              {!scanning && selected && !route && (
                 <div className="map-peek animate-slide-up" onClick={() => onSelectProperty(selected)}>
                   <img src={selected.image || '/placeholder.png'} alt={selected.name || 'Listing'} />
                   <div className="map-peek-info">
@@ -501,7 +741,20 @@ const FindNearbyPage = ({ listings, reviewStats, onSelectProperty, isLandlord })
                       {selected.is_verified && <BadgeCheck size={14} fill="#0066ff" color="white" />}
                     </strong>
                     <span>{selected.location}</span>
-                    <span className="map-peek-meta">₱{Number(selected.price || 0).toLocaleString()}/mo{!isSearch && selected.distance != null && <> • {formatDistance(selected.distance)}</>}</span>
+                    {selected.approx && <span className="map-peek-approx">≈ Tinatayang lokasyon (hindi pa naka-pin ng landlord)</span>}
+                    <span className="map-peek-meta">₱{Number(selected.price || 0).toLocaleString()}{isStay(selected) ? '/gabi' : '/mo'}{selected.distance != null && <> • {selected.approx ? '≈ ' : ''}{formatDistance(selected.distance)}{isSearch ? ' mula sa iyo' : ''}</>}</span>
+                    <div className="peek-actions">
+                      <button type="button" className="peek-directions" onClick={(e) => { e.stopPropagation(); startDirections(selected); }}>
+                        <RouteIcon size={14} /> Directions
+                      </button>
+                      <button
+                        type="button"
+                        className={`peek-action ${isStay(selected) ? 'stay' : 'rent'}`}
+                        onClick={(e) => { e.stopPropagation(); setActionSheet({ item: selected, kind: isStay(selected) ? 'book' : 'inquire' }); }}
+                      >
+                        {isStay(selected) ? <><CalendarCheck size={14} /> Book</> : <><Send size={14} /> Inquire</>}
+                      </button>
+                    </div>
                   </div>
                   <button type="button" className="map-peek-close" aria-label="Close" onClick={(e) => { e.stopPropagation(); setSelectedId(null); }}><X size={16} /></button>
                 </div>
@@ -518,6 +771,17 @@ const FindNearbyPage = ({ listings, reviewStats, onSelectProperty, isLandlord })
               )}
             </div>
 
+            {route && (
+              <RoutePanel
+                route={route}
+                activeMode={routeMode}
+                onMode={setRouteMode}
+                onClose={clearRoute}
+                showSteps={showSteps}
+                onToggleSteps={() => setShowSteps((v) => !v)}
+              />
+            )}
+
             {!scanning && results.length > 0 && (
               <div className="listing-grid">
                 {results.map((item) => (
@@ -528,23 +792,23 @@ const FindNearbyPage = ({ listings, reviewStats, onSelectProperty, isLandlord })
                   >
                     <div className="image-container">
                       <img src={item.image || '/placeholder.png'} alt={item.name || item.title} loading="lazy" />
-                      {!isSearch && (
+                      {item.distance != null && (
                         <span className="near-distance">
-                          <MapPin size={11} /> {formatDistance(item.distance)}
+                          <MapPin size={11} /> {item.approx ? '≈ ' : ''}{formatDistance(item.distance)}
                         </span>
                       )}
                     </div>
                     <div className="card-info">
                       <h4 className="card-title">{item.location?.split(',')[0] || item.name}</h4>
                       <p className="card-subtitle">
-                        {item.type || 'Rental'} • {isSearch ? (item.location || placeLabel) : `${formatDistance(item.distance)} away`}
+                        {item.type || 'Rental'} • {item.distance != null ? `${item.approx ? '≈ ' : ''}${formatDistance(item.distance)} ${isSearch ? 'mula sa iyo' : 'away'}` : (item.location || placeLabel)}
                       </p>
 
                       <div className="card-price-row">
                         <span className="price-tag">₱{item.price?.toLocaleString() || 0}</span>
-                        <span className="price-period">/month</span>
+                        <span className="price-period">{isStay(item) ? '/gabi' : '/month'}</span>
                         {reviewStats?.get(item.id)?.count > 0 && (
-                          <span className="card-rating" title={`${reviewStats.get(item.id).avg.toFixed(1)} out of 5`}>
+                          <span className="card-rating" title={`${reviewStats.get(item.id).avg.toFixed(1)} out of 3`}>
                             <Star size={11} fill="currentColor" strokeWidth={0} />
                             {reviewStats.get(item.id).avg.toFixed(1)}
                             <em>({reviewStats.get(item.id).count})</em>
@@ -552,16 +816,16 @@ const FindNearbyPage = ({ listings, reviewStats, onSelectProperty, isLandlord })
                         )}
                       </div>
 
-                      {item.coords && (
-                      <button
-                        className="card-inquire-btn"
-                        aria-label="Show on map"
-                        title="Show on map"
-                        onClick={(e) => { e.stopPropagation(); setSelectedId(item.id); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
-                      >
-                        📍
-                      </button>
-                      )}
+                      <div className="card-action-row">
+                        <button
+                          type="button"
+                          className={`card-action-btn ${isStay(item) ? 'stay' : 'rent'}`}
+                          onClick={(e) => { e.stopPropagation(); setActionSheet({ item, kind: isStay(item) ? 'book' : 'inquire' }); }}
+                        >
+                          {isStay(item) ? <><CalendarCheck size={15} /> Book</> : <><Send size={15} /> Inquire</>}
+                        </button>
+                      </div>
+
                     </div>
                   </div>
                 ))}
@@ -570,6 +834,15 @@ const FindNearbyPage = ({ listings, reviewStats, onSelectProperty, isLandlord })
           </div>
         )}
       </main>
+
+      {actionSheet && (
+        <ListingActionSheet
+          item={actionSheet.item}
+          kind={actionSheet.kind}
+          onClose={() => setActionSheet(null)}
+          onViewDetails={onSelectProperty}
+        />
+      )}
 
       {showConfirm && (
         <div className="modal-overlay" style={{ zIndex: 9999, backgroundColor: 'rgba(0,0,0,0.6)' }} onClick={() => setShowConfirm(false)}>

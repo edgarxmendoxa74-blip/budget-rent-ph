@@ -3,8 +3,10 @@ import { supabase } from '../lib/supabase';
 import { 
   Users, ClipboardList, Shield, LogOut, Search, 
   Check, X, Building2, Trash2, Star,
-  Settings, BarChart3, Clock, Award, AlertCircle, RefreshCw, ImagePlus
+  Settings, BarChart3, Clock, Award, AlertCircle, RefreshCw, ImagePlus,
+  Download, Home, MessageSquare, MapPin
 } from 'lucide-react';
+import { downloadCsv, fmtDate } from '../lib/csv';
 import './AdminPanel.css';
 
 const HIDDEN_PROPERTIES_KEY = 'budgetrent_hidden_properties';
@@ -77,6 +79,7 @@ const AdminPanel = ({ onLogout }) => {
   const [landlords, setLandlords] = useState([]);
   const [verificationRequests, setVerificationRequests] = useState([]);
   const [allProperties, setAllProperties] = useState([]);
+  const [reviews, setReviews] = useState([]);
   const [hiddenPropertyIds, setHiddenPropertyIdsState] = useState(getHiddenPropertyIds());
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState(null);
@@ -96,14 +99,173 @@ const AdminPanel = ({ onLogout }) => {
     return verificationRequests.filter(r => r.status === 'pending');
   }, [verificationRequests]);
 
-  const activeBadgesCount = useMemo(() => {
-    return landlords.filter(l => l.is_verified).length;
-  }, [landlords]);
-
   const visibleProperties = useMemo(() => {
     const hiddenSet = new Set(hiddenPropertyIds);
     return allProperties.filter(p => !hiddenSet.has(p.id));
   }, [allProperties, hiddenPropertyIds]);
+
+  const propertyNameById = useMemo(() => {
+    const map = new Map();
+    allProperties.forEach(p => map.set(p.id, p.name || p.title || 'Untitled'));
+    return map;
+  }, [allProperties]);
+
+  const filteredProperties = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return allProperties;
+    return allProperties.filter(p =>
+      [p.name, p.title, p.location, p.owner_name, p.email, p.type].some(v => v?.toLowerCase().includes(q))
+    );
+  }, [allProperties, searchQuery]);
+
+  const filteredReviews = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return reviews;
+    return reviews.filter(r =>
+      [propertyNameById.get(r.property_id), r.reviewer_name, r.comment].some(v => v?.toLowerCase().includes(q))
+    );
+  }, [reviews, searchQuery, propertyNameById]);
+
+  const stats = useMemo(() => {
+    const now = new Date();
+    const in30 = new Date(now.getTime() + 30 * 86400000);
+    const ago30 = new Date(now.getTime() - 30 * 86400000);
+    const hiddenSet = new Set(hiddenPropertyIds);
+    const isOccupied = p => String(p.availability || '').toLowerCase() === 'occupied';
+    const tally = (items, keyFn) => {
+      const counts = {};
+      items.forEach(i => { const k = keyFn(i); if (k) counts[k] = (counts[k] || 0) + 1; });
+      return Object.entries(counts).sort((a, b) => b[1] - a[1]);
+    };
+    const cityOf = p => {
+      const parts = (p.location || '').split(',').map(s => s.trim()).filter(Boolean);
+      return parts.length >= 2 ? parts[parts.length - 2] : parts[0];
+    };
+
+    const live = allProperties.filter(p => !hiddenSet.has(p.id));
+    const prices = live.map(p => Number(p.price)).filter(n => n > 0);
+    const expiringSoon = landlords
+      .filter(l => l.is_verified && l.subscription_expiry && new Date(l.subscription_expiry) <= in30)
+      .sort((a, b) => new Date(a.subscription_expiry) - new Date(b.subscription_expiry));
+    const ratings = reviews.map(r => Number(r.rating)).filter(n => n >= 1 && n <= 5);
+    const ratingDist = [5, 4, 3, 2, 1].map(star => [star, ratings.filter(r => r === star).length]);
+
+    return {
+      landlords: landlords.length,
+      verified: landlords.filter(l => l.is_verified).length,
+      expired: landlords.filter(l => l.subscription_status === 'Expired').length,
+      expiringSoon,
+      noContact: landlords.filter(l => !l.contact && !l.owner_whatsapp && !l.owner_facebook).length,
+      listings: live.length,
+      hidden: allProperties.length - live.length,
+      available: live.filter(p => !isOccupied(p)).length,
+      occupied: live.filter(isOccupied).length,
+      newListings30: live.filter(p => p.created_at && new Date(p.created_at) >= ago30).length,
+      noPin: live.filter(p => p.latitude == null || p.longitude == null).length,
+      avgPrice: prices.length ? Math.round(prices.reduce((a, b) => a + b, 0) / prices.length) : 0,
+      minPrice: prices.length ? Math.min(...prices) : 0,
+      maxPrice: prices.length ? Math.max(...prices) : 0,
+      byType: tally(live, p => p.type || 'Unspecified'),
+      topAreas: tally(live, cityOf).slice(0, 6),
+      reviewCount: ratings.length,
+      avgRating: ratings.length ? (ratings.reduce((a, b) => a + b, 0) / ratings.length).toFixed(1) : '—',
+      ratingDist,
+      pendingCount: verificationRequests.filter(r => r.status === 'pending').length,
+      approvedCount: verificationRequests.filter(r => r.status === 'approved').length,
+      totalLogins: landlords.reduce((sum, l) => sum + (Number(l.login_count) || 0), 0)
+    };
+  }, [landlords, allProperties, reviews, verificationRequests, hiddenPropertyIds]);
+
+  const exportLandlords = () => downloadCsv('budgetrent-landlords', [
+    { label: 'Name', value: l => l.owner_name },
+    { label: 'Business', value: l => l.owner_business_name },
+    { label: 'Email', value: l => l.email },
+    { label: 'Contact', value: l => l.contact },
+    { label: 'WhatsApp', value: l => l.owner_whatsapp },
+    { label: 'Facebook', value: l => l.owner_facebook },
+    { label: 'Verified', value: l => (l.is_verified ? 'Yes' : 'No') },
+    { label: 'Plan Status', value: l => l.subscription_status },
+    { label: 'Plan Availed', value: l => fmtDate(l.subscription_date) },
+    { label: 'Plan Expiry', value: l => fmtDate(l.subscription_expiry) },
+    { label: 'Listings', value: l => allProperties.filter(p => p.email === l.email).length },
+    { label: 'Login Count', value: l => l.login_count },
+    { label: 'Last Login', value: l => fmtDate(l.last_login) }
+  ], filteredLandlords);
+
+  const exportSubscriptions = () => downloadCsv('budgetrent-subscriptions', [
+    { label: 'Name', value: l => l.owner_name },
+    { label: 'Email', value: l => l.email },
+    { label: 'Plan Status', value: l => l.subscription_status },
+    { label: 'Availed', value: l => fmtDate(l.subscription_date) },
+    { label: 'Expiry', value: l => fmtDate(l.subscription_expiry) },
+    { label: 'Verified', value: l => (l.is_verified ? 'Yes' : 'No') }
+  ], filteredLandlords);
+
+  const exportListings = () => downloadCsv('budgetrent-listings', [
+    { label: 'Name', value: p => p.name || p.title },
+    { label: 'Type', value: p => p.type },
+    { label: 'Price (PHP/mo)', value: p => p.price },
+    { label: 'Availability', value: p => p.availability || 'Available' },
+    { label: 'Location', value: p => p.location },
+    { label: 'Latitude', value: p => p.latitude },
+    { label: 'Longitude', value: p => p.longitude },
+    { label: 'Rooms', value: p => p.rooms },
+    { label: 'CR', value: p => p.cr },
+    { label: 'Kitchen', value: p => p.kitchen },
+    { label: 'WiFi', value: p => p.wifi },
+    { label: 'Parking', value: p => p.parking },
+    { label: 'Secured', value: p => p.secured },
+    { label: 'Advance (months)', value: p => p.advance_months },
+    { label: 'Deposit (months)', value: p => p.deposit_months },
+    { label: 'Landlord', value: p => p.owner_name },
+    { label: 'Landlord Email', value: p => p.email },
+    { label: 'Contact', value: p => p.contact },
+    { label: 'Verified Landlord', value: p => (p.is_verified ? 'Yes' : 'No') },
+    { label: 'Hidden', value: p => (hiddenPropertyIds.includes(p.id) ? 'Yes' : 'No') },
+    { label: 'Posted', value: p => fmtDate(p.created_at) }
+  ], filteredProperties);
+
+  const exportReviews = () => downloadCsv('budgetrent-reviews', [
+    { label: 'Property', value: r => propertyNameById.get(r.property_id) },
+    { label: 'Reviewer', value: r => r.reviewer_name },
+    { label: 'Rating', value: r => r.rating },
+    { label: 'Comment', value: r => r.comment },
+    { label: 'Date', value: r => fmtDate(r.created_at) }
+  ], filteredReviews);
+
+  const exportRequests = () => downloadCsv('budgetrent-verification-requests', [
+    { label: 'Full Name', value: r => r.full_name },
+    { label: 'Property', value: r => r.property_name },
+    { label: 'Status', value: r => r.status },
+    { label: 'Requested', value: r => fmtDate(r.created_at) }
+  ], verificationRequests);
+
+  const exportSummary = () => downloadCsv('budgetrent-summary', [
+    { label: 'Metric', value: r => r[0] },
+    { label: 'Value', value: r => r[1] }
+  ], [
+    ['Total landlords', stats.landlords],
+    ['Verified landlords', stats.verified],
+    ['Expired plans', stats.expired],
+    ['Plans expiring in 30 days', stats.expiringSoon.length],
+    ['Landlords without contact info', stats.noContact],
+    ['Total landlord logins', stats.totalLogins],
+    ['Live listings', stats.listings],
+    ['Hidden listings', stats.hidden],
+    ['Available listings', stats.available],
+    ['Occupied listings', stats.occupied],
+    ['New listings (30 days)', stats.newListings30],
+    ['Listings without map pin', stats.noPin],
+    ['Average price (PHP/mo)', stats.avgPrice],
+    ['Lowest price (PHP/mo)', stats.minPrice],
+    ['Highest price (PHP/mo)', stats.maxPrice],
+    ['Total reviews', stats.reviewCount],
+    ['Average rating', stats.avgRating],
+    ['Pending verification requests', stats.pendingCount],
+    ['Approved verification requests', stats.approvedCount],
+    ...stats.byType.map(([k, v]) => [`Listings - ${k}`, v]),
+    ...stats.topAreas.map(([k, v]) => [`Area - ${k}`, v])
+  ]);
 
   useEffect(() => {
     fetchData();
@@ -130,6 +292,9 @@ const AdminPanel = ({ onLogout }) => {
       const { data: vData, error: vError } = await supabase.from('verification_requests').select('*').order('created_at', { ascending: false });
       if (propError) throw propError;
       if (vError) throw vError;
+      // Reviews are optional — the table may not exist yet, so never fail the whole dashboard
+      const { data: rData, error: rError } = await supabase.from('property_reviews').select('*').order('created_at', { ascending: false });
+      setReviews(rError ? [] : (rData || []));
       const normalizedProperties = normalizePropertyOwnerProfiles(propData || []);
       const hiddenIds = getHiddenPropertyIds();
       const hiddenPropertyIdSet = new Set(hiddenIds);
@@ -166,6 +331,9 @@ const AdminPanel = ({ onLogout }) => {
             owner_name: p.owner_name || 'Landlord',
             owner_avatar: p.owner_avatar,
             owner_business_name: p.owner_business_name || '',
+            contact: p.contact || '',
+            owner_facebook: p.owner_facebook || '',
+            owner_whatsapp: p.owner_whatsapp || '',
             email: email,
             subscription_status: subStatus,
             subscription_date: subDate,
@@ -385,25 +553,31 @@ const AdminPanel = ({ onLogout }) => {
     <div className="admin-dashboard-root animate-fade-in">
       <nav className="admin-sidebar shadow-lg">
         <div className="admin-logo">
-          <img src="/logo.png" alt="BudgetRentPH" style={{ width: '36px', height: '36px', objectFit: 'contain' }} />
+          <img src="/logo.png" alt="BudgetRentPH" className="admin-logo-img" />
           <span>BudgetRent <strong>PH</strong></span>
         </div>
         
         <div className="sidebar-group">
           <label>Management</label>
-          <button className={activeTab === 'analytics' ? 'active' : ''} onClick={() => setActiveTab('analytics')}><BarChart3 size={18}/> Analytics</button>
-          <button className={activeTab === 'landlords' ? 'active' : ''} onClick={() => setActiveTab('landlords')}><Users size={18}/> Landlords</button>
-          <button className={activeTab === 'requests' ? 'active' : ''} onClick={() => setActiveTab('requests')}><ClipboardList size={18}/> Pending Requests <span className="badge-count">{pendingRequests.length}</span></button>
+          <button className={activeTab === 'analytics' ? 'active' : ''} onClick={() => setActiveTab('analytics')}><BarChart3 size={18}/> <span>Analytics</span></button>
+          <button className={activeTab === 'landlords' ? 'active' : ''} onClick={() => setActiveTab('landlords')}><Users size={18}/> <span>Landlords</span></button>
+          <button className={activeTab === 'requests' ? 'active' : ''} onClick={() => setActiveTab('requests')}><ClipboardList size={18}/> <span>Pending Requests</span> <span className="badge-count">{pendingRequests.length}</span></button>
+        </div>
+
+        <div className="sidebar-group">
+          <label>Data</label>
+          <button className={activeTab === 'listings' ? 'active' : ''} onClick={() => setActiveTab('listings')}><Home size={18}/> <span>Listings</span></button>
+          <button className={activeTab === 'reviews' ? 'active' : ''} onClick={() => setActiveTab('reviews')}><MessageSquare size={18}/> <span>Reviews</span></button>
         </div>
 
         <div className="sidebar-group">
           <label>Subscriptions</label>
-          <button className={activeTab === 'subscriptions' ? 'active' : ''} onClick={() => setActiveTab('subscriptions')}><Star size={18}/> Managed Plans</button>
-          <button className={activeTab === 'payments' ? 'active' : ''} onClick={() => setActiveTab('payments')}><Settings size={18}/> Payment Slots</button>
+          <button className={activeTab === 'subscriptions' ? 'active' : ''} onClick={() => setActiveTab('subscriptions')}><Star size={18}/> <span>Managed Plans</span></button>
+          <button className={activeTab === 'payments' ? 'active' : ''} onClick={() => setActiveTab('payments')}><Settings size={18}/> <span>Payment Slots</span></button>
         </div>
 
         <div className="sidebar-footer">
-          <button onClick={onLogout} className="logout-btn"><LogOut size={18}/> Log Out</button>
+          <button onClick={onLogout} className="logout-btn"><LogOut size={18}/> <span>Log Out</span></button>
         </div>
       </nav>
 
@@ -411,7 +585,7 @@ const AdminPanel = ({ onLogout }) => {
         <header className="admin-header">
           <div>
             <h2>{activeTab.charAt(0).toUpperCase() + activeTab.slice(1)} Dashboard</h2>
-            <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--admin-text-muted)' }}>Managing live data from Budget Rent PH system</p>
+            <p className="admin-header-sub">Managing live data from Budget Rent PH system</p>
           </div>
           <div className="search-bar">
             <Search size={18} />
@@ -461,146 +635,239 @@ const AdminPanel = ({ onLogout }) => {
         )}
 
         <section className="admin-content-view">
+          {activeTab !== 'payments' && (
+            <div className="admin-toolbar">
+              <span>
+                {activeTab === 'analytics' && 'Key numbers for Budget Rent PH'}
+                {activeTab === 'landlords' && `${filteredLandlords.length} landlord(s)`}
+                {activeTab === 'subscriptions' && `${filteredLandlords.length} plan(s)`}
+                {activeTab === 'listings' && `${filteredProperties.length} listing(s)`}
+                {activeTab === 'reviews' && `${filteredReviews.length} review(s)`}
+                {activeTab === 'requests' && `${verificationRequests.length} request(s), ${pendingRequests.length} pending`}
+              </span>
+              <button
+                className="export-btn"
+                onClick={{
+                  analytics: exportSummary,
+                  landlords: exportLandlords,
+                  subscriptions: exportSubscriptions,
+                  listings: exportListings,
+                  reviews: exportReviews,
+                  requests: exportRequests
+                }[activeTab]}
+              >
+                <Download size={14} /> Export CSV
+              </button>
+            </div>
+          )}
+
           {activeTab === 'analytics' && (
-             <div className="analytics-dashboard">
-                <div className="stat-row">
-                   <div className="stat-card white">
-                      <Users size={24} color="#003366" />
-                      <div><label>Total Landlords</label><h3>{landlords.length}</h3></div>
-                   </div>
-                   <div className="stat-card gold">
-                      <Shield size={24} color="#003366" />
-                      <div><label>Active Badges</label><h3>{activeBadgesCount}</h3></div>
-                   </div>
+            <div className="analytics-dashboard">
+              <div className="stat-row">
+                <div className="stat-card white">
+                  <div className="stat-icon"><Users size={18} /></div>
+                  <div><label>Landlords</label><h3>{stats.landlords}</h3><small>{stats.noContact} without contact info</small></div>
                 </div>
-                <div className="stat-row" style={{ marginTop: '20px' }}>
-                   <div className="stat-card white">
-                      <Building2 size={24} color="#003366" />
-                      <div><label>Total Listings</label><h3>{visibleProperties.length}</h3></div>
-                   </div>
-                   <div className="stat-card navy">
-                      <RefreshCw size={24} color="#FFD700" />
-                      <div><label>Pending Requests</label><h3>{pendingRequests.length}</h3></div>
-                   </div>
+                <div className="stat-card gold">
+                  <div className="stat-icon"><Shield size={18} /></div>
+                  <div><label>Verified Badges</label><h3>{stats.verified}</h3><small>{stats.expired} expired plan(s)</small></div>
                 </div>
-             </div>
+                <div className="stat-card white">
+                  <div className="stat-icon"><Building2 size={18} /></div>
+                  <div><label>Live Listings</label><h3>{stats.listings}</h3><small>+{stats.newListings30} in last 30 days</small></div>
+                </div>
+                <div className="stat-card navy">
+                  <div className="stat-icon"><RefreshCw size={18} /></div>
+                  <div><label>Pending Requests</label><h3>{stats.pendingCount}</h3><small>{stats.approvedCount} approved</small></div>
+                </div>
+              </div>
+
+              <div className="analytics-grid">
+                <div className="analytics-panel">
+                  <h4>Availability</h4>
+                  <div className="bar-row"><span>Available</span><div className="bar"><i style={{ width: `${stats.listings ? (stats.available / stats.listings) * 100 : 0}%` }} /></div><b>{stats.available}</b></div>
+                  <div className="bar-row"><span>Occupied</span><div className="bar"><i className="danger" style={{ width: `${stats.listings ? (stats.occupied / stats.listings) * 100 : 0}%` }} /></div><b>{stats.occupied}</b></div>
+                  <div className="bar-row"><span>Hidden</span><div className="bar"><i className="muted" style={{ width: `${allProperties.length ? (stats.hidden / allProperties.length) * 100 : 0}%` }} /></div><b>{stats.hidden}</b></div>
+                </div>
+
+                <div className="analytics-panel">
+                  <h4>Rent Prices (₱/mo)</h4>
+                  <div className="kv-row"><span>Average</span><b>₱{stats.avgPrice.toLocaleString()}</b></div>
+                  <div className="kv-row"><span>Lowest</span><b>₱{stats.minPrice.toLocaleString()}</b></div>
+                  <div className="kv-row"><span>Highest</span><b>₱{stats.maxPrice.toLocaleString()}</b></div>
+                  {stats.byType.map(([type, count]) => (
+                    <div className="kv-row" key={type}><span>{type}</span><b>{count}</b></div>
+                  ))}
+                </div>
+
+                <div className="analytics-panel">
+                  <h4><MapPin size={13} /> Top Areas</h4>
+                  {stats.topAreas.length === 0 && <div className="admin-empty small">No location data yet.</div>}
+                  {stats.topAreas.map(([area, count]) => (
+                    <div className="bar-row" key={area}><span>{area}</span><div className="bar"><i style={{ width: `${(count / stats.topAreas[0][1]) * 100}%` }} /></div><b>{count}</b></div>
+                  ))}
+                </div>
+
+                <div className="analytics-panel">
+                  <h4>Reviews · ★ {stats.avgRating} <small>({stats.reviewCount})</small></h4>
+                  {stats.ratingDist.map(([star, count]) => (
+                    <div className="bar-row" key={star}><span>{star}★</span><div className="bar"><i className="gold" style={{ width: `${stats.reviewCount ? (count / stats.reviewCount) * 100 : 0}%` }} /></div><b>{count}</b></div>
+                  ))}
+                </div>
+
+                <div className="analytics-panel wide">
+                  <h4>Plans Expiring in 30 Days</h4>
+                  {stats.expiringSoon.length === 0 && <div className="admin-empty small">Walang malapit na mag-expire.</div>}
+                  {stats.expiringSoon.map(l => (
+                    <div className="kv-row" key={l.email}>
+                      <span>{l.owner_name} <small>{l.email}</small></span>
+                      <b className={new Date(l.subscription_expiry) < new Date() ? 'expired' : ''}>{fmtDate(l.subscription_expiry)}</b>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="analytics-panel wide">
+                  <h4>Data Quality</h4>
+                  <div className="kv-row"><span>Listings without map pin</span><b>{stats.noPin}</b></div>
+                  <div className="kv-row"><span>Landlords without contact info</span><b>{stats.noContact}</b></div>
+                  <div className="kv-row"><span>Total landlord logins</span><b>{stats.totalLogins}</b></div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'listings' && (
+            <div className="admin-list">
+              <div className="admin-list-head listing-row">
+                <span>Listing</span><span>Type</span><span>Price</span><span>Status</span><span>Landlord</span>
+              </div>
+              {filteredProperties.length === 0 && <div className="admin-empty">No listings found.</div>}
+              {filteredProperties.map(p => {
+                const occupied = String(p.availability || '').toLowerCase() === 'occupied';
+                const hidden = hiddenPropertyIds.includes(p.id);
+                return (
+                  <div key={p.id} className="admin-list-row listing-row">
+                    <div className="row-user">
+                      <div className="row-avatar square">{p.image ? <img src={p.image} alt="" /> : <Home size={14} />}</div>
+                      <div className="row-user-info">
+                        <strong>{p.name || p.title}</strong>
+                        <small>{p.location || 'No location'}</small>
+                      </div>
+                    </div>
+                    <span className="row-date">{p.type || '—'}</span>
+                    <span className="row-count">₱{Number(p.price || 0).toLocaleString()}</span>
+                    <span className={`status-pill ${hidden ? 'inactive' : occupied ? 'occupied' : 'active'}`}>{hidden ? 'Hidden' : occupied ? 'Occupied' : 'Available'}</span>
+                    <div className="row-user-info"><strong>{p.owner_name}</strong><small>{p.email}</small></div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {activeTab === 'reviews' && (
+            <div className="admin-list">
+              <div className="admin-list-head review-row">
+                <span>Property</span><span>Reviewer</span><span>Rating</span><span>Date</span><span>Comment</span>
+              </div>
+              {filteredReviews.length === 0 && <div className="admin-empty">No reviews yet.</div>}
+              {filteredReviews.map(r => (
+                <div key={r.id} className="admin-list-row review-row">
+                  <div className="row-user-info"><strong>{propertyNameById.get(r.property_id) || 'Removed listing'}</strong></div>
+                  <span className="row-date">{r.reviewer_name || 'Reviewer'}</span>
+                  <span className="row-count">{r.rating}★</span>
+                  <span className="row-date">{fmtDate(r.created_at)}</span>
+                  <span className="row-comment">{r.comment || '—'}</span>
+                </div>
+              ))}
+            </div>
           )}
 
           {activeTab === 'landlords' && (
-            <div className="landlord-grid">
+            <div className="admin-list">
+              <div className="admin-list-head landlord-row">
+                <span>Landlord</span><span>Status</span><span>Listings</span><span>Badge</span><span>Actions</span>
+              </div>
+              {filteredLandlords.length === 0 && <div className="admin-empty">No landlords found.</div>}
               {filteredLandlords.map(l => (
-                <div key={l.email} className="premium-card landlord-card">
-                  <div className="card-header">
-                    <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: '#003366', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', overflow: 'hidden' }}>
-                      {l.owner_avatar ? (
-                        <img src={l.owner_avatar} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                      ) : (
-                        l.owner_name?.charAt(0)
-                      )}
+                <div key={l.email} className="admin-list-row landlord-row">
+                  <div className="row-user">
+                    <div className="row-avatar">
+                      {l.owner_avatar ? <img src={l.owner_avatar} alt="" /> : l.owner_name?.charAt(0)}
                     </div>
-                    <div className="user-info">
-                      <h4>{l.owner_name} {l.is_verified && <Award size={14} color="#007dfe" />}</h4>
-                      <p>{l.email}</p>
+                    <div className="row-user-info">
+                      <strong>{l.owner_name} {l.is_verified && <Award size={13} color="#007dfe" />}</strong>
+                      <small>{l.email}</small>
                     </div>
                   </div>
-                  <div className="card-stats" style={{ padding: '12px' }}>
-                    <div className="stat-item"><span>Status</span><strong style={{color: l.is_verified ? '#10b981' : '#64748b'}}>{l.subscription_status || 'Regular'}</strong></div>
-                    <div className="stat-item"><span>Listings</span><strong>{visibleProperties.filter(p => p.email === l.email).length}</strong></div>
-                    <div className="stat-item">
-                      <span>Badge</span>
-                      <button 
-                        onClick={() => handleToggleVerified(l.email, l.is_verified)}
-                        style={{ 
-                          padding: '4px 10px', 
-                          borderRadius: '20px', 
-                          border: 'none', 
-                          fontSize: '0.7rem', 
-                          fontWeight: '800', 
-                          cursor: 'pointer',
-                          background: l.is_verified ? '#10b981' : '#ef4444',
-                          color: 'white',
-                          transition: 'all 0.2s'
-                        }}
-                      >
-                        {l.is_verified ? 'ON' : 'OFF'}
-                      </button>
-                    </div>
-                  </div>
-                  <div className="card-actions">
+                  <span className={`status-pill ${l.is_verified ? 'active' : 'inactive'}`}>{l.subscription_status || 'Regular'}</span>
+                  <span className="row-count">{visibleProperties.filter(p => p.email === l.email).length}</span>
+                  <button
+                    className={`badge-toggle ${l.is_verified ? 'on' : 'off'}`}
+                    onClick={() => handleToggleVerified(l.email, l.is_verified)}
+                  >
+                    {l.is_verified ? 'ON' : 'OFF'}
+                  </button>
+                  <div className="row-actions">
                     <button className="manage-btn" onClick={() => viewLandlordListings(l.email)}>Properties</button>
-                    <button className={l.is_verified ? 'verify-btn verified' : 'verify-btn'} onClick={() => handleRenew(l.email)}>{l.is_verified ? 'Renew Plan' : 'Activate'}</button>
-                    <button className="landlord-delete-btn" onClick={() => handleDeleteLandlord(l)}><Trash2 size={15} /> Delete</button>
+                    <button className="verify-btn" onClick={() => handleRenew(l.email)}>{l.is_verified ? 'Renew' : 'Activate'}</button>
+                    <button className="landlord-delete-btn" onClick={() => handleDeleteLandlord(l)} title="Delete landlord" aria-label="Delete landlord"><Trash2 size={14} /></button>
                   </div>
                 </div>
               ))}
             </div>
           )}
 
-
           {activeTab === 'subscriptions' && (
-             <div className="premium-table-wrapper">
-                <table className="premium-table">
-                  <thead>
-                    <tr><th>Landlord Name</th><th>Plan Status</th><th>Availed Date</th><th>Expiry Date</th><th>Action</th></tr>
-                  </thead>
-                  <tbody>
-                    {filteredLandlords.map(l => (
-                      <tr key={l.email}>
-                        <td style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                          <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: '#003366', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', flexShrink: 0, overflow: 'hidden' }}>
-                            {l.owner_avatar ? (
-                              <img src={l.owner_avatar} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                            ) : (
-                              l.owner_name?.charAt(0)
-                            )}
-                          </div>
-                          <div>
-                            <div style={{ fontWeight: '800' }}>{l.owner_name}</div>
-                            <small>{l.email}</small>
-                          </div>
-                        </td>
-                        <td>
-                          <span className={`status-pill ${l.is_verified ? 'active' : 'inactive'}`}>
-                            {l.subscription_status || (l.is_verified ? 'Active' : 'Regular')}
-                          </span>
-                        </td>
-                        <td>{l.subscription_date ? new Date(l.subscription_date).toLocaleDateString() : 'N/A'}</td>
-                        <td style={{ color: new Date(l.subscription_expiry) < new Date() ? '#ef4444' : 'inherit' }}>
-                          {l.subscription_expiry ? new Date(l.subscription_expiry).toLocaleDateString() : 'N/A'}
-                        </td>
-                        <td>
-                          <button className="refresh-btn" onClick={() => handleRenew(l.email)} style={{ padding: '6px 12px', background: '#003366', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <RefreshCw size={14}/> Renew
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-             </div>
+            <div className="admin-list">
+              <div className="admin-list-head sub-row">
+                <span>Landlord</span><span>Plan</span><span>Availed</span><span>Expiry</span><span>Action</span>
+              </div>
+              {filteredLandlords.length === 0 && <div className="admin-empty">No landlords found.</div>}
+              {filteredLandlords.map(l => (
+                <div key={l.email} className="admin-list-row sub-row">
+                  <div className="row-user">
+                    <div className="row-avatar">
+                      {l.owner_avatar ? <img src={l.owner_avatar} alt="" /> : l.owner_name?.charAt(0)}
+                    </div>
+                    <div className="row-user-info">
+                      <strong>{l.owner_name}</strong>
+                      <small>{l.email}</small>
+                    </div>
+                  </div>
+                  <span className={`status-pill ${l.is_verified ? 'active' : 'inactive'}`}>
+                    {l.subscription_status || (l.is_verified ? 'Active' : 'Regular')}
+                  </span>
+                  <span className="row-date">{l.subscription_date ? new Date(l.subscription_date).toLocaleDateString() : 'N/A'}</span>
+                  <span className={`row-date ${l.subscription_expiry && new Date(l.subscription_expiry) < new Date() ? 'expired' : ''}`}>
+                    {l.subscription_expiry ? new Date(l.subscription_expiry).toLocaleDateString() : 'N/A'}
+                  </span>
+                  <div className="row-actions">
+                    <button className="manage-btn" onClick={() => handleRenew(l.email)}><RefreshCw size={13}/> Renew</button>
+                  </div>
+                </div>
+              ))}
+            </div>
           )}
 
           {activeTab === 'requests' && (
-            <div className="requests-stack">
+            <div className="admin-list">
+              {pendingRequests.length === 0 && <div className="admin-empty">No pending requests.</div>}
               {pendingRequests.map(req => {
                 const landlord = landlords.find(l => l.user_id === req.user_id);
                 const avatar = landlord?.owner_avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(req.full_name)}&background=random`;
-                
                 return (
-                  <div key={req.id} className="premium-card request-item">
-                    <div className="req-header">
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Clock size={16}/> <span>{new Date(req.created_at).toLocaleDateString()}</span></div>
-                      <span className="status-badge pending">PENDING</span>
+                  <div key={req.id} className="admin-list-row request-row">
+                    <div className="row-user">
+                      <div className="row-avatar"><img src={avatar} alt="" /></div>
+                      <div className="row-user-info">
+                        <strong>{req.full_name}</strong>
+                        <small>{req.property_name}</small>
+                      </div>
                     </div>
-                    <div style={{ display: 'flex', gap: '20px', alignItems: 'center', margin: '12px 0' }}>
-                      <div style={{ width: '60px', height: '60px', borderRadius: '15px', background: 'var(--admin-navy)', overflow: 'hidden', flexShrink: 0 }}>
-                         <img src={avatar} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                      </div>
-                      <div style={{ flex: 1 }}>
-                        <h3 style={{ margin: '0 0 4px', color: '#003366' }}>{req.full_name}</h3>
-                        <p style={{ margin: 0, fontSize: '0.85rem' }}><strong>Property:</strong> {req.property_name}</p>
-                      </div>
-                      <button className="approve-btn" onClick={() => approveRequest(req.id, req.user_id, landlord?.email || req.full_name)}><Check size={16}/> Approve & Activate Plan</button>
+                    <span className="row-date"><Clock size={12}/> {new Date(req.created_at).toLocaleDateString()}</span>
+                    <span className="status-badge pending">Pending</span>
+                    <div className="row-actions">
+                      <button className="approve-btn" onClick={() => approveRequest(req.id, req.user_id, landlord?.email || req.full_name)}><Check size={14}/> Approve</button>
                     </div>
                   </div>
                 );
@@ -608,54 +875,35 @@ const AdminPanel = ({ onLogout }) => {
             </div>
           )}
 
-          {/* PAYMENTS & STATS VIEW REMAIN (Hidden logic for brevity but keep original) */}
           {activeTab === 'payments' && (
-             <div className="payment-config-grid">
-                {paymentMethods.map((pm, idx) => (
-                   <div key={pm.id} className="premium-card config-slot">
-                      <div className="slot-badge">SLOT {idx + 1}</div>
-                      <div className="config-form" style={{ marginTop: '16px' }}>
-                         <label style={{ fontSize: '0.7rem', fontWeight: '800' }}>PAYMENT METHOD</label>
-                         <input
-                           type="text"
-                           value={pm.method}
-                           placeholder="GCash"
-                           onChange={e => handlePaymentMethodChange(idx, 'method', e.target.value)}
-                         />
-                         <label style={{ fontSize: '0.7rem', fontWeight: '800' }}>ACCOUNT NAME</label>
-                         <input
-                           type="text"
-                           value={pm.accountName}
-                           placeholder="Juan Dela Cruz"
-                           onChange={e => handlePaymentMethodChange(idx, 'accountName', e.target.value)}
-                         />
-                         <label style={{ fontSize: '0.7rem', fontWeight: '800' }}>E-WALLET NUMBER</label>
-                         <input
-                           type="text"
-                           value={pm.accountNumber}
-                           placeholder="09XXXXXXXXX"
-                           onChange={e => handlePaymentMethodChange(idx, 'accountNumber', e.target.value)}
-                         />
-                         <label style={{ fontSize: '0.7rem', fontWeight: '800' }}>QR IMAGE</label>
-                         <input
-                           type="file"
-                           id={`payment-qr-${pm.id}`}
-                           hidden
-                           accept="image/*"
-                           onChange={e => handlePaymentQrUpload(idx, e.target.files?.[0])}
-                         />
-                         <label htmlFor={`payment-qr-${pm.id}`} className="qr-upload-box">
-                           {pm.qrUrl ? (
-                             <img src={pm.qrUrl} alt={`${pm.method} QR`} className="payment-qr-preview" />
-                           ) : (
-                             <span className="qr-upload-placeholder"><ImagePlus size={18} /> Upload QR</span>
-                           )}
-                         </label>
-                      </div>
-                   </div>
-                ))}
-                <button className="save-all-btn" onClick={handleSavePaymentDetails}>Update Payment Details</button>
-             </div>
+            <div className="admin-list">
+              <div className="admin-list-head slot-row">
+                <span>Slot</span><span>Method</span><span>Account Name</span><span>Number</span><span>QR</span>
+              </div>
+              {paymentMethods.map((pm, idx) => (
+                <div key={pm.id} className="admin-list-row slot-row">
+                  <span className="slot-badge">SLOT {idx + 1}</span>
+                  <input type="text" value={pm.method} placeholder="GCash" aria-label="Payment method"
+                    onChange={e => handlePaymentMethodChange(idx, 'method', e.target.value)} />
+                  <input type="text" value={pm.accountName} placeholder="Juan Dela Cruz" aria-label="Account name"
+                    onChange={e => handlePaymentMethodChange(idx, 'accountName', e.target.value)} />
+                  <input type="text" value={pm.accountNumber} placeholder="09XXXXXXXXX" aria-label="E-wallet number"
+                    onChange={e => handlePaymentMethodChange(idx, 'accountNumber', e.target.value)} />
+                  <div>
+                    <input type="file" id={`payment-qr-${pm.id}`} hidden accept="image/*"
+                      onChange={e => handlePaymentQrUpload(idx, e.target.files?.[0])} />
+                    <label htmlFor={`payment-qr-${pm.id}`} className="qr-upload-box" title="Upload QR">
+                      {pm.qrUrl ? (
+                        <img src={pm.qrUrl} alt={`${pm.method} QR`} className="payment-qr-preview" />
+                      ) : (
+                        <span className="qr-upload-placeholder"><ImagePlus size={16} /></span>
+                      )}
+                    </label>
+                  </div>
+                </div>
+              ))}
+              <button className="save-all-btn" onClick={handleSavePaymentDetails}>Update Payment Details</button>
+            </div>
           )}
         </section>
       </div>
@@ -664,9 +912,9 @@ const AdminPanel = ({ onLogout }) => {
       {isManageModalOpen && (
         <div className="modal-overlay" onClick={() => setIsManageModalOpen(false)}>
           <div className="modal-content animate-slide-up admin-listings-modal" onClick={e => e.stopPropagation()}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
-               <h3 style={{ margin: 0 }}>Listings</h3>
-               <button onClick={() => setIsManageModalOpen(false)} style={{ border: 'none', background: 'none' }}><X size={20}/></button>
+            <div className="admin-modal-head">
+               <h3>Listings</h3>
+               <button onClick={() => setIsManageModalOpen(false)} aria-label="Close"><X size={18}/></button>
             </div>
             <div className="admin-listings-scroll">
               {selectedLandlordListings.length === 0 ? (

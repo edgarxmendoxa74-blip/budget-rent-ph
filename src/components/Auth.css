@@ -1,6 +1,7 @@
 .auth-container {
   min-height: 100vh;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   background: 
@@ -270,6 +271,56 @@
   text-decoration: underline;
 }
 
+/* Facebook page note below the auth card */
+.auth-connect {
+  margin-top: 18px;
+  display: flex;
+  justify-content: center;
+}
+
+.auth-connect-note {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-radius: 16px;
+  text-decoration: none;
+  text-align: left;
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.08);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+}
+
+.auth-connect-note svg {
+  flex-shrink: 0;
+}
+
+.auth-connect-note svg {
+  color: #1877F2;
+  background: white;
+  border-radius: 50%;
+}
+
+.auth-connect-note span {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+  min-width: 0;
+}
+
+.auth-connect-note small {
+  font-size: 11px;
+  font-weight: 600;
+  opacity: 0.75;
+}
+
+.auth-connect-note strong {
+  font-size: 15px;
+  font-weight: 800;
+}
+
 /* How to Use button */
 .how-to-use-btn {
   margin-top: 16px;
@@ -296,15 +347,22 @@
 }
 
 /* How to Use modal */
+.how-to-use-overlay {
+  z-index: 2000;
+  padding: 16px;
+}
+
 .how-to-use-modal {
-  width: calc(100% - 32px);
+  width: 100%;
   max-width: 440px;
   background: white;
   border-radius: 28px;
   padding: 24px;
-  max-height: 85vh;
+  max-height: calc(100dvh - 32px);
   overflow-y: auto;
+  overscroll-behavior: contain;
   margin: auto;
+  text-align: left;
   box-shadow: 0 20px 50px rgba(0, 38, 82, 0.3);
 }
 
@@ -328,8 +386,9 @@
   box-shadow: var(--shadow-gold);
 }
 
-.how-to-use-title flex {
+.how-to-use-title {
   flex: 1;
+  min-width: 0;
 }
 
 .how-to-use-title h3 {
@@ -345,6 +404,7 @@
 }
 
 .how-to-use-close {
+  flex-shrink: 0;
   width: 36px;
   height: 36px;
   border-radius: 50%;
@@ -396,7 +456,9 @@
 .how-to-use-steps {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 14px;
+  /* Room for the step badges that sit outside each card, so the scroll container doesn't clip them */
+  padding: 8px 0 0 8px;
 }
 
 .how-to-use-step {
@@ -471,4 +533,15 @@
 .how-to-use-done:hover {
   box-shadow: 0 10px 24px rgba(0, 59, 122, 0.45);
   transform: translateY(-2px);
+}
+
+@media (max-width: 480px) {
+  .how-to-use-modal {
+    padding: 20px 16px;
+    border-radius: 24px;
+  }
+
+  .how-to-use-title h3 {
+    font-size: 18px;
+  }
 }

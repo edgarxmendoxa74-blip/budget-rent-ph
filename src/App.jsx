@@ -1,6 +1,11 @@
 import React, { useState, useEffect, useMemo, useRef, Suspense, lazy } from 'react';
-import { Search, MapPin, Bed, Bath, Wifi, Shield, Star, Menu, X, Heart, MessageCircle, Phone, LogOut, Building2, User, Users, Loader2, ClipboardList, Mail, BadgeCheck, Headset, ArrowLeft, Home, Navigation, Globe, Trash2, ChevronLeft, ChevronRight, Bell, FileText } from 'lucide-react';
+import { Search, MapPin, Bed, Bath, Wifi, Shield, Star, Menu, X, Heart, MessageCircle, Phone, LogOut, Building2, User, Users, Loader2, ClipboardList, Mail, BadgeCheck, Headset, ArrowLeft, Home, Navigation, Globe, Trash2, ChevronLeft, ChevronRight, Bell, FileText, HousePlus, LocateFixed, ScrollText, FileSignature, Info } from 'lucide-react';
 import { clearSupabaseSessionStorage, recoverFromJwtError, supabase, validateCurrentSession } from './lib/supabase';
+import { isAdminEmail } from './lib/admin';
+import { useUserLocation } from './lib/useUserLocation';
+import { useApproxCoords } from './lib/useApproxCoords';
+import { useAreaSearch } from './lib/useAreaSearch';
+import { toCoords, distanceKm, formatDistance, inArea } from './lib/geo';
 import './App.css';
 import './components/ProfileModal.css';
 
@@ -37,6 +42,11 @@ const CATEGORY_EMOJI = { Paupahan: "🏠", Staycation: "🌴" };
 
 // Budget input sa home search: max na presyo kada buwan (0/blank = lahat)
 const parseBudget = (value) => Math.max(0, Number(value) || 0);
+// Numero lang ang tinype sa search bar (hal. 4000) = presyo, hindi pangalan ng lugar
+const parseNumericQuery = (value) => {
+  const q = String(value || '').trim().replace(/[₱,s]/g, '');
+  return /^d{3,7}$/.test(q) ? Number(q) : 0;
+};
 const isStaycation = (item) => String(item?.type || item?.category || '').toLowerCase().includes('staycation');
 
 // Availability status: 'Available' (default) o 'Occupied'/'Accommodated'
@@ -44,6 +54,8 @@ const isOccupied = (item) => {
   const value = String(item?.availability || '').toLowerCase().trim();
   return value === 'occupied' || value === 'accommodated' || value === 'rented' || value === 'unavailable';
 };
+// Tinatayang kasya sa staycation: 2 guests kada kwarto (wala pang capacity field sa database)
+const stayCapacity = (item) => Math.max(1, Number(item?.rooms) || 1) * 2;
 const availabilityLabel = (item) => (isOccupied(item) ? 'Occupied' : 'Available');
 const HIDDEN_PROPERTIES_KEY = 'budgetrent_hidden_properties';
 
@@ -104,7 +116,7 @@ export const getMoveInBreakdown = (item) => {
   return { price, advance, deposit, estimatedMoveIn };
 };
 
-function ListingCard({ item, isFav, onToggleFavorite, onOpen, stats }) {
+function ListingCard({ item, isFav, onToggleFavorite, onOpen, stats, distanceLabel }) {
   return (
     <div
       className="listing-card animate-slide-up"
@@ -134,23 +146,19 @@ function ListingCard({ item, isFav, onToggleFavorite, onOpen, stats }) {
         <div className="card-header-row">
           <div className="card-title-group">
             <h4 className="card-title">{item.location?.split(',')[0] || item.name}</h4>
-            <p className="card-subtitle">{item.type || item.category || 'Rental Property'}</p>
+            <p className="card-subtitle">
+              {item.type || item.category || 'Rental Property'}
+              {isStaycation(item) && <span> • hanggang {stayCapacity(item)} guests</span>}
+              {distanceLabel && <span className="card-distance"> • 📍 {distanceLabel}</span>}
+            </p>
           </div>
-          <button
-            className="card-inquire-btn"
-            aria-label="Book this listing"
-            title="Book this listing"
-            onClick={(e) => { e.stopPropagation(); onOpen(item); }}
-          >
-            📅
-          </button>
         </div>
 
         <div className="card-price-row">
           <span className="price-tag">₱{item.price?.toLocaleString() || 0}</span>
-          <span className="price-period">/month</span>
+          <span className="price-period">{isStaycation(item) ? '/gabi' : '/month'}</span>
           {stats?.count > 0 && (
-            <span className="card-rating" title={`${stats.avg.toFixed(1)} out of 5`}>
+            <span className="card-rating" title={`${stats.avg.toFixed(1)} out of 3`}>
               <Star size={11} fill="currentColor" strokeWidth={0} />
               {stats.avg.toFixed(1)}
               <em>({stats.count})</em>
@@ -202,8 +210,21 @@ function App() {
   const [propertyToDelete, setPropertyToDelete] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [editingListingItem, setEditingListingItem] = useState(null);
-  const isOwner = session?.user?.email === 'admin@budgetrent.ph' || 
-                  session?.user?.email === 'mendozajakong@gmail.com';
+  const isOwner = isAdminEmail(session?.user?.email);
+
+  // Layo ng bawat listing mula sa lokasyon ng tenant (kung pinayagan ang location)
+  const userLoc = useUserLocation();
+  // Staycation 'Where': hanapin ang buong lugar sa mapa, hindi lang text sa address
+  const priceQuery = parseNumericQuery(debouncedSearchQuery);
+  const stayArea = useAreaSearch(debouncedSearchQuery, selectedCategory === 'Staycation' && !priceQuery);
+  const approxCoords = useApproxCoords(properties, Boolean(userLoc.coords) || Boolean(stayArea));
+  const getDistanceLabel = (item) => {
+    if (!userLoc.coords || !item) return null;
+    const pinned = toCoords(item);
+    const coords = pinned || approxCoords[item.id];
+    if (!coords) return null;
+    return `${pinned ? '' : '≈ '}${formatDistance(distanceKm(userLoc.coords, coords))} mula sa iyo`;
+  };
 
 
 
@@ -324,10 +345,11 @@ function App() {
     }
   };
 
+  const maxBudget = parseBudget(budgetMax) || priceQuery;
+
   const filteredListings = useMemo(() => {
-    const maxBudget = parseBudget(budgetMax);
     const skipBudget = activeTab === 'mylistings' || activeTab === 'admin';
-    return properties.filter(item => {
+    const matches = properties.filter(item => {
       const matchesCategory = (activeTab === 'mylistings' || activeTab === 'admin')
         ? true
         : selectedCategory === "Staycation"
@@ -336,14 +358,35 @@ function App() {
             ? !isStaycation(item)
             : (item.type || "") === selectedCategory || (item.category || "") === selectedCategory;
       const q = debouncedSearchQuery.toLowerCase();
-      const matchesSearch = (item.name || item.title || "").toLowerCase().includes(q) || 
-                            (item.location || "").toLowerCase().includes(q);
+      const matchesText = (item.name || item.title || "").toLowerCase().includes(q) || 
+                          (item.location || "").toLowerCase().includes(q);
+      const matchesArea = Boolean(stayArea) && inArea(toCoords(item) || approxCoords[item.id], stayArea);
+      const matchesSearch = priceQuery > 0 || matchesText || matchesArea;
+      // Staycation 'When' / 'Who': hindi ipinapakita ang occupied kapag may petsa; ayon sa kasya ang guests
+      const skipStay = activeTab === 'mylistings' || activeTab === 'admin' || selectedCategory !== 'Staycation';
+      const matchesStay = skipStay || (
+        (!stayDate || !isOccupied(item)) &&
+        (!stayGuests || stayCapacity(item) >= Number(stayGuests))
+      );
       const matchesMyListings = activeTab === 'mylistings' ? (item.user_id === session?.user?.id) : true;
       const price = Number(item.price) || 0;
-      const matchesBudget = skipBudget || maxBudget <= 0 || price <= maxBudget;
-      return matchesCategory && matchesSearch && matchesMyListings && matchesBudget;
+      const matchesBudget = skipBudget || maxBudget <= 0 || (price > 0 && price <= maxBudget);
+      return matchesCategory && matchesSearch && matchesMyListings && matchesBudget && matchesStay;
     });
-  }, [properties, selectedCategory, debouncedSearchQuery, activeTab, session?.user?.id, budgetMax]);
+    // May budget: pinakamalapit sa budget muna (hal. 4000 → ₱4,000, ₱3,900...), para tugma ang unang lalabas
+    return maxBudget > 0 && !skipBudget
+      ? [...matches].sort((a, b) => (Number(b.price) || 0) - (Number(a.price) || 0))
+      : matches;
+  }, [properties, selectedCategory, debouncedSearchQuery, activeTab, session?.user?.id, maxBudget, stayArea, approxCoords, stayDate, stayGuests]);
+
+  // Pinakamurang listing sa napiling category (para sa mungkahi kapag walang pasok sa budget)
+  const cheapestInCategory = useMemo(() => {
+    const prices = properties
+      .filter(item => (selectedCategory === 'Staycation' ? isStaycation(item) : !isStaycation(item)))
+      .map(item => Number(item.price) || 0)
+      .filter(price => price > 0);
+    return prices.length ? Math.min(...prices) : null;
+  }, [properties, selectedCategory]);
 
   const shouldShowOwnerAvatar = (item) => Boolean(item?.owner_avatar);
 
@@ -507,9 +550,10 @@ function App() {
           <div className="mobile-menu-content animate-slide-left" onClick={e => e.stopPropagation()}>
             <div className="menu-header">
               <div className="logo-section">
-                <img src="/logo.png" alt="Logo" className="logo-img" />
-                <div style={{ display: 'flex', flexDirection: 'column' }}>
-                  <h1 className="brand-name" style={{ margin: 0 }}>BudgetRent<span>PH</span></h1>
+                <span className="menu-logo-chip"><img src="/logo.png" alt="Logo" className="logo-img" /></span>
+                <div className="menu-brand-text">
+                  <h1 className="brand-name">Budget<span>Rent</span>PH</h1>
+                  <p>Mura. Malapit. Mapagkakatiwalaan.</p>
                 </div>
               </div>
               <button className="close-menu" onClick={() => setIsMenuOpen(false)}><X size={24} /></button>
@@ -518,32 +562,34 @@ function App() {
             <div className="menu-items">
               {isGuest && (
                 <>
-                  <button className="menu-link" onClick={() => { setIsMenuOpen(false); setActiveTab('home'); }}>
+                  <p className="menu-section-label">Explore</p>
+                  <button className={`menu-link${activeTab === 'home' ? ' active' : ''}`} onClick={() => { setIsMenuOpen(false); setActiveTab('home'); }}>
                     <div className="icon-container-mini"><Home size={18} /></div> Home
                   </button>
-                  <button className="menu-link" onClick={() => { setIsMenuOpen(false); setActiveTab('wishlist'); }}>
-                    <div className="icon-container-mini"><Heart size={18} /></div> My Wishlist
+                  <button className={`menu-link${activeTab === 'wishlist' ? ' active' : ''}`} onClick={() => { setIsMenuOpen(false); setActiveTab('wishlist'); }}>
+                    <div className="icon-container-mini secondary-icon"><Heart size={18} /></div> My Wishlist
                   </button>
-                  <button className="menu-link" onClick={() => { setIsMenuOpen(false); setActiveTab('explore'); }}>
-                    <div className="icon-container-mini"><MapPin size={18} /></div> Phone Location
+                  <button className={`menu-link${activeTab === 'explore' ? ' active' : ''}`} onClick={() => { setIsMenuOpen(false); setActiveTab('explore'); }}>
+                    <div className="icon-container-mini"><LocateFixed size={18} /></div> Phone Location
                   </button>
                 </>
               )}
               {!isGuest && (
                 <>
+                  <p className="menu-section-label">Landlord</p>
                   <button className="menu-link highlight" onClick={() => { setIsMenuOpen(false); setIsPropertyFormOpen(true); }}>
-                    <div className="icon-container-mini"><Shield size={18} /></div> List your property
+                    <div className="icon-container-mini"><HousePlus size={18} /></div> List your property
                   </button>
-                  <button className="menu-link" onClick={() => { setIsMenuOpen(false); setActiveTab('mylistings'); }}>
+                  <button className={`menu-link${activeTab === 'mylistings' ? ' active' : ''}`} onClick={() => { setIsMenuOpen(false); setActiveTab('mylistings'); }}>
                     <div className="icon-container-mini"><ClipboardList size={18} /></div> My Listings
                   </button>
-                  <button className="menu-link" onClick={() => { setIsMenuOpen(false); setActiveTab('agreement'); }}>
-                    <div className="icon-container-mini secondary-icon"><FileText size={18} /></div> Create Agreement Draft
+                  <button className={`menu-link${activeTab === 'agreement' ? ' active' : ''}`} onClick={() => { setIsMenuOpen(false); setActiveTab('agreement'); }}>
+                    <div className="icon-container-mini secondary-icon"><FileSignature size={18} /></div> Create Agreement Draft
                   </button>
                   <button className="menu-link" onClick={() => { setIsMenuOpen(false); setIsProfileEditing(true); setIsProfileModalOpen(true); }}>
                     <div className="icon-container-mini"><User size={18} /></div> Contact & Profile
                   </button>
-                  <button className="menu-link" onClick={() => { setIsMenuOpen(false); setActiveTab('verified'); }}>
+                  <button className={`menu-link${activeTab === 'verified' ? ' active' : ''}`} onClick={() => { setIsMenuOpen(false); setActiveTab('verified'); }}>
                     <div className="icon-container-mini secondary-icon"><BadgeCheck size={18} /></div> Get Verified
                   </button>
                 </>
@@ -552,15 +598,15 @@ function App() {
 
               
               <div className="menu-divider"></div>
-              
-              <button className="menu-link" onClick={() => { setIsMenuOpen(false); setActiveTab('about'); }}>
-                <div className="icon-container-mini"><Building2 size={18} /></div> About Us
+              <p className="menu-section-label">Tungkol & Tulong</p>
+              <button className={`menu-link${activeTab === 'about' ? ' active' : ''}`} onClick={() => { setIsMenuOpen(false); setActiveTab('about'); }}>
+                <div className="icon-container-mini"><Info size={18} /></div> About Us
               </button>
-              <button className="menu-link" onClick={() => { setIsMenuOpen(false); setActiveTab('terms'); }}>
-                <div className="icon-container-mini"><Shield size={18} /></div> Terms & Policies
+              <button className={`menu-link${activeTab === 'terms' ? ' active' : ''}`} onClick={() => { setIsMenuOpen(false); setActiveTab('terms'); }}>
+                <div className="icon-container-mini"><ScrollText size={18} /></div> Terms & Policies
               </button>
-              <button className="menu-link" onClick={() => { setIsMenuOpen(false); setActiveTab('support'); }}>
-                <div className="icon-container-mini"><Headset size={18} /></div> Chat Customer Support
+              <button className={`menu-link${activeTab === 'support' ? ' active' : ''}`} onClick={() => { setIsMenuOpen(false); setActiveTab('support'); }}>
+                <div className="icon-container-mini secondary-icon"><Headset size={18} /></div> Chat Customer Support
               </button>
               <button className="menu-link logout" onClick={handleLogout}>
                 <div className="icon-container-mini logout-icon"><LogOut size={18} /></div> Sign Out
@@ -568,7 +614,7 @@ function App() {
             </div>
 
             <div className="menu-footer">
-              <p>© 2026 Budget Rent PH</p>
+              <p><strong>Budget<span>Rent</span>PH</strong><br />© 2026 Budget Rent PH</p>
               <div className="social-links">
                 <Phone size={18} />
                 <MessageCircle size={18} />
@@ -619,6 +665,7 @@ function App() {
                         <input
                           id="stay-when"
                           type="date"
+                          min={new Date().toISOString().slice(0, 10)}
                           className={stayDate ? '' : 'is-empty'}
                           value={stayDate}
                           onChange={(e) => setStayDate(e.target.value)}
@@ -635,7 +682,7 @@ function App() {
                         value={stayGuests}
                         onChange={(e) => setStayGuests(e.target.value)}
                       >
-                        <option value="">Add guests</option>
+                        <option value="">Guests</option>
                         <option value="1">1 guest</option>
                         <option value="2">2 guests</option>
                         <option value="3">3 guests</option>
@@ -681,16 +728,15 @@ function App() {
                   <div className="budget-input-wrap">
                     <span className="budget-peso">₱</span>
                     <input
-                      type="number"
-                      min="0"
-                      step="100"
+                      type="text"
                       inputMode="numeric"
+                      autoComplete="off"
                       className="budget-input"
-                      placeholder="I-enter ang budget mo kada buwan"
-                      value={budgetMax}
-                      onChange={(e) => setBudgetMax(e.target.value)}
+                      placeholder={selectedCategory === 'Staycation' ? 'Budget mo kada gabi' : 'Budget mo kada buwan'}
+                      value={budgetMax === '' ? '' : Number(budgetMax).toLocaleString('en-US')}
+                      onChange={(e) => setBudgetMax(e.target.value.replace(/\D/g, '').replace(/^0+/, '').slice(0, 7))}
                     />
-                    <span className="budget-suffix">/mo</span>
+                    <span className="budget-suffix">{selectedCategory === 'Staycation' ? '/gabi' : '/mo'}</span>
                     {budgetMax !== '' && (
                       <button
                         type="button"
@@ -702,6 +748,12 @@ function App() {
                       </button>
                     )}
                   </div>
+                  {maxBudget > 0 && (
+                    <p className="budget-hint">
+                      Hanggang ₱{maxBudget.toLocaleString()}{selectedCategory === 'Staycation' ? ' kada gabi' : ' kada buwan'} • {filteredListings.length} resulta
+                      {selectedCategory !== 'Staycation' && ' • buwanang upa lang, hindi pa kasama ang advance at deposit'}
+                    </p>
+                  )}
                 </div>
             </div>
           </header>
@@ -712,7 +764,7 @@ function App() {
                 <button 
                   key={cat} 
                   className={`category-chip ${selectedCategory === cat ? 'active' : ''}`}
-                  onClick={() => setSelectedCategory(cat)}
+                  onClick={() => { if (cat !== selectedCategory) setBudgetMax(''); setSelectedCategory(cat); }}
                 >
                   <span className="chip-emoji">{CATEGORY_EMOJI[cat] || '🏠'}</span>
                   {cat}
@@ -741,6 +793,38 @@ function App() {
                 ))}
               </div>
             ) : (
+              <>
+              {userLoc.status !== 'granted' && (
+                <button
+                  type="button"
+                  className="distance-prompt"
+                  onClick={userLoc.request}
+                  disabled={userLoc.status === 'loading'}
+                >
+                  <Navigation size={15} />
+                  {userLoc.status === 'loading' ? 'Hinahanap ang lokasyon mo...'
+                    : userLoc.status === 'denied' ? 'Naka-block ang location — i-Allow sa browser/phone settings para makita ang layo'
+                    : userLoc.status === 'unavailable' ? 'Hindi makuha ang lokasyon — subukan ulit'
+                    : 'I-on ang location para makita kung gaano kalayo ang bawat bahay'}
+                </button>
+              )}
+              {filteredListings.length === 0 && (
+                <div className="budget-empty">
+                  {maxBudget > 0 && cheapestInCategory && cheapestInCategory > maxBudget ? (
+                    <>
+                      <strong>Walang listing na hanggang ₱{maxBudget.toLocaleString()}</strong>
+                      <span>Ang pinakamura ngayon ay ₱{cheapestInCategory.toLocaleString()}{selectedCategory === 'Staycation' ? ' kada gabi' : ' kada buwan'}.</span>
+                      <button type="button" onClick={() => setBudgetMax(String(cheapestInCategory))}>Ipakita hanggang ₱{cheapestInCategory.toLocaleString()}</button>
+                    </>
+                  ) : (
+                    <>
+                      <strong>Walang nahanap na listing</strong>
+                      <span>Subukan ang ibang lugar, petsa, o budget.</span>
+                      {maxBudget > 0 && <button type="button" onClick={() => { setBudgetMax(''); if (priceQuery) setSearchQuery(''); }}>Burahin ang budget</button>}
+                    </>
+                  )}
+                </div>
+              )}
               <div className="listing-grid">
                 {filteredListings.map(item => (
                   <ListingCard
@@ -750,9 +834,11 @@ function App() {
                     onToggleFavorite={toggleFavorite}
                     onOpen={setSelectedProperty}
                     stats={reviewStats.get(item.id)}
+                    distanceLabel={getDistanceLabel(item)}
                   />
                 ))}
               </div>
+              </>
             )}
           </main>
         </>
@@ -761,7 +847,8 @@ function App() {
       {activeTab === 'explore' && (
         <Suspense fallback={<div className="text-center py-10"><Loader2 className="animate-spin text-primary mx-auto" size={40} /></div>}>
           <FindNearbyPage 
-            listings={filteredListings}
+            listings={properties}
+            userLocation={userLoc.coords}
             reviewStats={reviewStats}
             onSelectProperty={setSelectedProperty}
             isLandlord={!isGuest && session?.user?.user_metadata?.user_role === 'landlord'}
@@ -817,6 +904,7 @@ function App() {
                     onToggleFavorite={toggleFavorite}
                     onOpen={setSelectedProperty}
                     stats={reviewStats.get(item.id)}
+                    distanceLabel={getDistanceLabel(item)}
                   />
                 ))}
               </div>
@@ -1056,7 +1144,7 @@ function App() {
               })()}
               
               <div className="modal-location">
-                <MapPin size={18} /> {selectedProperty.location}
+                <MapPin size={18} /> {selectedProperty.location}{getDistanceLabel(selectedProperty) && <span className="card-distance"> • {getDistanceLabel(selectedProperty)}</span>}
               </div>
 
               <div className="divider"></div>
@@ -1171,47 +1259,57 @@ function App() {
 
       {/* Navigation Bar */}
       {(!isOwner || activeTab !== 'admin') && (
-        <div className="bottom-nav glass">
+        <nav className="bottom-nav glass" aria-label="Main navigation">
           {!isGuest ? (
             /* Landlord Navigation */
             <>
-              <button className={`nav-item ico-list ${activeTab === 'mylistings' ? 'active' : ''}`} onClick={() => setActiveTab('mylistings')}>
-                <span className={`nav-icon-box ${activeTab === 'mylistings' ? 'active' : ''}`}><ClipboardList size={24} /></span>
-                <span>My Listings</span>
+              <button
+                className={`nav-item ico-list ${activeTab === 'mylistings' ? 'active' : ''}`}
+                onClick={() => setActiveTab('mylistings')}
+                aria-current={activeTab === 'mylistings' ? 'page' : undefined}
+              >
+                <span className="nav-icon-box"><ClipboardList size={22} /></span>
+                <span className="nav-label">My Listings</span>
               </button>
-              <button className="nav-item circle-plus" onClick={() => setIsPropertyFormOpen(true)} aria-label="List your property" title="List your property">📅</button>
-              <button className="nav-item ico-account" onClick={() => { setIsProfileEditing(false); setIsProfileModalOpen(true); }}>
-                <span className="nav-icon-box"><User size={24} /></span>
-                <span>Account</span>
+              <button className="nav-item circle-plus" onClick={() => setIsPropertyFormOpen(true)} aria-label="List your property" title="List your property">+</button>
+              <button
+                className={`nav-item ico-account ${isProfileModalOpen ? 'active' : ''}`}
+                onClick={() => { setIsProfileEditing(false); setIsProfileModalOpen(true); }}
+              >
+                <span className="nav-icon-box"><User size={22} /></span>
+                <span className="nav-label">Account</span>
               </button>
             </>
           ) : (
             /* Tenant Navigation */
             <>
-              <button 
+              <button
                 className={`nav-item ico-nearby ${activeTab === 'explore' ? 'active' : ''}`}
                 onClick={() => setActiveTab('explore')}
+                aria-current={activeTab === 'explore' ? 'page' : undefined}
               >
-                <div className={`nav-icon-box ${activeTab === 'explore' ? 'active' : ''}`}><MapPin size={26} /></div>
-                <span>Nearby</span>
+                <span className="nav-icon-box"><MapPin size={22} /></span>
+                <span className="nav-label">Nearby</span>
               </button>
-              <button 
+              <button
                 className={`nav-item ico-home ${activeTab === 'home' ? 'active' : ''}`}
                 onClick={() => setActiveTab('home')}
+                aria-current={activeTab === 'home' ? 'page' : undefined}
               >
-              <div className={`nav-icon-box ${activeTab === 'home' ? 'active' : ''}`}><Home size={26} /></div>
-                <span>Home</span>
+                <span className="nav-icon-box"><Home size={22} /></span>
+                <span className="nav-label">Home</span>
               </button>
-              <button 
+              <button
                 className={`nav-item ico-wish ${activeTab === 'wishlist' ? 'active' : ''}`}
                 onClick={() => setActiveTab('wishlist')}
+                aria-current={activeTab === 'wishlist' ? 'page' : undefined}
               >
-                <div className={`nav-icon-box ${activeTab === 'wishlist' ? 'active' : ''}`}><Heart size={26} /></div>
-                <span>Wishlist</span>
+                <span className="nav-icon-box"><Heart size={22} /></span>
+                <span className="nav-label">Wishlist</span>
               </button>
             </>
           )}
-        </div>
+        </nav>
       )}
 
       {/* Property Listing Form Modal */}

@@ -3,13 +3,24 @@ import { Star, Loader2, Trash2, Pencil, Check, X, MessageSquare } from 'lucide-r
 import { supabase } from '../lib/supabase';
 import './ReviewsSection.css';
 
-const MAX_COMMENT = 500;
+const MAX_WORDS = 30;
+const MAX_STARS = 3;
+const countWords = (t) => (t.trim() ? t.trim().split(/\s+/).length : 0);
+const limitWords = (t) => {
+  let words = 0;
+  let out = '';
+  for (const part of t.split(/(\s+)/)) {
+    if (part && !/^\s+$/.test(part) && ++words > MAX_WORDS) break;
+    out += part;
+  }
+  return out;
+};
 
-export const StarRow = ({ value, size = 14, onChange, label }) => {
+export const StarRow = ({ value, size = 14, onChange, label, max = MAX_STARS }) => {
   const interactive = typeof onChange === 'function';
   return (
     <div className={`rev-stars${interactive ? ' interactive' : ''}`} role={interactive ? 'radiogroup' : undefined} aria-label={label || 'Rating'}>
-      {[1, 2, 3, 4, 5].map(n => (
+      {Array.from({ length: Math.max(max, value || 0) }, (_, i) => i + 1).map(n => (
         <button
           key={n}
           type="button"
@@ -43,7 +54,14 @@ const ReviewsSection = ({ property, session, isGuest, reviews, loading, onChange
   const userId = session?.user?.id;
   const isOwner = Boolean(userId && property?.user_id && property.user_id === userId);
   const myReview = userId ? reviews.find(r => r.user_id === userId) : null;
-  const canReview = Boolean(userId) && !isGuest && !isOwner;
+  const isAnon = !userId;
+  const canReview = !isOwner;
+
+  const doneKey = `budgetrent_reviewed_${property?.id}`;
+  const [anonDone, setAnonDone] = useState(() => {
+    try { return localStorage.getItem(doneKey) === '1'; } catch { return false; }
+  });
+  const [anonName, setAnonName] = useState('');
 
   const resetForm = () => {
     setRating(0);
@@ -56,32 +74,49 @@ const ReviewsSection = ({ property, session, isGuest, reviews, loading, onChange
     e.preventDefault();
     if (!canReview) return;
     if (rating < 1) {
-      setError('Pumili muna ng rating (1–5 stars).');
+      setError('Pumili muna ng rating (1–3 stars).');
       return;
     }
-    if (comment.trim().length > MAX_COMMENT) {
-      setError(`Masyadong mahaba ang comment. Max ${MAX_COMMENT} characters.`);
+    if (countWords(comment) > MAX_WORDS) {
+      setError(`Masyadong mahaba ang review. Max ${MAX_WORDS} words.`);
       return;
     }
 
     setSubmitting(true);
     setError(null);
     try {
-      const meta = session.user.user_metadata || {};
-      const payload = {
-        property_id: property.id,
-        user_id: userId,
-        rating,
-        comment: comment.trim() || null,
-        reviewer_name: meta.full_name || session.user.email?.split('@')[0] || 'Reviewer',
-        reviewer_avatar: meta.avatar_url || null,
-      };
+      if (isAnon) {
+        const { error: insertError } = await supabase
+          .from('property_reviews')
+          .insert({
+            property_id: property.id,
+            user_id: null,
+            rating,
+            comment: comment.trim() || null,
+            reviewer_name: anonName.trim().slice(0, 40) || 'Tenant',
+            reviewer_avatar: null,
+          });
+        if (insertError) throw insertError;
+        try { localStorage.setItem(doneKey, '1'); } catch { /* ignore */ }
+        setAnonDone(true);
+        setAnonName('');
+      } else {
+        const meta = session.user.user_metadata || {};
+        const payload = {
+          property_id: property.id,
+          user_id: userId,
+          rating,
+          comment: comment.trim() || null,
+          reviewer_name: meta.full_name || session.user.email?.split('@')[0] || 'Reviewer',
+          reviewer_avatar: meta.avatar_url || null,
+        };
 
-      const { error: upsertError } = await supabase
-        .from('property_reviews')
-        .upsert(payload, { onConflict: 'property_id,user_id' });
+        const { error: upsertError } = await supabase
+          .from('property_reviews')
+          .upsert(payload, { onConflict: 'property_id,user_id' });
 
-      if (upsertError) throw upsertError;
+        if (upsertError) throw upsertError;
+      }
 
       resetForm();
       onChanged?.();
@@ -126,7 +161,7 @@ const ReviewsSection = ({ property, session, isGuest, reviews, loading, onChange
     }
   };
 
-  const showForm = canReview && (!myReview || editing);
+  const showForm = canReview && (isAnon ? !anonDone : (!myReview || editing));
 
   return (
     <section className="reviews-section">
@@ -205,22 +240,31 @@ const ReviewsSection = ({ property, session, isGuest, reviews, loading, onChange
           {showForm && (
             <form className="review-form" onSubmit={handleSubmit}>
               <h4>{editing ? 'I-edit ang review' : 'Mag-iwan ng review'}</h4>
+              {isAnon && (
+                <input
+                  className="review-form-name"
+                  type="text"
+                  placeholder="Pangalan (optional)"
+                  value={anonName}
+                  maxLength={40}
+                  onChange={(e) => setAnonName(e.target.value)}
+                />
+              )}
               <div className="review-form-rating">
                 <StarRow value={rating} size={22} onChange={setRating} label="Ang iyong rating" />
                 <span className="review-form-hint">
-                  {rating > 0 ? `${rating}/5` : 'Piliin ang rating'}
+                  {rating > 0 ? `${rating}/${MAX_STARS}` : 'Piliin ang rating'}
                 </span>
               </div>
               <textarea
                 className="review-form-textarea"
                 placeholder="Ano ang naging experience mo sa listing na ito? (optional)"
                 value={comment}
-                maxLength={MAX_COMMENT}
-                onChange={(e) => setComment(e.target.value)}
+                onChange={(e) => setComment(limitWords(e.target.value))}
                 rows={3}
               />
               <div className="review-form-footer">
-                <span className="review-char-count">{comment.length}/{MAX_COMMENT}</span>
+                <span className="review-char-count">{countWords(comment)}/{MAX_WORDS} words</span>
                 <div className="review-form-buttons">
                   {editing && (
                     <button type="button" className="review-btn cancel" onClick={resetForm} disabled={submitting}>
@@ -238,12 +282,11 @@ const ReviewsSection = ({ property, session, isGuest, reviews, loading, onChange
 
           {!canReview && (
             <p className="review-gate">
-              {isGuest
-                ? 'Mag-sign in upang makapag-review ng listing.'
-                : isOwner
-                  ? 'Ikaw ang may-ari ng listing na ito — hindi ka puwedeng mag-review sa sarili mo.'
-                  : 'Mag-sign in upang makapag-review.'}
+              Ikaw ang may-ari ng listing na ito — hindi ka puwedeng mag-review sa sarili mo.
             </p>
+          )}
+          {isAnon && anonDone && (
+            <p className="review-gate">Salamat sa iyong review!</p>
           )}
 
           {error && <div className="review-error">{error}</div>}

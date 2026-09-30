@@ -219,20 +219,24 @@ const EditListings = ({ session, onClose, onListingUpdated, initialEditingItem =
                     <img src={item.image || '/placeholder.png'} alt={item.name} />
                   </div>
                   <div className="my-listing-info">
-                    <h4>{item.name}</h4>
-                    <span className="my-listing-type">{item.type}</span>
-                    <div className="my-listing-meta">
-                      <MapPin size={12} /> {item.location}
+                    <div className="my-listing-title-row">
+                      <h4>{item.name}</h4>
+                      <span className="my-listing-type">{item.type}</span>
                     </div>
-                    <div className="my-listing-price">₱{item.price?.toLocaleString()}/mo</div>
-                    <button
-                      type="button"
-                      className={`avail-toggle ${isOccupiedItem(item) ? 'occupied' : 'available'}`}
-                      onClick={(e) => { e.stopPropagation(); handleToggleAvailability(item); }}
-                      title="I-toggle ang status: Available / Occupied"
-                    >
-                      {isOccupiedItem(item) ? 'Occupied' : 'Available'}
-                    </button>
+                    <div className="my-listing-meta">
+                      <MapPin size={12} /> <span>{item.location}</span>
+                    </div>
+                    <div className="my-listing-bottom-row">
+                      <div className="my-listing-price">₱{item.price?.toLocaleString()}/mo</div>
+                      <button
+                        type="button"
+                        className={`avail-toggle ${isOccupiedItem(item) ? 'occupied' : 'available'}`}
+                        onClick={(e) => { e.stopPropagation(); handleToggleAvailability(item); }}
+                        title="I-toggle ang status: Available / Occupied"
+                      >
+                        {isOccupiedItem(item) ? 'Occupied' : 'Available'}
+                      </button>
+                    </div>
                   </div>
                   <div className="my-listing-actions">
                     <button className="edit-action-btn edit" onClick={() => handleEdit(item)}>

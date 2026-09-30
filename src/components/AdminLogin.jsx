@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { supabase } from '../lib/supabase';
+import { isAdminEmail } from '../lib/admin';
 import { Mail, Lock, Shield, Loader2, ArrowLeft, Eye, EyeOff } from 'lucide-react';
 import './Auth.css'; // Reusing some auth styles
 
@@ -17,10 +18,10 @@ const AdminLogin = ({ onLoginSuccess, onBack }) => {
 
     try {
       // Allow specific admin emails
-      const isAdminEmail = email === 'admin@budgetrent.ph' || email === 'mendozajakong@gmail.com';
+      const isLegacyBypassEmail = email === 'admin@budgetrent.ph' || email === 'mendozajakong@gmail.com';
 
       // DEVELOPMENT BYPASS: If credentials match hardcoded, skip Supabase Auth for quick access
-      if (isAdminEmail && password === 'admin123') {
+      if (isLegacyBypassEmail && password === 'admin123') {
         localStorage.setItem('budgetrent_admin_bypass', 'true');
         onLoginSuccess();
         return;
@@ -33,7 +34,7 @@ const AdminLogin = ({ onLoginSuccess, onBack }) => {
 
       if (error) throw error;
 
-      if (data.user.email !== 'admin@budgetrent.ph' && data.user.email !== 'mendozajakong@gmail.com') {
+      if (!isAdminEmail(data.user.email)) {
         await supabase.auth.signOut();
         throw new Error('This account does not have administrative privileges.');
       }

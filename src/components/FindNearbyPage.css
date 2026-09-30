@@ -675,9 +675,18 @@
   transform: scale(1.15);
 }
 
-.hm-emoji {
-  font-size: 0.9rem;
-  line-height: 1;
+.hm-icon {
+  display: inline-flex;
+  align-items: center;
+  color: var(--primary);
+}
+
+.house-marker.stay .hm-icon {
+  color: var(--secondary-dark);
+}
+
+.house-marker.selected .hm-icon {
+  color: #fff;
 }
 
 @keyframes marker-pop {
@@ -739,4 +748,463 @@
   gap: 6px;
   color: var(--primary);
   border-color: var(--primary);
+}
+
+/* Tinatayang lokasyon (walang pin ang landlord) */
+.house-marker.approx {
+  border-style: dashed;
+  background: #f8fafc;
+}
+
+.map-peek-info .map-peek-approx {
+  color: #b45309;
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+
+/* Choice: Find Rent o Staycation */
+.intent-choices {
+  perspective: 900px;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
+  padding: 18px 6px;
+}
+
+@media (min-width: 560px) {
+  .intent-choices { grid-template-columns: 1fr 1fr; }
+}
+
+.intent-card {
+  --rx: 0deg;
+  --ry: 0deg;
+  transform-style: preserve-3d;
+  transform: rotateX(var(--rx)) rotateY(var(--ry));
+  transition: transform 0.25s ease-out, box-shadow 0.25s ease-out;
+  animation: intent-enter 0.7s cubic-bezier(0.22, 1.2, 0.36, 1) backwards;
+  will-change: transform;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 26px 18px;
+  border-radius: 22px;
+  border: 2px solid transparent;
+  cursor: pointer;
+  text-align: center;
+  color: var(--primary-dark);
+  box-shadow: 0 14px 32px -18px rgba(0, 34, 74, 0.5);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.intent-card.stay { animation-delay: 0.12s; }
+
+.intent-card:hover,
+.intent-card:focus-visible {
+  box-shadow: 0 26px 44px -16px rgba(0, 34, 74, 0.55);
+}
+
+.intent-card:active {
+  transition-duration: 0.08s;
+}
+
+@keyframes intent-enter {
+  0% { opacity: 0; transform: perspective(900px) rotateX(-65deg) translateY(30px) scale(0.9); }
+  100% { opacity: 1; transform: perspective(900px) rotateX(var(--rx)) rotateY(var(--ry)); }
+}
+
+/* Lutang at umiikot na 3D icon, may lalim (extrude) at kintab */
+.intent-card > strong,
+.intent-card > span:last-child {
+  transform: translateZ(18px);
+}
+
+.intent-icon {
+  position: relative;
+  transform-style: preserve-3d;
+  transform: translateZ(46px);
+  animation: intent-float 3.4s ease-in-out infinite, intent-spin 6s ease-in-out infinite;
+}
+
+.intent-card.stay .intent-icon { animation-delay: -1.2s, -2s; }
+
+.intent-icon.rent {
+  box-shadow:
+    1px 1px 0 #002a5c, 2px 2px 0 #00264f, 3px 3px 0 #00224a, 4px 4px 0 #001e42,
+    5px 5px 0 #001a3b, 6px 6px 0 #001633,
+    0 18px 26px -6px rgba(0, 34, 74, 0.55);
+}
+
+.intent-icon.stay {
+  box-shadow:
+    1px 1px 0 #e08a00, 2px 2px 0 #d47f00, 3px 3px 0 #c87500, 4px 4px 0 #bc6c00,
+    5px 5px 0 #b06300, 6px 6px 0 #a45a00,
+    0 18px 26px -6px rgba(217, 119, 6, 0.6);
+}
+
+/* kintab (gloss) */
+.intent-icon::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.45) 0%, rgba(255, 255, 255, 0) 45%);
+  pointer-events: none;
+}
+
+.intent-glyph {
+  display: flex;
+  transform: translateZ(22px);
+  filter: drop-shadow(2px 3px 0 rgba(0, 0, 0, 0.25));
+}
+
+.intent-icon.stay .intent-glyph {
+  filter: drop-shadow(2px 3px 0 rgba(0, 34, 74, 0.28));
+}
+
+/* anino sa sahig */
+.intent-card::after {
+  content: '';
+  position: absolute;
+  top: 26px;
+  left: 50%;
+  width: 62px;
+  height: 14px;
+  margin-left: -31px;
+  transform: translateY(78px) translateZ(-20px);
+  border-radius: 50%;
+  background: rgba(0, 34, 74, 0.25);
+  filter: blur(6px);
+  animation: intent-shadow 3.4s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.intent-card { position: relative; }
+
+@keyframes intent-float {
+  0%, 100% { translate: 0 0; }
+  50% { translate: 0 -9px; }
+}
+
+@keyframes intent-spin {
+  0%, 100% { transform: translateZ(46px) rotateY(-24deg) rotateX(8deg); }
+  50% { transform: translateZ(46px) rotateY(24deg) rotateX(-6deg); }
+}
+
+@keyframes intent-shadow {
+  0%, 100% { transform: translateY(78px) translateZ(-20px) scale(1); opacity: 0.9; }
+  50% { transform: translateY(78px) translateZ(-20px) scale(0.75); opacity: 0.5; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .intent-card,
+  .intent-icon,
+  .intent-card::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+.intent-card.rent {
+  background: linear-gradient(160deg, #F0F6FF, #E0ECFF);
+  border-color: rgba(0, 59, 122, 0.25);
+}
+
+.intent-card.stay {
+  background: linear-gradient(160deg, #FFF8E7, #FFE9B8);
+  border-color: rgba(245, 158, 11, 0.45);
+}
+
+.intent-icon {
+  width: 68px;
+  height: 68px;
+  border-radius: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.intent-icon.rent {
+  background: var(--primary-gradient);
+  color: #fff;
+  box-shadow: 0 10px 22px -8px rgba(0, 34, 74, 0.6);
+}
+
+.intent-icon.stay {
+  background: var(--secondary-gradient);
+  color: var(--primary);
+  box-shadow: 0 10px 22px -8px rgba(217, 119, 6, 0.6);
+}
+
+.intent-card strong {
+  font-size: 1.15rem;
+  font-weight: 800;
+}
+
+.intent-card > span:last-child {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+/* ===== Directions / ruta ===== */
+
+.peek-directions {
+  align-self: flex-start;
+  margin-top: 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: none;
+  border-radius: 100px;
+  padding: 7px 14px;
+  background: var(--primary-gradient);
+  color: #fff;
+  font-weight: 800;
+  font-size: 0.78rem;
+  cursor: pointer;
+  box-shadow: 0 6px 14px -6px rgba(0, 34, 74, 0.7);
+}
+
+.route-marker-wrap {
+  background: transparent;
+  border: none;
+}
+
+.route-start {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.rs-dot {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #0a84ff;
+  border: 3px solid #fff;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 0 5px rgba(10, 132, 255, 0.3), 0 4px 10px rgba(0, 0, 0, 0.35);
+}
+
+.rs-label {
+  padding: 2px 9px;
+  border-radius: 100px;
+  background: #0a63ff;
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 800;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.3);
+}
+
+.route-end {
+  width: 38px;
+  height: 38px;
+  border-radius: 50% 50% 50% 6px;
+  transform: rotate(-45deg);
+  background: var(--primary-gradient);
+  border: 3px solid #fff;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8px 18px rgba(0, 34, 74, 0.5);
+}
+
+.route-end.stay {
+  background: var(--secondary-gradient);
+  color: var(--primary);
+}
+
+.route-end span {
+  transform: rotate(45deg);
+  display: flex;
+}
+
+.route-panel {
+  margin: 0 0 16px;
+  padding: 14px;
+  border-radius: 20px;
+  background: #fff;
+  border: 1.5px solid #dbe6f5;
+  box-shadow: 0 16px 34px -20px rgba(0, 34, 74, 0.5);
+}
+
+.route-panel.error {
+  border-color: #fcd9a8;
+  background: #fffaf0;
+}
+
+.route-panel.error p {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0 0 10px;
+  color: #b45309;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.route-loading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--primary);
+  font-weight: 700;
+  font-size: 0.88rem;
+}
+
+.route-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.route-head strong {
+  display: block;
+  color: var(--primary-dark);
+  font-size: 1rem;
+}
+
+.route-head span {
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.route-close {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 50%;
+  background: #f1f5f9;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.route-close-inline {
+  border: none;
+  border-radius: 100px;
+  padding: 7px 16px;
+  background: #f1f5f9;
+  color: var(--primary);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.route-modes {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.route-mode {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 10px 6px;
+  border-radius: 14px;
+  border: 1.5px solid #dbe6f5;
+  background: #f8fbff;
+  color: var(--primary);
+  cursor: pointer;
+}
+
+.route-mode strong {
+  font-size: 0.8rem;
+}
+
+.route-mode span {
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+.route-mode.active {
+  background: var(--primary-gradient);
+  border-color: transparent;
+  color: #fff;
+  box-shadow: 0 8px 18px -8px rgba(0, 34, 74, 0.7);
+}
+
+.route-mode.active span {
+  color: #ffe3a3;
+}
+
+.route-mode.far {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.route-note {
+  margin: 10px 2px 0;
+  font-size: 0.76rem;
+  color: var(--text-muted);
+  line-height: 1.45;
+}
+
+.route-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.route-steps-toggle {
+  flex: 1 1 150px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  font-weight: 800;
+  font-size: 0.8rem;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.route-steps-toggle {
+  background: #fff;
+  color: var(--primary);
+  border: 1.5px solid var(--primary);
+}
+
+.route-steps-toggle .flip {
+  transform: rotate(180deg);
+}
+
+.route-steps {
+  margin: 12px 0 0;
+  padding: 0 0 0 20px;
+  max-height: 260px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 0.82rem;
+  color: var(--primary-dark);
+}
+
+.route-steps li span {
+  font-weight: 600;
+}
+
+.route-steps li em {
+  display: block;
+  font-style: normal;
+  font-size: 0.72rem;
+  color: var(--text-muted);
 }

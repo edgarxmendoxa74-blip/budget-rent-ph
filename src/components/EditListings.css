@@ -71,7 +71,7 @@
 }
 
 .edit-listings-body {
-  padding: 20px 24px 28px;
+  padding: 14px 16px 20px;
 }
 
 .edit-loading, .edit-empty {
@@ -87,21 +87,21 @@
   gap: 12px;
 }
 
-/* Listing Items */
+/* Listing Items (compact) */
 .my-listings-list {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 8px;
 }
 
 .my-listing-item {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 10px;
   background: #F8FAFC;
   border: 1px solid var(--border-subtle);
-  border-radius: 18px;
-  padding: 14px;
+  border-radius: 14px;
+  padding: 8px;
   transition: all 0.25s var(--ease-smooth);
 }
 
@@ -112,9 +112,9 @@
 }
 
 .my-listing-img {
-  width: 72px;
-  height: 72px;
-  border-radius: 14px;
+  width: 56px;
+  height: 56px;
+  border-radius: 10px;
   overflow: hidden;
   flex-shrink: 0;
   background: #E2E8F0;
@@ -131,22 +131,31 @@
   min-width: 0;
 }
 
+.my-listing-title-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
 .my-listing-info h4 {
-  font-size: 1rem;
+  font-size: 0.9rem;
   font-weight: 800;
   color: var(--text-main);
-  margin: 0 0 2px;
+  margin: 0;
+  min-width: 0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .my-listing-type {
-  font-size: 0.68rem;
+  flex-shrink: 0;
+  font-size: 0.6rem;
   font-weight: 800;
   color: var(--primary);
   background: var(--primary-light);
-  padding: 3px 10px;
+  padding: 2px 7px;
   border-radius: 100px;
   text-transform: uppercase;
 }
@@ -154,17 +163,36 @@
 .my-listing-meta {
   display: flex;
   align-items: center;
-  gap: 4px;
-  font-size: 0.78rem;
+  gap: 3px;
+  font-size: 0.72rem;
   color: var(--text-muted);
+  margin-top: 2px;
+  min-width: 0;
+}
+
+.my-listing-meta svg {
+  flex-shrink: 0;
+}
+
+.my-listing-meta span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.my-listing-bottom-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
   margin-top: 4px;
 }
 
 .my-listing-price {
-  font-size: 1rem;
+  font-size: 0.9rem;
   font-weight: 800;
   color: #059669;
-  margin-top: 2px;
+  white-space: nowrap;
 }
 
 /* Availability toggle (Available / Occupied) */
@@ -173,12 +201,11 @@
   align-items: center;
   justify-content: center;
   gap: 5px;
-  margin-top: 8px;
-  padding: 5px 12px;
+  padding: 3px 10px;
   border-radius: 100px;
   border: 1.5px solid transparent;
   font-family: inherit;
-  font-size: 0.72rem;
+  font-size: 0.66rem;
   font-weight: 800;
   cursor: pointer;
   transition: all 0.2s var(--ease-pop);
@@ -204,14 +231,14 @@
 .my-listing-actions {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
   flex-shrink: 0;
 }
 
 .edit-action-btn {
-  width: 38px;
-  height: 38px;
-  border-radius: 12px;
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
   border: none;
   display: flex;
   align-items: center;

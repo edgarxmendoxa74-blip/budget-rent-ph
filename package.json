@@ -14,7 +14,8 @@
     "leaflet": "^1.9.4",
     "lucide-react": "^1.8.0",
     "react": "^19.2.4",
-    "react-dom": "^19.2.4"
+    "react-dom": "^19.2.4",
+    "three": "^0.186.1"
   },
   "devDependencies": {
     "@capacitor/android": "^8.3.0",

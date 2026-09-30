@@ -1,7 +1,23 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { supabase } from '../lib/supabase';
 import { Mail, Lock, User, ArrowRight, Loader2, Building2, Phone, MessageCircle, Globe, X, Heart, Eye, EyeOff, BadgeCheck, Lightbulb, Search, MapPin, PlusCircle, UserPlus, Pencil } from 'lucide-react';
 import './Auth.css';
+
+// Facebook page shown below the auth card (text only, not a link)
+const FacebookPageNote = () => (
+  <div className="auth-connect animate-fade-in">
+    <div className="auth-connect-note">
+      <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+        <path fill="currentColor" d="M24 12.07C24 5.41 18.63 0 12 0S0 5.41 0 12.07C0 18.1 4.39 23.1 10.13 24v-8.44H7.08v-3.49h3.05V9.41c0-3.02 1.79-4.69 4.53-4.69 1.31 0 2.68.24 2.68.24v2.97h-1.51c-1.49 0-1.96.93-1.96 1.89v2.25h3.33l-.53 3.49h-2.8V24C19.61 23.1 24 18.1 24 12.07z" />
+      </svg>
+      <span>
+        <small>Follow our FB page</small>
+        <strong>BudgetRenthPh</strong>
+      </span>
+    </div>
+  </div>
+);
 
 const Auth = ({ onAuthSuccess }) => {
   const [view, setView] = useState('tenant'); // 'tenant' or 'landlord'
@@ -12,6 +28,21 @@ const Auth = ({ onAuthSuccess }) => {
   const [isHowToUseOpen, setIsHowToUseOpen] = useState(false);
   const [howToUseTab, setHowToUseTab] = useState('tenant');
   const [showPassword, setShowPassword] = useState(false);
+
+  // Lock page scroll and allow Escape to close while the guide is open
+  useEffect(() => {
+    if (!isHowToUseOpen) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') setIsHowToUseOpen(false);
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isHowToUseOpen]);
   
   const [formData, setFormData] = useState({
     email: '',
@@ -127,30 +158,39 @@ const Auth = ({ onAuthSuccess }) => {
             </button>
           </div>
 
-          {isHowToUseOpen && (
-            <div className="modal-overlay centered" style={{ zIndex: 1000 }} onClick={() => setIsHowToUseOpen(false)}>
-              <div className="how-to-use-modal animate-slide-up" onClick={e => e.stopPropagation()}>
+          {/* Portal to body: .auth-card's backdrop-filter would otherwise trap the fixed overlay inside the card */}
+          {isHowToUseOpen && createPortal(
+            <div className="modal-overlay centered how-to-use-overlay" onClick={() => setIsHowToUseOpen(false)}>
+              <div
+                className="how-to-use-modal animate-slide-up"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="how-to-use-heading"
+                onClick={e => e.stopPropagation()}
+              >
                 <div className="how-to-use-header">
                   <div className="how-to-use-icon">
                     <Lightbulb size={22} />
                   </div>
                   <div className="how-to-use-title">
-                    <h3>Paano Gamitin?</h3>
+                    <h3 id="how-to-use-heading">Paano Gamitin?</h3>
                     <p>Mabilis na gabay sa paggamit ng BudgetRentPH</p>
                   </div>
-                  <button className="how-to-use-close" onClick={() => setIsHowToUseOpen(false)} aria-label="Isara">
+                  <button type="button" className="how-to-use-close" onClick={() => setIsHowToUseOpen(false)} aria-label="Isara">
                     <X size={20} />
                   </button>
                 </div>
 
                 <div className="how-to-use-tabs">
-                  <button 
+                  <button
+                    type="button"
                     className={howToUseTab === 'tenant' ? 'active' : ''}
                     onClick={() => setHowToUseTab('tenant')}
                   >
                     <Search size={15} /> Tenant
                   </button>
-                  <button 
+                  <button
+                    type="button"
                     className={howToUseTab === 'landlord' ? 'active' : ''}
                     onClick={() => setHowToUseTab('landlord')}
                   >
@@ -174,13 +214,16 @@ const Auth = ({ onAuthSuccess }) => {
                   })}
                 </div>
 
-                <button className="how-to-use-done" onClick={() => setIsHowToUseOpen(false)}>
+                <button type="button" className="how-to-use-done" onClick={() => setIsHowToUseOpen(false)}>
                   Naintindihan, Salamat!
                 </button>
               </div>
-            </div>
+            </div>,
+            document.body
           )}
         </div>
+
+        <FacebookPageNote />
       </div>
     );
   }
@@ -323,6 +366,8 @@ const Auth = ({ onAuthSuccess }) => {
           )}
         </div>
       </div>
+
+      <FacebookPageNote />
     </div>
   );
 };
