@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Send, CheckCircle, Home, MapPin, Tag, Info, Shield, Zap, TrendingUp, Camera, Loader2, Image as ImageIcon } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import LocationPicker from './LocationPicker';
 import './PropertyForm.css';
 
 const PropertyForm = ({ onClose, session, onListingAdded }) => {
@@ -29,6 +30,7 @@ const PropertyForm = ({ onClose, session, onListingAdded }) => {
     ownerWhatsapp: session?.user?.user_metadata?.whatsapp || ''
   });
   const [image, setImage] = useState(null);
+  const [coords, setCoords] = useState(null);
   const [isVerified, setIsVerified] = useState(false);
 
   const getVerificationRow = async () => {
@@ -116,6 +118,7 @@ const PropertyForm = ({ onClose, session, onListingAdded }) => {
     e.preventDefault();
     if (!session?.user) return alert('Dapat kang naka-log in!');
     if (!image) return alert('Paki-upload muna ang litrato ng iyong property!');
+    if (!coords) return alert('Paki-pin muna ang lokasyon ng property sa mapa para makita ito ng tenants sa radar.');
     
     setLoading(true);
     
@@ -134,6 +137,8 @@ const PropertyForm = ({ onClose, session, onListingAdded }) => {
         advance_months: parseInt(formData.advanceMonths || 1),
         deposit_months: parseInt(formData.depositMonths || 2),
         location: formData.location,
+        latitude: coords.lat,
+        longitude: coords.lng,
         description: formData.description,
         contact: formData.contact,
         image: image || '/placeholder.png',
@@ -156,10 +161,13 @@ const PropertyForm = ({ onClose, session, onListingAdded }) => {
 
       let { error } = await supabase.from('properties').insert(payload);
 
-      // Fallback kapag wala pa ang availability column sa database
-      if (error && (error.code === '42703' || /availability/i.test(error.message || ''))) {
+      // Fallback kapag wala pa ang availability / latitude / longitude columns sa database
+      if (error && (error.code === '42703' || /availability|latitude|longitude/i.test(error.message || ''))) {
         const legacyPayload = { ...payload };
         delete legacyPayload.availability;
+        delete legacyPayload.latitude;
+        delete legacyPayload.longitude;
+        console.warn('Missing map columns; run supabase/migrations/add_property_coordinates.sql');
         ({ error } = await supabase.from('properties').insert(legacyPayload));
       }
 
@@ -254,7 +262,17 @@ const PropertyForm = ({ onClose, session, onListingAdded }) => {
 
             <div className="form-group">
               <label>Location</label>
-              <input name="location" placeholder="City or Landmarks" required onChange={handleChange} />
+              <input name="location" placeholder="Barangay, Bayan/City, Probinsya (hal. Bonuan, Dagupan, Pangasinan)" required onChange={handleChange} />
+              <span className="upload-hint">Isulat ang bayan at probinsya para makita ng mga tenants na naghahanap sa lugar na iyon.</span>
+            </div>
+
+            <div className="form-group">
+              <label>Pin sa Mapa <span style={{ color: '#ef4444' }}>(Required)</span></label>
+              <LocationPicker
+                value={coords}
+                addressHint={formData.location}
+                onChange={(lat, lng) => setCoords({ lat, lng })}
+              />
             </div>
 
             <div className="form-group">

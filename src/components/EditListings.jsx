@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { X, Edit3, Trash2, Loader2, Save, MapPin, Camera } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import LocationPicker from './LocationPicker';
+import { toCoords } from '../lib/geo';
 import './EditListings.css';
 
 const CATEGORIES = ['Paupahan', 'Staycation'];
@@ -138,6 +140,8 @@ const EditListings = ({ session, onClose, onListingUpdated, initialEditingItem =
         type: editingItem.type,
         price: parseFloat(editingItem.price || 0),
         location: editingItem.location,
+        latitude: toCoords(editingItem)?.lat ?? null,
+        longitude: toCoords(editingItem)?.lng ?? null,
         description: editingItem.description,
         contact: editingItem.contact,
         image: editingItem.image,
@@ -160,10 +164,12 @@ const EditListings = ({ session, onClose, onListingUpdated, initialEditingItem =
         .update(payload)
         .eq('id', editingItem.id);
 
-      // Fallback kapag wala pa ang availability column sa database
-      if (error && (error.code === '42703' || /availability/i.test(error.message || ''))) {
+      // Fallback kapag wala pa ang availability / latitude / longitude columns sa database
+      if (error && (error.code === '42703' || /availability|latitude|longitude/i.test(error.message || ''))) {
         const legacyPayload = { ...payload };
         delete legacyPayload.availability;
+        delete legacyPayload.latitude;
+        delete legacyPayload.longitude;
         ({ error } = await supabase
           .from('properties')
           .update(legacyPayload)
@@ -279,7 +285,16 @@ const EditListings = ({ session, onClose, onListingUpdated, initialEditingItem =
               </div>
               <div className="edit-form-group">
                 <label>Location</label>
-                <input value={editingItem.location || ''} onChange={e => handleEditChange('location', e.target.value)} />
+                <input value={editingItem.location || ''} placeholder="Barangay, Bayan/City, Probinsya" onChange={e => handleEditChange('location', e.target.value)} />
+              </div>
+              <div className="edit-form-group">
+                <label>Pin sa Mapa</label>
+                <LocationPicker
+                  key={editingItem.id}
+                  value={toCoords(editingItem)}
+                  addressHint={editingItem.location}
+                  onChange={(lat, lng) => setEditingItem(prev => ({ ...prev, latitude: lat, longitude: lng }))}
+                />
               </div>
               <div className="edit-form-group">
                 <label>Availability Status</label>

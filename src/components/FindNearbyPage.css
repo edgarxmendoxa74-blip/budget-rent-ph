@@ -341,3 +341,402 @@
   border-color: var(--primary);
   color: var(--primary);
 }
+
+/* ===== Radar map ===== */
+
+.gps-dot.manual {
+  background: #F59E0B;
+  box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.2);
+  animation: none;
+}
+
+.near-inline-error {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  color: #b45309;
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin: 10px 0;
+}
+
+.radar-card {
+  position: relative;
+  border-radius: 22px;
+  overflow: hidden;
+  margin: 4px 0 18px;
+  border: 1.5px solid #e2e8f0;
+  box-shadow: 0 18px 40px -22px rgba(0, 34, 74, 0.45);
+  isolation: isolate;
+}
+
+.radar-map {
+  width: 100%;
+  height: min(58vh, 460px);
+  min-height: 320px;
+  background: #eef2f7;
+  z-index: 0;
+}
+
+.radius-chips {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 500;
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 100px;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(8px);
+  box-shadow: 0 6px 18px rgba(0, 34, 74, 0.18);
+}
+
+.radius-chips button {
+  border: none;
+  background: transparent;
+  color: var(--primary);
+  font-weight: 700;
+  font-size: 0.78rem;
+  padding: 6px 12px;
+  border-radius: 100px;
+  cursor: pointer;
+}
+
+.radius-chips button.active {
+  background: var(--primary);
+  color: #fff;
+}
+
+.recenter-btn {
+  position: absolute;
+  right: 10px;
+  bottom: 92px;
+  z-index: 500;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  border: none;
+  background: #fff;
+  color: var(--primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(0, 34, 74, 0.22);
+  cursor: pointer;
+}
+
+.scan-banner {
+  position: absolute;
+  bottom: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+  padding: 9px 16px;
+  border-radius: 100px;
+  background: var(--primary);
+  color: #fff;
+  font-size: 0.8rem;
+  font-weight: 700;
+  box-shadow: 0 8px 20px rgba(0, 34, 74, 0.35);
+}
+
+.spin-slow {
+  animation: radar-spin 1.6s linear infinite;
+}
+
+.radar-empty {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: 12px;
+  z-index: 500;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  text-align: center;
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 10px 24px rgba(0, 34, 74, 0.2);
+}
+
+.radar-empty strong {
+  color: var(--primary);
+  font-size: 0.95rem;
+}
+
+.radar-empty span {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+
+.radar-empty button {
+  margin-top: 6px;
+  border: none;
+  border-radius: 100px;
+  padding: 8px 16px;
+  background: var(--secondary-gradient);
+  color: var(--primary);
+  font-weight: 800;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.map-peek {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: 12px;
+  z-index: 500;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 36px 10px 10px;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 10px 28px rgba(0, 34, 74, 0.28);
+  cursor: pointer;
+}
+
+.map-peek img {
+  width: 64px;
+  height: 64px;
+  border-radius: 12px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.map-peek-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.map-peek-info strong {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--primary-dark);
+  font-size: 0.92rem;
+}
+
+.map-peek-info span {
+  color: var(--text-muted);
+  font-size: 0.76rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.map-peek-info .map-peek-meta {
+  color: var(--primary);
+  font-weight: 800;
+  font-size: 0.8rem;
+}
+
+.map-peek-close {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  border: none;
+  background: #f1f5f9;
+  color: var(--text-muted);
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.listing-card.radar-selected {
+  outline: 2.5px solid var(--primary);
+  outline-offset: 2px;
+}
+
+/* User location dot */
+.user-dot-wrap,
+.radar-overlay,
+.house-marker-wrap {
+  background: transparent;
+  border: none;
+}
+
+.user-dot {
+  position: relative;
+  width: 22px;
+  height: 22px;
+}
+
+.user-dot span {
+  position: absolute;
+  inset: 3px;
+  border-radius: 50%;
+  background: #0a84ff;
+  border: 3px solid #fff;
+  box-shadow: 0 2px 8px rgba(10, 132, 255, 0.6);
+}
+
+.user-dot.manual span {
+  background: #F59E0B;
+  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.6);
+}
+
+.user-dot.live::before {
+  content: '';
+  position: absolute;
+  inset: -10px;
+  border-radius: 50%;
+  background: rgba(10, 132, 255, 0.25);
+  animation: user-pulse 2s ease-out infinite;
+}
+
+@keyframes user-pulse {
+  0% { transform: scale(0.4); opacity: 1; }
+  100% { transform: scale(1.6); opacity: 0; }
+}
+
+/* Radar sweep */
+.radar {
+  position: relative;
+  border-radius: 50%;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.radar-sweep {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: conic-gradient(from 0deg, rgba(10, 132, 255, 0) 0deg, rgba(10, 132, 255, 0) 280deg, rgba(10, 132, 255, 0.28) 350deg, rgba(10, 132, 255, 0.55) 360deg);
+  animation: radar-spin 4s linear infinite;
+  opacity: 0.55;
+}
+
+.radar.scanning .radar-sweep {
+  animation-duration: 1.2s;
+  opacity: 1;
+}
+
+.radar-ring {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  border-radius: 50%;
+  border: 1px dashed rgba(0, 59, 122, 0.28);
+  transform: translate(-50%, -50%);
+}
+
+.radar-ring.r1 { width: 33%; height: 33%; }
+.radar-ring.r2 { width: 66%; height: 66%; }
+.radar-ring.r3 { width: 100%; height: 100%; border-style: solid; }
+
+@keyframes radar-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Listing price markers */
+.house-marker {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 10px 5px 6px;
+  border-radius: 100px;
+  background: #fff;
+  color: var(--primary);
+  font-weight: 800;
+  font-size: 0.78rem;
+  white-space: nowrap;
+  border: 2px solid var(--primary);
+  box-shadow: 0 6px 14px rgba(0, 34, 74, 0.28);
+  cursor: pointer;
+  transform-origin: bottom center;
+  animation: marker-pop 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  transition: transform 0.15s ease;
+}
+
+.house-marker.verified {
+  border-color: #F59E0B;
+}
+
+.house-marker.selected {
+  background: var(--primary);
+  color: #fff;
+  transform: scale(1.15);
+}
+
+.hm-emoji {
+  font-size: 0.9rem;
+  line-height: 1;
+}
+
+@keyframes marker-pop {
+  0% { opacity: 0; transform: scale(0.3) translateY(10px); }
+  100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.house-marker.selected {
+  animation: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .radar-sweep,
+  .user-dot.live::before,
+  .house-marker,
+  .spin-slow {
+    animation: none !important;
+  }
+}
+
+/* Desktop location instructions */
+.desktop-steps {
+  text-align: left;
+  margin: 10px 0 12px;
+  padding-left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+
+.desktop-steps b {
+  color: var(--primary);
+}
+
+.near-reminder .near-reminder-note {
+  display: block;
+  font-size: 0.78rem;
+  opacity: 0.85;
+}
+
+.near-error-card .near-cta {
+  margin-top: 4px;
+}
+
+/* Area search mode */
+.nearby-head-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.near-me-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--primary);
+  border-color: var(--primary);
+}

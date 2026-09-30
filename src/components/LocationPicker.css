@@ -1,0 +1,78 @@
+.location-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.lp-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.lp-actions button {
+  flex: 1 1 140px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 9px 12px;
+  border-radius: 12px;
+  border: 1.5px solid var(--primary);
+  background: var(--primary-light, #F0F6FF);
+  color: var(--primary);
+  font-weight: 700;
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+
+.lp-actions button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.lp-map {
+  height: 240px;
+  width: 100%;
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1.5px solid #e2e8f0;
+  z-index: 0;
+}
+
+.lp-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+.lp-status.set {
+  color: var(--accent, #10B981);
+  font-weight: 600;
+}
+
+.lp-pin {
+  background: transparent;
+  border: none;
+}
+
+.lp-pin-body {
+  width: 40px;
+  height: 40px;
+  border-radius: 50% 50% 50% 4px;
+  transform: rotate(-45deg);
+  background: var(--primary);
+  border: 3px solid #fff;
+  box-shadow: 0 6px 16px rgba(0, 34, 74, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.lp-pin-body span {
+  transform: rotate(45deg);
+  font-size: 18px;
+}
