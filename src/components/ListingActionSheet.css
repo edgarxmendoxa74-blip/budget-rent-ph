@@ -210,11 +210,6 @@
   color: #fff;
 }
 
-.act-option.msgr {
-  background: linear-gradient(135deg, #00b2ff, #006aff);
-  color: #fff;
-}
-
 .act-option.call {
   background: var(--secondary-gradient);
   color: var(--primary);
@@ -244,10 +239,6 @@
 .act-hint {
   color: #b45309;
   font-weight: 600;
-}
-
-.act-hint.ok {
-  color: #047857;
 }
 
 .act-note {

@@ -1,7 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Phone, Mail, MessageCircle, MessageSquare, CalendarCheck, Send, Info } from 'lucide-react';
-import { toMessengerUrl } from '../lib/social';
+import { X, Phone, Mail, CalendarCheck, Send, Info } from 'lucide-react';
 import './ListingActionSheet.css';
 
 const pad = (n) => String(n).padStart(2, '0');
@@ -25,7 +24,6 @@ const ListingActionSheet = ({ item, kind, onClose, onViewDetails }) => {
   const [checkOut, setCheckOut] = useState('');
   const [guests, setGuests] = useState(Math.min(2, capacity));
   const [extra, setExtra] = useState('');
-  const [copied, setCopied] = useState(false);
 
   const name = item?.name || item?.title || item?.location?.split(',')[0] || 'listing';
   const nights = isBook && checkIn && checkOut ? nightsBetween(checkIn, checkOut) : 0;
@@ -44,28 +42,14 @@ const ListingActionSheet = ({ item, kind, onClose, onViewDetails }) => {
       `Available pa po ba? Puwede po bang malaman ang mga detalye at kung kailan ako puwedeng makapunta? Salamat po!${note}`;
   }, [isBook, name, item, checkIn, checkOut, nights, guests, total, extra]);
 
-  // Messenger ng landlord galing sa Facebook link/username na inilagay nila
-  const messenger = toMessengerUrl(item?.owner_facebook);
   const phone = String(item?.contact || '').trim();
   const email = String(item?.email || '').trim();
   const encoded = encodeURIComponent(message);
 
   const options = [
-    messenger && { key: 'msgr', label: 'Messenger', Icon: MessageCircle, href: messenger, external: true, copy: true },
-    phone && { key: 'sms', label: 'SMS', Icon: MessageSquare, href: `sms:${phone}?body=${encoded}` },
-    email && { key: 'mail', label: 'Email', Icon: Mail, href: `mailto:${email}?subject=${encodeURIComponent(`${isBook ? 'Booking request' : 'Inquiry'}: ${name}`)}&body=${encoded}` },
-    phone && { key: 'call', label: 'Tawagan', Icon: Phone, href: `tel:${phone}` }
+    email && { key: 'mail', label: 'Email Owner', Icon: Mail, href: `mailto:${email}?subject=${encodeURIComponent(`${isBook ? 'Booking request' : 'Inquiry'}: ${name}`)}&body=${encoded}` },
+    phone && { key: 'call', label: 'Call Owner', Icon: Phone, href: `tel:${phone}` }
   ].filter(Boolean);
-
-  // Hindi kayang isama ng Messenger link ang mensahe, kaya kokopyahin para i-paste sa chat
-  const copyMessage = async () => {
-    try {
-      await navigator.clipboard.writeText(message);
-      setCopied(true);
-    } catch {
-      setCopied(false);
-    }
-  };
 
   // Portal sa body para nasa ibabaw ng bottom nav at hindi maipit sa animated na parent
   return createPortal(
@@ -131,7 +115,7 @@ const ListingActionSheet = ({ item, kind, onClose, onViewDetails }) => {
         <div className="act-options">
           {options.length === 0 && <p className="act-empty">Walang contact info ang owner na ito.</p>}
           {options.map((opt) => {
-            const { key, label, href, external, copy } = opt;
+            const { key, label, href } = opt;
             const Icon = opt.Icon;
             return (
             <a
@@ -139,9 +123,6 @@ const ListingActionSheet = ({ item, kind, onClose, onViewDetails }) => {
               href={datesValid || key === 'call' ? href : undefined}
               className={`act-option ${key} ${datesValid || key === 'call' ? '' : 'disabled'}`}
               aria-disabled={!(datesValid || key === 'call')}
-              target={external ? '_blank' : undefined}
-              rel={external ? 'noopener noreferrer' : undefined}
-              onClick={copy ? copyMessage : undefined}
             >
               <Icon size={18} /> {label}
             </a>
@@ -149,11 +130,6 @@ const ListingActionSheet = ({ item, kind, onClose, onViewDetails }) => {
           })}
         </div>
 
-        {messenger && (
-          <p className={`act-hint ${copied ? 'ok' : ''}`}>
-            <Info size={14} /> {copied ? 'Na-copy na ang mensahe — i-paste (hold > Paste) sa chat ng Messenger.' : 'Sa Messenger, kokopyahin ang mensahe para i-paste mo lang sa chat.'}
-          </p>
-        )}
         {!datesValid && <p className="act-hint"><Info size={14} /> Pumili muna ng check-in at check-out para maipadala ang booking request.</p>}
         <p className="act-note"><Info size={14} /> Request lang ito — ang owner pa rin ang magkukumpirma ng {isBook ? 'booking' : 'availability'}. Walang bayad na kinukuha dito.</p>
 
