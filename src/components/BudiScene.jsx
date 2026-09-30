@@ -311,6 +311,23 @@ export default function BudiScene({ phase = 'hop', onReady, onFail }) {
         tgt.thoughtS = 1;
         mouth = 'hmm';
         posY = 0;
+      } else if (ph === 'wave') {
+        // paikot na 4s: tatalon muna (2x), pagkatapos kakaway
+        const c = tp % 4;
+        lerp('rotY', -0.12);
+        if (c < 1.6) {
+          const hh = reduced ? 0 : Math.abs(Math.sin((Math.PI * c) / 0.8));
+          posY = hh * 0.45;
+          sx = 1 + 0.05 * (1 - hh); sy = 1 - 0.07 * (1 - hh);
+          tgt.aLz = -(0.3 + 1.6 * hh); tgt.aRz = 0.3 + 1.6 * hh;
+          tgt.headZ = Math.sin(tp * 6) * 0.05;
+        } else {
+          const w = c - 1.6;
+          tgt.aLz = -(2.5 + Math.sin(w * 9) * 0.42);
+          tgt.aRz = 0.12;
+          tgt.headZ = 0.07 + Math.sin(w * 9) * 0.035;
+          posY = Math.abs(Math.sin(tp * 2.2)) * 0.03;
+        }
       } else {
         // idea + exit
         const T = 0.15;
@@ -355,7 +372,7 @@ export default function BudiScene({ phase = 'hop', onReady, onFail }) {
       b.dots.forEach((d, i) => { d.position.y = -0.02 + Math.max(0, Math.sin(now * 6 - i * 0.6)) * 0.14; });
 
       // bulb
-      const bp = ph === 'hop' || ph === 'think' ? 0 : ph === 'exit' ? 1 : clamp01((tp - 0.05) / 0.55);
+      const bp = ph === 'hop' || ph === 'think' || ph === 'wave' ? 0 : ph === 'exit' ? 1 : clamp01((tp - 0.05) / 0.55);
       const bs = bp === 0 ? 0.0001 : Math.max(0.0001, easeOutBack(bp));
       b.bulb.scale.setScalar(bs);
       b.bulb.rotation.z = Math.sin(now * 8) * 0.05;

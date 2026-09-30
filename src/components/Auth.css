@@ -545,3 +545,15 @@
     font-size: 18px;
   }
 }
+
+/* Remember email (login) */
+.remember-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 2px 0 14px;
+  text-align: left;
+  font-size: 0.85rem;
+}
+.remember-row input { width: 16px; height: 16px; accent-color: var(--primary); flex-shrink: 0; }
+.remember-row label { color: var(--text-muted); cursor: pointer; }

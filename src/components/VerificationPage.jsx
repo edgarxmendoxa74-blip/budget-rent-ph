@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { ShieldCheck, CheckCircle2, ArrowLeft, Loader2, Zap, AlertCircle, X as XIcon } from 'lucide-react';
+import { HeroBudi } from './MascotSplash';
 
 const VerificationPage = ({ onDone, session }) => {
   const [step, setStep] = useState(1);
@@ -67,6 +68,7 @@ const VerificationPage = ({ onDone, session }) => {
         flexShrink: 0,
         borderBottom: '1px solid #f1f5f9'
       }}>
+        <HeroBudi message="Magpa-verify para lumabas ang badge at tumaas ang tiwala ng mga tenant." />
         <h1 style={{ fontSize: '2rem', margin: '0 0 6px', fontWeight: '900', color: 'var(--primary)', letterSpacing: '-1px', textTransform: 'uppercase' }}>GET VERIFIED</h1>
         <div style={{ background: '#f1f5f9', color: 'var(--primary)', padding: '6px 16px', borderRadius: '100px', fontSize: '0.65rem', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '1.5px', border: '1px solid #e2e8f0' }}>Premium Landlord Status</div>
       </header>

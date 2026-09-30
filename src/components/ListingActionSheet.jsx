@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Phone, Mail, CalendarCheck, Send, Info } from 'lucide-react';
+import { X, Phone, Mail, CalendarCheck, Send, Info, BookmarkCheck } from 'lucide-react';
 import './ListingActionSheet.css';
 
 const pad = (n) => String(n).padStart(2, '0');
@@ -46,8 +46,28 @@ const ListingActionSheet = ({ item, kind, onClose, onViewDetails }) => {
   const email = String(item?.email || '').trim();
   const encoded = encodeURIComponent(message);
 
+  // Reserve slot (staycation lang): ipinapadala sa WhatsApp ng owner kung meron, kung wala ay SMS
+  const reserveMessage = useMemo(() => {
+    const note = extra.trim() ? `
+${extra.trim()}` : '';
+    return `Kumusta po! Gusto ko pong mag-RESERVE ng slot sa "${name}" (${item?.location || ''}).
+` +
+      `Check-in: ${checkIn || '—'}
+Check-out: ${checkOut || '—'}${nights ? ` (${nights} gabi)` : ''}
+` +
+      `Guests: ${guests}
+${nights ? `Tinatayang total: ${peso(total)}
+` : ''}` +
+      `Paki-confirm po kung puwede pa at paano ang reservation. Salamat po!${note}`;
+  }, [name, item, checkIn, checkOut, nights, guests, total, extra]);
+  const waNumber = String(item?.owner_whatsapp || '').replace(/D/g, '');
+  const reserveHref = waNumber
+    ? `https://wa.me/${waNumber}?text=${encodeURIComponent(reserveMessage)}`
+    : phone ? `sms:${phone}?&body=${encodeURIComponent(reserveMessage)}` : null;
+
   const options = [
     email && { key: 'mail', label: 'Email Owner', Icon: Mail, href: `mailto:${email}?subject=${encodeURIComponent(`${isBook ? 'Booking request' : 'Inquiry'}: ${name}`)}&body=${encoded}` },
+    isBook && reserveHref && { key: 'reserve', label: 'Reserve Slot', Icon: BookmarkCheck, href: reserveHref },
     phone && { key: 'call', label: 'Call Owner', Icon: Phone, href: `tel:${phone}` }
   ].filter(Boolean);
 
@@ -72,6 +92,10 @@ const ListingActionSheet = ({ item, kind, onClose, onViewDetails }) => {
             <span>{item?.location}</span>
           </div>
         </div>
+
+        {isBook && /^(occupied|accommodated|rented|unavailable)$/i.test(String(item?.availability || '').trim()) && (
+          <p className="act-hint"><Info size={14} /> Occupied ngayon ang staycation na ito, pero puwede ka pa ring mag-reserve ng slot para sa ibang petsa.</p>
+        )}
 
         {isBook && (
           <div className="act-form">
@@ -112,7 +136,7 @@ const ListingActionSheet = ({ item, kind, onClose, onViewDetails }) => {
         <div className="act-preview" aria-label="Mensaheng ipapadala">{message}</div>
 
         <p className="act-send-label">Ipadala sa owner gamit ang:</p>
-        <div className="act-options">
+        <div className={`act-options${options.length > 2 ? ' stacked' : ''}`}>
           {options.length === 0 && <p className="act-empty">Walang contact info ang owner na ito.</p>}
           {options.map((opt) => {
             const { key, label, href } = opt;

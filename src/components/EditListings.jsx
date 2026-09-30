@@ -150,6 +150,7 @@ const EditListings = ({ session, onClose, onListingUpdated, initialEditingItem =
         cr: editingItem.cr,
         rooms: parseInt(editingItem.rooms || 1),
         secured: editingItem.secured,
+        pets_allowed: /staycation/i.test(editingItem.type || '') ? (editingItem.pets_allowed || 'No') : 'No',
         kitchen: parseInt(editingItem.kitchen || 0),
         email: editingItem.email,
         availability: editingItem.availability || 'Available',
@@ -165,8 +166,9 @@ const EditListings = ({ session, onClose, onListingUpdated, initialEditingItem =
         .eq('id', editingItem.id);
 
       // Fallback kapag wala pa ang availability / latitude / longitude columns sa database
-      if (error && (error.code === '42703' || /availability|latitude|longitude/i.test(error.message || ''))) {
+      if (error && (error.code === '42703' || /availability|latitude|longitude|pets_allowed/i.test(error.message || ''))) {
         const legacyPayload = { ...payload };
+        delete legacyPayload.pets_allowed;
         delete legacyPayload.availability;
         delete legacyPayload.latitude;
         delete legacyPayload.longitude;
@@ -334,6 +336,12 @@ const EditListings = ({ session, onClose, onListingUpdated, initialEditingItem =
                   <label>Secured</label>
                   <select value={editingItem.secured || 'Yes'} onChange={e => handleEditChange('secured', e.target.value)}><option>Yes</option><option>No</option></select>
                 </div>
+                {/staycation/i.test(editingItem.type || '') && (
+                  <div className="edit-form-group">
+                    <label>Pets Allowed?</label>
+                    <select value={editingItem.pets_allowed || 'No'} onChange={e => handleEditChange('pets_allowed', e.target.value)}><option>Yes</option><option>No</option></select>
+                  </div>
+                )}
               </div>
               <div className="edit-form-group">
                 <label>Contact Info</label>

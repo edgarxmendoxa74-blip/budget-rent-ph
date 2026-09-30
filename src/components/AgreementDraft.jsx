@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { FileText, Download, Loader2, CheckCircle } from 'lucide-react';
+import { HeroBudi } from './MascotSplash';
 import './AgreementDraft.css';
 
 const DEFAULT_TERMS =
@@ -271,6 +272,7 @@ const AgreementDraft = ({ session }) => {
   return (
     <div className="page-section animate-fade-in">
       <header className="hero branding-hero">
+        <HeroBudi message="Punan ang detalye at gagawa ako ng kontrata para sa tenant mo." />
         <div className="hero-content">
           <span className="branding-kicker">Landlord Tools</span>
           <h2>Agreement Draft</h2>

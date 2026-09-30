@@ -23,6 +23,7 @@ const PropertyForm = ({ onClose, session, onListingAdded }) => {
     cr: 'Shared',
     rooms: '1',
     secured: 'Yes',
+    petsAllowed: 'No',
     kitchen: '0',
     email: session?.user?.user_metadata?.business_email || session?.user?.email || '',
     ownerBusinessName: session?.user?.user_metadata?.property_name || '',
@@ -147,6 +148,7 @@ const PropertyForm = ({ onClose, session, onListingAdded }) => {
         cr: formData.cr,
         rooms: parseInt(formData.rooms || 1),
         secured: formData.secured,
+        pets_allowed: formData.type === 'Staycation' ? formData.petsAllowed : 'No',
         kitchen: parseInt(formData.kitchen || 0),
         email: formData.email,
         amenities: amenities,
@@ -162,8 +164,9 @@ const PropertyForm = ({ onClose, session, onListingAdded }) => {
       let { error } = await supabase.from('properties').insert(payload);
 
       // Fallback kapag wala pa ang availability / latitude / longitude columns sa database
-      if (error && (error.code === '42703' || /availability|latitude|longitude/i.test(error.message || ''))) {
+      if (error && (error.code === '42703' || /availability|latitude|longitude|pets_allowed/i.test(error.message || ''))) {
         const legacyPayload = { ...payload };
+        delete legacyPayload.pets_allowed;
         delete legacyPayload.availability;
         delete legacyPayload.latitude;
         delete legacyPayload.longitude;
@@ -341,6 +344,15 @@ const PropertyForm = ({ onClose, session, onListingAdded }) => {
                 <label>Kitchen</label>
                 <input type="number" name="kitchen" min="0" value={formData.kitchen} onChange={handleChange} placeholder="0" />
               </div>
+              {formData.type === 'Staycation' && (
+                <div className="form-group">
+                  <label>Pets Allowed?</label>
+                  <select name="petsAllowed" value={formData.petsAllowed} onChange={handleChange}>
+                    <option value="No">No</option>
+                    <option value="Yes">Yes</option>
+                  </select>
+                </div>
+              )}
             </div>
 
             <div className="form-group">

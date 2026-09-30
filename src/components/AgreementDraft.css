@@ -297,3 +297,75 @@
   font-size: 0.68rem;
   color: var(--text-muted);
 }
+
+/* ----- Mobile fit ----- */
+.agr-layout > *,
+.agr-grid > * {
+  min-width: 0;
+}
+
+.agr-field input,
+.agr-field select,
+.agr-field textarea {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.agr-field input[type="date"] {
+  -webkit-appearance: none;
+  appearance: none;
+  min-height: 44px;
+}
+
+.agr-info dd,
+.agr-clauses li,
+.agr-sign em {
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 600px) {
+  .agr-container {
+    padding: 16px 12px 110px;
+  }
+
+  .agr-form-card,
+  .agr-preview-wrap {
+    padding: 14px;
+    border-radius: 18px;
+  }
+
+  .agr-grid {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+
+  /* 16px para hindi mag-zoom ang iOS kapag na-focus ang field */
+  .agr-field input,
+  .agr-field select,
+  .agr-field textarea {
+    font-size: 16px;
+  }
+
+  .agr-paper {
+    padding: 16px 14px;
+  }
+
+  .agr-info > div {
+    flex-direction: column;
+    gap: 2px;
+    padding: 7px 0;
+  }
+
+  .agr-info dt {
+    width: auto;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+
+  .agr-sign-row {
+    grid-template-columns: 1fr;
+    gap: 22px;
+  }
+}

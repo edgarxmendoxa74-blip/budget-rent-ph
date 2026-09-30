@@ -221,3 +221,20 @@ export default function MascotSplash() {
     </div>
   );
 }
+
+// Budi sa sulok ng hero: kumakaway pakaliwa at sinasabi kung ano ang gagawin sa section
+export function HeroBudi({ message }) {
+  const [webglFailed, setWebglFailed] = useState(false);
+  return (
+    <div className="hero-budi">
+      {message && <div className="hero-budi-bubble" key={message} role="status">{message}</div>}
+      {webglFailed ? (
+        <Budi phase="wave" />
+      ) : (
+        <Suspense fallback={<div className="budi-3d" />}>
+          <BudiScene phase="wave" onFail={() => setWebglFailed(true)} />
+        </Suspense>
+      )}
+    </div>
+  );
+}

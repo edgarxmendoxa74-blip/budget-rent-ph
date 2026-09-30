@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useMemo, useRef, Suspense, lazy } from 'react';
-import { Search, MapPin, Bed, Bath, Wifi, Shield, Star, Menu, X, Heart, MessageCircle, Phone, LogOut, Building2, User, Users, Loader2, ClipboardList, Mail, BadgeCheck, Headset, ArrowLeft, Home, Navigation, Globe, Trash2, ChevronLeft, ChevronRight, Bell, FileText, HousePlus, LocateFixed, ScrollText, FileSignature, Info } from 'lucide-react';
+import { HeroBudi } from './components/MascotSplash';
+import { Search, MapPin, Bed, Bath, Wifi, Shield, Star, Menu, X, Heart, MessageCircle, Phone, LogOut, Building2, User, Users, Loader2, ClipboardList, Mail, BadgeCheck, Headset, ArrowLeft, Home, Navigation, Globe, Trash2, ChevronLeft, ChevronRight, Bell, FileText, HousePlus, LocateFixed, PawPrint, ScrollText, FileSignature, Info, House, TreePalm, Plus, Lightbulb } from 'lucide-react';
 import { clearSupabaseSessionStorage, recoverFromJwtError, supabase, validateCurrentSession } from './lib/supabase';
 import { isAdminEmail } from './lib/admin';
 import { useUserLocation } from './lib/useUserLocation';
+import { isInstalledApp, hasSeenTour, forceTourFromUrl } from './lib/tour';
 import { useApproxCoords } from './lib/useApproxCoords';
 import { useAreaSearch } from './lib/useAreaSearch';
 import { toCoords, distanceKm, formatDistance, inArea } from './lib/geo';
@@ -11,6 +13,7 @@ import './components/ProfileModal.css';
 
 // Lazy loaded components
 const Auth = lazy(() => import('./components/Auth'));
+const AppTour = lazy(() => import('./components/AppTour'));
 const PropertyForm = lazy(() => import('./components/PropertyForm'));
 const ProfileModal = lazy(() => import('./components/ProfileModal'));
 const EditListings = lazy(() => import('./components/EditListings'));
@@ -38,7 +41,7 @@ function useDebounce(value, delay) {
 }
 
 const CATEGORIES = ["Paupahan", "Staycation"];
-const CATEGORY_EMOJI = { Paupahan: "🏠", Staycation: "🌴" };
+const CATEGORY_ICON = { Paupahan: House, Staycation: TreePalm };
 
 // Budget input sa home search: max na presyo kada buwan (0/blank = lahat)
 const parseBudget = (value) => Math.max(0, Number(value) || 0);
@@ -56,7 +59,8 @@ const isOccupied = (item) => {
 };
 // Tinatayang kasya sa staycation: 2 guests kada kwarto (wala pang capacity field sa database)
 const stayCapacity = (item) => Math.max(1, Number(item?.rooms) || 1) * 2;
-const availabilityLabel = (item) => (isOccupied(item) ? 'Occupied' : 'Available');
+// Staycation na occupied: puwede pa ring mag-reserve ng slot para sa ibang petsa
+const availabilityLabel = (item) => (isOccupied(item) ? (isStaycation(item) ? 'Occupied • Reserve pa' : 'Occupied') : 'Available');
 const HIDDEN_PROPERTIES_KEY = 'budgetrent_hidden_properties';
 
 const getHiddenPropertyIds = () => {
@@ -136,6 +140,11 @@ function ListingCard({ item, isFav, onToggleFavorite, onOpen, stats, distanceLab
         >
           <Heart size={18} />
         </button>
+        {distanceLabel && (
+          <span className="card-km-chip" title={distanceLabel}>
+            <Navigation size={11} /> {distanceLabel.replace(' mula sa iyo', '')}
+          </span>
+        )}
         {isFav && (
           <span className="guest-favorite-badge">
             <Heart size={11} fill="currentColor" strokeWidth={2.5} /> Guest favorite
@@ -149,7 +158,6 @@ function ListingCard({ item, isFav, onToggleFavorite, onOpen, stats, distanceLab
             <p className="card-subtitle">
               {item.type || item.category || 'Rental Property'}
               {isStaycation(item) && <span> • hanggang {stayCapacity(item)} guests</span>}
-              {distanceLabel && <span className="card-distance"> • 📍 {distanceLabel}</span>}
             </p>
           </div>
         </div>
@@ -170,6 +178,18 @@ function ListingCard({ item, isFav, onToggleFavorite, onOpen, stats, distanceLab
   );
 }
 
+// Buksan agad ang calendar / guest list kapag pinindot kahit saang bahagi ng segment
+const openStayPicker = (e) => {
+  const control = e.currentTarget.querySelector('input[type="date"], select');
+  if (!control) return;
+  // native na nagbubukas ang select kapag ito mismo ang pinindot
+  if (e.target === control && control.tagName === 'SELECT') return;
+  try {
+    control.focus();
+    control.showPicker?.();
+  } catch { /* hindi suportado ng browser: gagana pa rin ang normal na click */ }
+};
+
 function App() {
   const [session, setSession] = useState(null);
   const [properties, setProperties] = useState([]); // Dynamic properties state
@@ -178,6 +198,7 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [isGuest, setIsGuest] = useState(localStorage.getItem('budgetrent_guest') === 'true');
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isTourOpen, setIsTourOpen] = useState(false);
   const [isNotifOpen, setIsNotifOpen] = useState(false);
   const [readNotifs, setReadNotifs] = useState(() => {
     try {
@@ -214,6 +235,12 @@ function App() {
 
   // Layo ng bawat listing mula sa lokasyon ng tenant (kung pinayagan ang location)
   const userLoc = useUserLocation();
+
+  // App tour: kusang lalabas sa unang bukas ng naka-install na app (o ?tour=1). Puwede ring buksan sa menu.
+  useEffect(() => {
+    if (!session && !isGuest) return;
+    if (forceTourFromUrl() || (isInstalledApp() && !hasSeenTour())) setIsTourOpen(true);
+  }, [session, isGuest]);
   // Staycation 'Where': hanapin ang buong lugar sa mapa, hindi lang text sa address
   const priceQuery = parseNumericQuery(debouncedSearchQuery);
   const stayArea = useAreaSearch(debouncedSearchQuery, selectedCategory === 'Staycation' && !priceQuery);
@@ -334,6 +361,20 @@ function App() {
     }
   };
 
+  // Toggle ng landlord: Available <-> Occupied
+  const handleToggleAvailability = async (item) => {
+    const next = isOccupied(item) ? 'Available' : 'Occupied';
+    const setStatus = (value) => setProperties(prev => prev.map(p => p.id === item.id ? { ...p, availability: value } : p));
+    setStatus(next);
+    const { error } = await supabase.from('properties').update({ availability: next }).eq('id', item.id);
+    if (error) {
+      setStatus(item.availability || 'Available');
+      alert(error.code === '42703' || /availability/i.test(error.message || '')
+        ? 'Wala pa ang "availability" column sa database. Patakbuhin muna ang SQL migration sa Supabase SQL Editor.'
+        : 'Error updating availability: ' + error.message);
+    }
+  };
+
   const handleLogout = async () => {
     await supabase.auth.signOut();
     localStorage.removeItem('budgetrent_admin_bypass');
@@ -362,10 +403,9 @@ function App() {
                           (item.location || "").toLowerCase().includes(q);
       const matchesArea = Boolean(stayArea) && inArea(toCoords(item) || approxCoords[item.id], stayArea);
       const matchesSearch = priceQuery > 0 || matchesText || matchesArea;
-      // Staycation 'When' / 'Who': hindi ipinapakita ang occupied kapag may petsa; ayon sa kasya ang guests
+      // Staycation 'Who': ayon sa kasya ang guests. Kasama pa rin ang occupied dahil puwede pang mag-reserve
       const skipStay = activeTab === 'mylistings' || activeTab === 'admin' || selectedCategory !== 'Staycation';
       const matchesStay = skipStay || (
-        (!stayDate || !isOccupied(item)) &&
         (!stayGuests || stayCapacity(item) >= Number(stayGuests))
       );
       const matchesMyListings = activeTab === 'mylistings' ? (item.user_id === session?.user?.id) : true;
@@ -413,8 +453,43 @@ function App() {
     [reviews, selectedProperty]
   );
 
+  // Announcements galing sa admin (Supabase). Hindi nagfa-fail ang app kung wala pang table.
+  const [announcements, setAnnouncements] = useState([]);
+  const [deletedNotifs, setDeletedNotifs] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem('budgetrent_deleted_notifs') || '[]');
+    } catch {
+      return [];
+    }
+  });
+
+  const loadAnnouncements = async () => {
+    const { data, error } = await supabase.from('announcements').select('*').order('created_at', { ascending: false }).limit(30);
+    if (!error) setAnnouncements(data || []);
+  };
+
+  useEffect(() => {
+    loadAnnouncements();
+    const t = setInterval(loadAnnouncements, 60000);
+    return () => clearInterval(t);
+  }, []);
+
+  const timeAgo = (iso) => {
+    const mins = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60000));
+    if (mins < 1) return 'Just now';
+    if (mins < 60) return `${mins}m ago`;
+    const hrs = Math.round(mins / 60);
+    if (hrs < 24) return `${hrs}h ago`;
+    return `${Math.round(hrs / 24)}d ago`;
+  };
+
   const notifications = useMemo(() => {
+    const announcementItems = announcements.map(a => ({
+      id: `ann-${a.id}-${a.updated_at || a.created_at}`,
+      icon: '📢', tone: 'gold', title: a.title, body: a.body, time: timeAgo(a.updated_at || a.created_at)
+    }));
     const items = [
+      ...announcementItems,
       { id: 'welcome', icon: '🎉', tone: 'gold', title: 'Welcome to BudgetRentPH', body: 'Maligayang pagdating! Simulan ang paghahanap ng affordable na rental.', time: 'Just now' },
       { id: 'categories', icon: '🏠', tone: 'navy', title: 'Paupahan or Staycation', body: 'Piliin ang category para makita ang rentals na hinahanap mo.', time: 'Today' },
       { id: 'wishlist', icon: '❤️', tone: 'red', title: 'Save your favorites', body: 'I-tap ang heart sa listing para mapunta sa iyong Wishlist.', time: 'Today' },
@@ -422,10 +497,17 @@ function App() {
     if (!isGuest) {
       items.push({ id: 'verified', icon: '✅', tone: 'green', title: 'Get Verified', body: 'Mag-verify ng account para mas magtitiwala ang mga tenant sa listings mo.', time: 'Tip' });
     }
-    return items;
-  }, [isGuest]);
+    return items.filter(n => !deletedNotifs.includes(n.id));
+  }, [isGuest, announcements, deletedNotifs]);
 
   const unreadCount = notifications.filter(n => !readNotifs.includes(n.id)).length;
+
+  // Delete ay sa device na ito lang (hindi nabubura ang announcement ng iba)
+  const deleteNotifs = (ids) => {
+    const next = [...new Set([...deletedNotifs, ...ids])];
+    setDeletedNotifs(next);
+    localStorage.setItem('budgetrent_deleted_notifs', JSON.stringify(next));
+  };
 
   const markAllRead = () => {
     const all = notifications.map(n => n.id);
@@ -508,11 +590,17 @@ function App() {
                   <div className="notif-panel animate-slide-up">
                     <div className="notif-head">
                       <h4>Notifications</h4>
-                      {unreadCount > 0 && (
-                        <button onClick={markAllRead}>Mark all as read</button>
-                      )}
+                      <div className="notif-head-actions">
+                        {unreadCount > 0 && (
+                          <button onClick={markAllRead}>Mark all as read</button>
+                        )}
+                        {notifications.length > 0 && (
+                          <button onClick={() => deleteNotifs(notifications.map(n => n.id))}>Clear all</button>
+                        )}
+                      </div>
                     </div>
                     <div className="notif-list">
+                      {notifications.length === 0 && <p className="notif-empty">Wala kang notifications.</p>}
                       {notifications.map(n => (
                         <div
                           key={n.id}
@@ -529,6 +617,15 @@ function App() {
                             <p className="notif-body">{n.body}</p>
                             <span className="notif-time">{n.time}</span>
                           </div>
+                          <button
+                            type="button"
+                            className="notif-delete"
+                            aria-label="Delete notification"
+                            title="Delete"
+                            onClick={(e) => { e.stopPropagation(); deleteNotifs([n.id]); }}
+                          >
+                            <Trash2 size={15} />
+                          </button>
                         </div>
                       ))}
                     </div>
@@ -564,13 +661,13 @@ function App() {
                 <>
                   <p className="menu-section-label">Explore</p>
                   <button className={`menu-link${activeTab === 'home' ? ' active' : ''}`} onClick={() => { setIsMenuOpen(false); setActiveTab('home'); }}>
-                    <div className="icon-container-mini"><Home size={18} /></div> Home
+                    <div className="icon-container-mini"><House size={18} /></div> Home
                   </button>
                   <button className={`menu-link${activeTab === 'wishlist' ? ' active' : ''}`} onClick={() => { setIsMenuOpen(false); setActiveTab('wishlist'); }}>
                     <div className="icon-container-mini secondary-icon"><Heart size={18} /></div> My Wishlist
                   </button>
                   <button className={`menu-link${activeTab === 'explore' ? ' active' : ''}`} onClick={() => { setIsMenuOpen(false); setActiveTab('explore'); }}>
-                    <div className="icon-container-mini"><LocateFixed size={18} /></div> Phone Location
+                    <div className="icon-container-mini"><Navigation size={18} /></div> Phone Location
                   </button>
                 </>
               )}
@@ -599,8 +696,11 @@ function App() {
               
               <div className="menu-divider"></div>
               <p className="menu-section-label">Tungkol & Tulong</p>
+              <button className="menu-link" onClick={() => { setIsMenuOpen(false); setIsTourOpen(true); }}>
+                <div className="icon-container-mini secondary-icon"><Lightbulb size={18} /></div> App Tour (Paano gamitin)
+              </button>
               <button className={`menu-link${activeTab === 'about' ? ' active' : ''}`} onClick={() => { setIsMenuOpen(false); setActiveTab('about'); }}>
-                <div className="icon-container-mini"><Info size={18} /></div> About Us
+                <div className="icon-container-mini"><Building2 size={18} /></div> About Us
               </button>
               <button className={`menu-link${activeTab === 'terms' ? ' active' : ''}`} onClick={() => { setIsMenuOpen(false); setActiveTab('terms'); }}>
                 <div className="icon-container-mini"><ScrollText size={18} /></div> Terms & Policies
@@ -629,6 +729,7 @@ function App() {
       {activeTab === 'home' && (
         <>
           <header className={`hero ${activeTab === 'saved' ? 'saved-hero' : ''}`}>
+            <HeroBudi message="Hello! 👋 Ako si Budi. Hanapin dito ang paupahan o staycation na pasok sa budget mo." />
             <div className="hero-content">
               <h2>Welcome to <span>BudgetRentPH</span></h2>
               <p>Mura. Malapit. Mapagkakatiwalaan.</p>
@@ -659,7 +760,7 @@ function App() {
                       </div>
                     </div>
                     <span className="stay-sep" />
-                    <div className="stay-seg">
+                    <div className="stay-seg" onClick={openStayPicker}>
                       <label htmlFor="stay-when">When</label>
                       <div className="stay-date">
                         <input
@@ -674,7 +775,7 @@ function App() {
                       </div>
                     </div>
                     <span className="stay-sep" />
-                    <div className="stay-seg">
+                    <div className="stay-seg" onClick={openStayPicker}>
                       <label htmlFor="stay-who">Who</label>
                       <select
                         id="stay-who"
@@ -766,7 +867,7 @@ function App() {
                   className={`category-chip ${selectedCategory === cat ? 'active' : ''}`}
                   onClick={() => { if (cat !== selectedCategory) setBudgetMax(''); setSelectedCategory(cat); }}
                 >
-                  <span className="chip-emoji">{CATEGORY_EMOJI[cat] || '🏠'}</span>
+                  <span className="chip-emoji">{React.createElement(CATEGORY_ICON[cat] || House, { size: 20, strokeWidth: 2.2 })}</span>
                   {cat}
                 </button>
               ))}
@@ -868,10 +969,8 @@ function App() {
       {activeTab === 'wishlist' && (
         <>
           <header className="hero saved-hero">
+            <HeroBudi message="Dito makikita ang mga na-save mo. Pindutin ang ❤ sa kahit anong listing para i-save ito." />
             <div className="hero-content">
-              <div className="wishlist-hero-icon">
-                <Heart size={34} fill="currentColor" />
-              </div>
               <h2>My <span>Wishlist</span></h2>
               <p>Properties you saved for later</p>
             </div>
@@ -918,6 +1017,7 @@ function App() {
       {activeTab === 'mylistings' && (
         <>
           <header className={`hero saved-hero`} style={{ position: 'relative' }}>
+            <HeroBudi message="Dito makikita ang lahat ng listing mo. Pindutin ang Edit para palitan ang detalye o status." />
             <div className="hero-content">
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: '8px' }}>
                 <h2>My Properties</h2>
@@ -948,43 +1048,47 @@ function App() {
                 You haven't listed any properties yet. Use the "List your property" button to start!
               </div>
             ) : (
-              <div className="listing-grid">
+              <div className="mine-grid">
                 {filteredListings.map(item => (
-                  <div 
-                    key={item.id} 
-                    className="listing-card animate-slide-up"
-                  >
-                    <div className="image-container">
+                  <div key={item.id} className="mine-card animate-slide-up">
+                    <div className="mine-img">
                       <img src={item.image || '/placeholder.png'} alt={item.name || item.title} loading="lazy" />
                       <span className={`avail-badge ${isOccupied(item) ? 'occupied' : 'available'}`}>
                         {availabilityLabel(item)}
                       </span>
-                      <div className="rating-tag" style={{ background: 'var(--primary)', color: 'white' }}>
-                        <Shield size={12} fill="currentColor" /> Manage Listing
-                      </div>
                     </div>
-                    <div className="card-info">
-                      <h4>{item.name || item.title}</h4>
-                      <p className="card-desc">{item.description}</p>
-                      <div className="card-price-row">
-                        <span className="price-tag">₱{item.price?.toLocaleString() || 0}</span>
-                        <span className="price-period">/month</span>
+                    <div className="mine-info">
+                      <span className={`mine-cat ${isStaycation(item) ? 'stay' : 'rent'}`}>
+                        {isStaycation(item) ? <TreePalm size={11} /> : <House size={11} />}
+                        {isStaycation(item) ? 'Staycation' : 'Paupahan'}
+                      </span>
+                      <h4 className="mine-name">{item.name || item.title}</h4>
+                      <div className="mine-price">
+                        ₱{item.price?.toLocaleString() || 0}<span>{isStaycation(item) ? '/gabi' : '/month'}</span>
                       </div>
-                      <div className="location">
-                        <MapPin size={14} /> {item.location}
-                      </div>
-                      <div className="property-specs">
-                        <span><div className="spec-icon"><Wifi size={10} /></div> {item.wifi || 'No'}</span>
-                        <span><div className="spec-icon"><Building2 size={10} /></div> {item.rooms || 1} Room</span>
-                        <span><div className="spec-icon"><Star size={10} /></div> {item.cr || 'Shared'}</span>
-                      </div>
-                      <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
-                        <button className="action-btn-outline" style={{ flex: 1, margin: 0 }} onClick={(e) => { e.stopPropagation(); setEditingListingItem(item); setIsEditListingsOpen(true); }}>
+                      <div className="mine-loc"><MapPin size={12} /> <span>{item.location}</span></div>
+                      <button
+                        type="button"
+                        className={`mine-toggle ${isOccupied(item) ? 'occupied' : 'available'}`}
+                        onClick={(e) => { e.stopPropagation(); handleToggleAvailability(item); }}
+                        aria-pressed={isOccupied(item)}
+                        title={isStaycation(item) && isOccupied(item) ? 'Occupied — puwede pa ring mag-reserve ng slot ang guests' : 'I-toggle: Available / Occupied'}
+                      >
+                        <span className="mine-toggle-track"><span className="mine-toggle-knob" /></span>
+                        <span className="mine-toggle-text">
+                          {isOccupied(item) ? 'Occupied' : 'Available'}
+                          {isStaycation(item) && isOccupied(item) && <em> • reserve pa</em>}
+                        </span>
+                      </button>
+                      <div className="mine-actions">
+                        <button
+                          className="mine-btn mine-edit"
+                          onClick={(e) => { e.stopPropagation(); setEditingListingItem(item); setIsEditListingsOpen(true); }}
+                        >
                           Edit
                         </button>
-                        <button 
-                          className="action-btn-outline" 
-                          style={{ flex: 1, margin: 0, background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', borderColor: 'rgba(239, 68, 68, 0.2)' }} 
+                        <button
+                          className="mine-btn mine-delete"
                           onClick={(e) => { e.stopPropagation(); setPropertyToDelete(item); }}
                         >
                           Delete
@@ -1118,6 +1222,9 @@ function App() {
                 </span>
               </div>
               <h2>{selectedProperty.name || selectedProperty.title}</h2>
+              {isStaycation(selectedProperty) && isOccupied(selectedProperty) && (
+                <p className="stay-reserve-note"><Info size={14} /> Occupied ngayon, pero puwede ka pa ring mag-reserve ng slot para sa ibang petsa.</p>
+              )}
               {(() => {
                 const { price, advance, deposit, estimatedMoveIn } = getMoveInBreakdown(selectedProperty);
                 return (
@@ -1218,6 +1325,15 @@ function App() {
                     <p>{selectedProperty.secured || 'No'}</p>
                   </div>
                 </div>
+                {isStaycation(selectedProperty) && (
+                  <div className="amenity-item">
+                    <div className="circle-icon"><PawPrint size={16} /></div>
+                    <div>
+                      <label>Pets</label>
+                      <p>{selectedProperty.pets_allowed === 'Yes' ? 'Pet-friendly (allowed)' : 'Not allowed'}</p>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {selectedProperty.amenities?.length > 0 && (
@@ -1257,6 +1373,12 @@ function App() {
         </div>
       )}
 
+      {isTourOpen && (
+        <Suspense fallback={null}>
+          <AppTour isLandlord={!isGuest} onClose={() => setIsTourOpen(false)} />
+        </Suspense>
+      )}
+
       {/* Navigation Bar */}
       {(!isOwner || activeTab !== 'admin') && (
         <nav className="bottom-nav glass" aria-label="Main navigation">
@@ -1271,7 +1393,7 @@ function App() {
                 <span className="nav-icon-box"><ClipboardList size={22} /></span>
                 <span className="nav-label">My Listings</span>
               </button>
-              <button className="nav-item circle-plus" onClick={() => setIsPropertyFormOpen(true)} aria-label="List your property" title="List your property">+</button>
+              <button className="nav-item circle-plus" onClick={() => setIsPropertyFormOpen(true)} aria-label="List your property" title="List your property"><Plus size={34} strokeWidth={3.2} /></button>
               <button
                 className={`nav-item ico-account ${isProfileModalOpen ? 'active' : ''}`}
                 onClick={() => { setIsProfileEditing(false); setIsProfileModalOpen(true); }}

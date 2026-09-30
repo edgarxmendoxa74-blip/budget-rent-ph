@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { Navigation, Loader2, MapPin, Star, X, ShieldCheck, Search, AlertCircle, Signal, LocateFixed, Radar, BadgeCheck, House, TreePalm, Route as RouteIcon, Car, Bus, Bike, ChevronDown, CalendarCheck, Send } from 'lucide-react';
+import { Navigation, Loader2, MapPin, Star, X, ShieldCheck, Search, AlertCircle, Signal, LocateFixed, Radar, BadgeCheck, House, TreePalm, Route as RouteIcon, Car, Bus, Bike, ChevronDown, CalendarCheck, Send, Lightbulb } from 'lucide-react';
 import { TILE_URL, TILE_OPTIONS, MAP_OPTIONS, toCoords, distanceKm, formatDistance, geocodeAddress, inArea, getCurrentPosition } from '../lib/geo';
 import { useApproxCoords } from '../lib/useApproxCoords';
 import ListingActionSheet from './ListingActionSheet';
+import { HeroBudi } from './MascotSplash';
 import { fetchRoute, getEstimates, formatDuration, formatStepDistance, stepText } from '../lib/routing';
 import './FindNearbyPage.css';
 
@@ -46,8 +47,27 @@ const getDeviceInfo = () => {
   const isMobile = isNativeApp || /Android|iPhone|iPad|iPod|Mobile/i.test(ua) || (/Macintosh/i.test(ua) && navigator.maxTouchPoints > 1);
   const os = /Windows/i.test(ua) ? 'windows' : /Macintosh|Mac OS X/i.test(ua) ? 'mac' : 'other';
   const browser = /Edg\//i.test(ua) ? 'Edge' : /Firefox/i.test(ua) ? 'Firefox' : /Chrome/i.test(ua) ? 'Chrome' : /Safari/i.test(ua) ? 'Safari' : 'browser';
-  return { isDesktop: !isMobile, os, browser };
+  const isIOS = /iPhone|iPad|iPod/i.test(ua) || (/Macintosh/i.test(ua) && navigator.maxTouchPoints > 1);
+  return { isDesktop: !isMobile, isIOS, os, browser };
 };
+
+// Paalala sa mobile users: i-ON muna ang location ng phone bago mag-activate ng Live GPS
+const MobileLocationTip = ({ isIOS }) => (
+  <div className="near-reminder">
+    <div className="near-reminder-head">
+      <span className="near-reminder-icon"><Lightbulb size={16} /></span>
+      <strong>I-ON muna ang Location ng phone mo</strong>
+    </div>
+    <ol className="near-reminder-steps">
+      <li>
+        {isIOS
+          ? <>Buksan ang <b>Settings</b> &gt; <b>Privacy &amp; Security</b> &gt; <b>Location Services</b> at i-<b>ON</b>.</>
+          : <>I-swipe pababa ang notification bar at i-tap ang <b>Location</b> icon, o pumunta sa <b>Settings</b> &gt; <b>Location</b> at i-<b>ON</b>.</>}
+      </li>
+      <li>Bumalik dito at pindutin ang <b>Allow Live GPS</b>.</li>
+    </ol>
+  </div>
+);
 
 const DesktopLocationSteps = ({ os, browser }) => (
   <ol className="desktop-steps">
@@ -76,7 +96,8 @@ const isOccupied = (item) => {
 };
 
 // Registered landlord = may account (user_id) sa app. Available lang at may pin sa mapa.
-const isRadarEligible = (item) => Boolean(item?.user_id) && !isOccupied(item) && Boolean(toCoords(item));
+// Ang occupied na staycation ay puwede pa ring i-reserve, kaya nasa radar pa rin
+const isRadarEligible = (item) => Boolean(item?.user_id) && (!isOccupied(item) || isStay(item)) && Boolean(toCoords(item));
 
 const shortPrice = (price) => {
   const n = Number(price) || 0;
@@ -533,7 +554,7 @@ const FindNearbyPage = ({ listings, reviewStats, onSelectProperty, isLandlord, u
     if (mode === 'search' && area) {
       const place = area.query.split(',')[0].toLowerCase().replace(/\b(city|province|of)\b/g, '').trim();
       return mapListings
-        .filter((item) => Boolean(item?.user_id) && !isOccupied(item))
+        .filter((item) => Boolean(item?.user_id) && (!isOccupied(item) || isStay(item)))
         .map((item) => {
           const coords = toCoords(item);
           // Layo mula sa mismong lokasyon ng tenant (hindi mula sa gitna ng hinanap na lugar)
@@ -573,9 +594,9 @@ const FindNearbyPage = ({ listings, reviewStats, onSelectProperty, isLandlord, u
     return (
       <div className="page-section animate-fade-in" style={{ paddingBottom: '80px', backgroundColor: 'white' }}>
         <header className="hero nearby-hero">
+          <HeroBudi message="Pumili muna kung ano ang hanap mo: Find Rent para sa paupahan o Staycation para sa bakasyon." />
           <div className="hero-content">
             <div className="nearby-title-row">
-              <span className="nearby-icon"><Navigation size={22} /></span>
               <h2>Ano ang hinahanap mo?</h2>
             </div>
             <p className="nearby-sub">Piliin muna para ipakita sa mapa ang tamang listings</p>
@@ -602,6 +623,11 @@ const FindNearbyPage = ({ listings, reviewStats, onSelectProperty, isLandlord, u
   return (
     <div className="page-section animate-fade-in" style={{ paddingBottom: '80px', backgroundColor: 'white' }}>
       <header className="hero nearby-hero">
+        <HeroBudi message={locationFound
+            ? 'Ito ang mga bahay na malapit sa iyo! Pindutin ang isang pin sa mapa para makita ang detalye.'
+            : device.isDesktop
+              ? 'Pindutin ang Activate Location, o i-type ang lugar sa search para makita ang mga malapit na bahay.'
+              : 'I-ON muna ang Location ng phone, tapos pindutin ang Activate Live GPS para makita ang mga bahay malapit sa iyo.'} />
         <div className="hero-content">
           {!isLandlord && (
             <>
@@ -661,21 +687,21 @@ const FindNearbyPage = ({ listings, reviewStats, onSelectProperty, isLandlord, u
                 </button>
 
                 {errorType === 'unavailable' && (
-                  <p className="near-inline-error"><AlertCircle size={15} /> {device.isDesktop ? 'Hindi makuha ang location. Siguraduhing naka-ON ang Wi-Fi at Location services, o gamitin ang search.' : 'Hindi makuha ang GPS signal. Subukan ulit o gamitin ang search.'}</p>
+                  <p className="near-inline-error"><AlertCircle size={15} /> {device.isDesktop ? 'Hindi makuha ang location. Siguraduhing naka-ON ang Wi-Fi at Location services, o gamitin ang search.' : 'Hindi makuha ang GPS signal. Siguraduhing naka-ON ang Location ng phone mo, tapos subukan ulit o gamitin ang search.'}</p>
                 )}
 
                 {device.isDesktop ? (
                   <div className="near-reminder">
-                    <strong>Reminder (Desktop / Laptop)</strong>
-                    Pagpindot ng button, i-click ang <b>Allow</b> sa lalabas na popup ng {device.browser}. Kung walang lumabas o naka-block:
+                    <div className="near-reminder-head">
+                      <span className="near-reminder-icon"><Lightbulb size={16} /></span>
+                      <strong>Reminder para sa Desktop / Laptop</strong>
+                    </div>
+                    <p className="near-reminder-text">Pagpindot ng button, i-click ang <b>Allow</b> sa lalabas na popup ng {device.browser}. Kung walang lumabas o naka-block:</p>
                     <DesktopLocationSteps os={device.os} browser={device.browser} />
                     <span className="near-reminder-note">Sa desktop, Wi-Fi ang ginagamit para hanapin ka kaya puwedeng ilang metro ang layo. Puwede ring i-type ang city o barangay sa search.</span>
                   </div>
                 ) : (
-                  <p className="near-reminder">
-                    <strong>Reminder</strong>
-                    Go to your <b>Phone Settings</b> &gt; <b>Location</b> then turn it <b>ON</b>. Makikita mo sa mapa ang mga available na bahay ng registered landlords malapit sa iyo.
-                  </p>
+                  <MobileLocationTip isIOS={device.isIOS} />
                 )}
               </div>
             )}
@@ -851,6 +877,7 @@ const FindNearbyPage = ({ listings, reviewStats, onSelectProperty, isLandlord, u
             <div className="near-confirm-icon"><Signal size={34} className="pulse" /></div>
             <h2 style={{ fontSize: '1.4rem', color: 'var(--primary)', marginBottom: '10px', fontWeight: 800 }}>{device.isDesktop ? 'Allow Location Access?' : 'Enable Real-time Tracking?'}</h2>
             <p style={{ color: 'var(--text-muted)', fontSize: '0.92rem', lineHeight: '1.6', marginBottom: '24px' }}>Gagamitin ng BudgetRentPH ang location mo para ipakita sa mapa ang pinakamalapit na available na bahay. Hindi ito sine-save o ibinabahagi.{device.isDesktop && <> Pagkatapos, i-click din ang <b>Allow</b> sa popup ng {device.browser}.</>}</p>
+            {!device.isDesktop && <MobileLocationTip isIOS={device.isIOS} />}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               <button onClick={startLiveTracking} className="near-confirm-allow"><ShieldCheck size={20} /> {device.isDesktop ? 'Allow Location' : 'Allow Live GPS'}</button>
               <button onClick={() => setShowConfirm(false)} className="near-confirm-cancel">Cancel</button>

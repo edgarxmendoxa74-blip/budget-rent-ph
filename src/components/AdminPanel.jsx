@@ -4,7 +4,7 @@ import {
   Users, ClipboardList, Shield, LogOut, Search, 
   Check, X, Building2, Trash2, Star,
   Settings, BarChart3, Clock, Award, AlertCircle, RefreshCw, ImagePlus,
-  Download, Home, MessageSquare, MapPin
+  Download, Home, MessageSquare, MapPin, Megaphone, Pencil, Send
 } from 'lucide-react';
 import { downloadCsv, fmtDate } from '../lib/csv';
 import './AdminPanel.css';
@@ -80,6 +80,9 @@ const AdminPanel = ({ onLogout }) => {
   const [verificationRequests, setVerificationRequests] = useState([]);
   const [allProperties, setAllProperties] = useState([]);
   const [reviews, setReviews] = useState([]);
+  const [announcements, setAnnouncements] = useState([]);
+  const [annForm, setAnnForm] = useState({ id: null, title: '', body: '' });
+  const [annSaving, setAnnSaving] = useState(false);
   const [hiddenPropertyIds, setHiddenPropertyIdsState] = useState(getHiddenPropertyIds());
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState(null);
@@ -269,7 +272,43 @@ const AdminPanel = ({ onLogout }) => {
 
   useEffect(() => {
     fetchData();
+    loadAnnouncements();
   }, []);
+
+  // Announcements -> lumalabas bilang notification sa lahat ng users ng app
+  const loadAnnouncements = async () => {
+    const { data, error } = await supabase.from('announcements').select('*').order('created_at', { ascending: false });
+    setAnnouncements(error ? [] : (data || []));
+  };
+
+  const annError = (error) => alert(
+    /announcements|relation|does not exist|schema cache/i.test(error.message || '')
+      ? 'Wala pa ang "announcements" table. Patakbuhin muna ang supabase/migrations/add_announcements.sql sa Supabase SQL Editor.'
+      : 'Error: ' + error.message
+  );
+
+  const saveAnnouncement = async (e) => {
+    e.preventDefault();
+    const title = annForm.title.trim();
+    const body = annForm.body.trim();
+    if (!title || !body) return;
+    setAnnSaving(true);
+    const { error } = annForm.id
+      ? await supabase.from('announcements').update({ title, body, updated_at: new Date().toISOString() }).eq('id', annForm.id)
+      : await supabase.from('announcements').insert({ title, body });
+    setAnnSaving(false);
+    if (error) return annError(error);
+    setAnnForm({ id: null, title: '', body: '' });
+    loadAnnouncements();
+  };
+
+  const deleteAnnouncement = async (a) => {
+    if (!window.confirm(`I-delete ang "${a.title}"? Mawawala ito sa notifications ng lahat ng users.`)) return;
+    const { error } = await supabase.from('announcements').delete().eq('id', a.id);
+    if (error) return annError(error);
+    if (annForm.id === a.id) setAnnForm({ id: null, title: '', body: '' });
+    loadAnnouncements();
+  };
 
   const handleFixConnection = async () => {
     const adminBypass = localStorage.getItem('budgetrent_admin_bypass');
@@ -561,6 +600,7 @@ const AdminPanel = ({ onLogout }) => {
           <label>Management</label>
           <button className={activeTab === 'analytics' ? 'active' : ''} onClick={() => setActiveTab('analytics')}><BarChart3 size={18}/> <span>Analytics</span></button>
           <button className={activeTab === 'landlords' ? 'active' : ''} onClick={() => setActiveTab('landlords')}><Users size={18}/> <span>Landlords</span></button>
+          <button className={activeTab === 'announcements' ? 'active' : ''} onClick={() => setActiveTab('announcements')}><Megaphone size={18}/> <span>Notifications</span></button>
           <button className={activeTab === 'requests' ? 'active' : ''} onClick={() => setActiveTab('requests')}><ClipboardList size={18}/> <span>Pending Requests</span> <span className="badge-count">{pendingRequests.length}</span></button>
         </div>
 
@@ -635,7 +675,7 @@ const AdminPanel = ({ onLogout }) => {
         )}
 
         <section className="admin-content-view">
-          {activeTab !== 'payments' && (
+          {activeTab !== 'payments' && activeTab !== 'announcements' && (
             <div className="admin-toolbar">
               <span>
                 {activeTab === 'analytics' && 'Key numbers for Budget Rent PH'}
@@ -761,6 +801,56 @@ const AdminPanel = ({ onLogout }) => {
                   </div>
                 );
               })}
+            </div>
+          )}
+
+          {activeTab === 'announcements' && (
+            <div className="ann-wrap">
+              <form className="ann-form" onSubmit={saveAnnouncement}>
+                <h4>{annForm.id ? 'I-edit ang notification' : 'Bagong notification / update'}</h4>
+                <p className="ann-hint">Matatanggap ito ng lahat ng users sa Notifications (bell icon) ng app.</p>
+                <input
+                  type="text"
+                  placeholder="Title (hal. Bagong feature!)"
+                  maxLength={80}
+                  value={annForm.title}
+                  onChange={e => setAnnForm(f => ({ ...f, title: e.target.value }))}
+                  required
+                />
+                <textarea
+                  rows={3}
+                  placeholder="Message..."
+                  maxLength={300}
+                  value={annForm.body}
+                  onChange={e => setAnnForm(f => ({ ...f, body: e.target.value }))}
+                  required
+                />
+                <div className="ann-actions">
+                  <button type="submit" className="ann-send" disabled={annSaving}>
+                    <Send size={15} /> {annSaving ? 'Saving...' : (annForm.id ? 'I-save ang pagbabago' : 'I-send sa lahat')}
+                  </button>
+                  {annForm.id && (
+                    <button type="button" className="ann-cancel" onClick={() => setAnnForm({ id: null, title: '', body: '' })}>Cancel</button>
+                  )}
+                </div>
+              </form>
+
+              <div className="admin-list">
+                {announcements.length === 0 && <div className="admin-empty">Wala pang notification na naipadala.</div>}
+                {announcements.map(a => (
+                  <div key={a.id} className="ann-row">
+                    <div className="ann-row-text">
+                      <strong>{a.title}</strong>
+                      <p>{a.body}</p>
+                      <small>{fmtDate(a.created_at)}</small>
+                    </div>
+                    <div className="ann-row-btns">
+                      <button type="button" title="I-edit" onClick={() => setAnnForm({ id: a.id, title: a.title, body: a.body })}><Pencil size={15} /></button>
+                      <button type="button" title="I-delete" className="del" onClick={() => deleteAnnouncement(a)}><Trash2 size={15} /></button>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
 

@@ -322,3 +322,10 @@
   background: var(--secondary-gradient);
   color: var(--primary);
 }
+
+/* 3 buttons (Email / Reserve / Call): isang column, nasa gitna ang Reserve */
+.act-options.stacked { grid-template-columns: 1fr; }
+.act-option.reserve {
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: #fff;
+}

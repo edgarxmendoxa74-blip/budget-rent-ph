@@ -19,6 +19,11 @@ const FacebookPageNote = () => (
   </div>
 );
 
+const REMEMBER_EMAIL_KEY = 'budgetrent_landlord_email';
+const readRememberedEmail = () => {
+  try { return localStorage.getItem(REMEMBER_EMAIL_KEY) || ''; } catch { return ''; }
+};
+
 const Auth = ({ onAuthSuccess }) => {
   const [view, setView] = useState('tenant'); // 'tenant' or 'landlord'
   const [isLogin, setIsLogin] = useState(true);
@@ -28,6 +33,10 @@ const Auth = ({ onAuthSuccess }) => {
   const [isHowToUseOpen, setIsHowToUseOpen] = useState(false);
   const [howToUseTab, setHowToUseTab] = useState('tenant');
   const [showPassword, setShowPassword] = useState(false);
+  // Email lang ang naaalala ng app (hindi ang password). Ang password ay hawak ng password manager ng browser/phone.
+  const [rememberEmail, setRememberEmail] = useState(() => {
+    try { return localStorage.getItem(REMEMBER_EMAIL_KEY) !== null; } catch { return false; }
+  });
 
   // Lock page scroll and allow Escape to close while the guide is open
   useEffect(() => {
@@ -45,7 +54,7 @@ const Auth = ({ onAuthSuccess }) => {
   }, [isHowToUseOpen]);
   
   const [formData, setFormData] = useState({
-    email: '',
+    email: readRememberedEmail(),
     password: '',
     fullName: '',
     phone: '',
@@ -66,6 +75,16 @@ const Auth = ({ onAuthSuccess }) => {
           password: formData.password,
         });
         if (error) throw error;
+        try {
+          if (rememberEmail) localStorage.setItem(REMEMBER_EMAIL_KEY, formData.email);
+          else localStorage.removeItem(REMEMBER_EMAIL_KEY);
+        } catch { /* private mode: okay lang */ }
+        // Hilingin sa browser na i-save ang password (Chrome/Edge/Android). Hindi ito sine-save ng app.
+        try {
+          if (window.PasswordCredential && navigator.credentials?.store) {
+            await navigator.credentials.store(new window.PasswordCredential({ id: formData.email, password: formData.password, name: formData.email }));
+          }
+        } catch { /* hindi suportado */ }
       } else {
         if (!termsAgreed) {
           throw new Error('You must agree to the Terms and Policies to register.');
@@ -305,6 +324,8 @@ const Auth = ({ onAuthSuccess }) => {
             <input
               type="email"
               name="email"
+              id="landlord-email"
+              autoComplete="username"
               placeholder="Email Address"
               required
               value={formData.email}
@@ -317,6 +338,8 @@ const Auth = ({ onAuthSuccess }) => {
             <input
               type={showPassword ? "text" : "password"}
               name="password"
+              id="landlord-password"
+              autoComplete={isLogin ? 'current-password' : 'new-password'}
               placeholder="Password"
               required
               value={formData.password}
@@ -331,6 +354,18 @@ const Auth = ({ onAuthSuccess }) => {
               {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
             </button>
           </div>
+
+          {isLogin && (
+            <div className="remember-row">
+              <input
+                type="checkbox"
+                id="rememberEmail"
+                checked={rememberEmail}
+                onChange={(e) => setRememberEmail(e.target.checked)}
+              />
+              <label htmlFor="rememberEmail">Tandaan ang email ko sa device na ito</label>
+            </div>
+          )}
 
           {!isLogin && (
             <div className="terms-checkbox-group" style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: '8px 0 16px', textAlign: 'left', fontSize: '0.85rem' }}>
