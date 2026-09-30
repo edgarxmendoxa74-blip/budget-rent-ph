@@ -557,3 +557,41 @@
 }
 .remember-row input { width: 16px; height: 16px; accent-color: var(--primary); flex-shrink: 0; }
 .remember-row label { color: var(--text-muted); cursor: pointer; }
+
+/* Confirmation modal: matagumpay na landlord sign up */
+.signup-success-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(0, 20, 45, 0.7);
+  backdrop-filter: blur(3px);
+}
+.signup-success-card {
+  width: 100%;
+  max-width: 380px;
+  padding: 30px 22px 22px;
+  border-radius: 26px;
+  background: #fff;
+  text-align: center;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
+}
+.signup-success-icon {
+  width: 84px;
+  height: 84px;
+  margin: 0 auto 16px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  background: linear-gradient(135deg, #34d399, #059669);
+  box-shadow: 0 0 0 8px rgba(16, 185, 129, 0.12);
+}
+.signup-success-card h3 { margin: 0 0 10px; font-size: 1.2rem; font-weight: 800; color: var(--primary, #003b7a); }
+.signup-success-card p { margin: 0 0 10px; font-size: 0.9rem; line-height: 1.6; color: var(--text-muted, #64748b); overflow-wrap: anywhere; }
+.signup-success-card strong { color: var(--primary, #003b7a); }
+.signup-success-card .auth-submit-btn { width: 100%; margin-top: 10px; }

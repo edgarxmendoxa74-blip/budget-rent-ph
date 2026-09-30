@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { supabase } from '../lib/supabase';
-import { Mail, Lock, User, ArrowRight, Loader2, Building2, Phone, MessageCircle, Globe, X, Heart, Eye, EyeOff, BadgeCheck, Lightbulb, Search, MapPin, PlusCircle, UserPlus, Pencil } from 'lucide-react';
+import { Mail, Lock, User, ArrowRight, Loader2, Building2, Phone, MessageCircle, Globe, X, Heart, Eye, EyeOff, BadgeCheck, Lightbulb, Search, MapPin, PlusCircle, UserPlus, Pencil, CheckCircle2 } from 'lucide-react';
 import './Auth.css';
 
 // Facebook page shown below the auth card (text only, not a link)
@@ -33,6 +33,8 @@ const Auth = ({ onAuthSuccess }) => {
   const [isHowToUseOpen, setIsHowToUseOpen] = useState(false);
   const [howToUseTab, setHowToUseTab] = useState('tenant');
   const [showPassword, setShowPassword] = useState(false);
+  // Confirmation modal pagkatapos ng matagumpay na landlord sign up: { email, verified }
+  const [signupSuccess, setSignupSuccess] = useState(null);
   // Email lang ang naaalala ng app (hindi ang password). Ang password ay hawak ng password manager ng browser/phone.
   const [rememberEmail, setRememberEmail] = useState(() => {
     try { return localStorage.getItem(REMEMBER_EMAIL_KEY) !== null; } catch { return false; }
@@ -111,13 +113,7 @@ const Auth = ({ onAuthSuccess }) => {
           throw new Error('User already exists with this email.');
         }
         
-        if (data?.user?.email_confirmed_at === null && data?.user?.confirmation_sent_at) {
-          alert('✅ Verification email sent! Please check your inbox and click the link to confirm your email.');
-        } else if (data?.user?.email_confirmed_at) {
-          alert('✅ Account created and email verified! You can now login.');
-        } else {
-          alert('✅ Account created! Please verify your email.');
-        }
+        setSignupSuccess({ email: formData.email, verified: Boolean(data?.user?.email_confirmed_at) });
       }
     } catch (err) {
       setError(err.message);
@@ -401,6 +397,31 @@ const Auth = ({ onAuthSuccess }) => {
           )}
         </div>
       </div>
+
+      {signupSuccess && createPortal(
+        <div className="signup-success-overlay" role="dialog" aria-modal="true" aria-label="Account created">
+          <div className="signup-success-card animate-slide-up">
+            <span className="signup-success-icon"><CheckCircle2 size={44} strokeWidth={2.2} /></span>
+            <h3>Matagumpay ang pag-sign up!</h3>
+            {signupSuccess.verified ? (
+              <p>Na-verify na ang email mo at handa na ang iyong Landlord account. Puwede ka nang mag-login.</p>
+            ) : (
+              <>
+                <p>Nagpadala kami ng verification link sa <strong>{signupSuccess.email}</strong>.</p>
+                <p>Buksan ang email at i-click ang link para ma-activate ang account mo. Hindi mo makikita? Silipin din ang <b>Spam</b> folder.</p>
+              </>
+            )}
+            <button
+              type="button"
+              className="auth-submit-btn landlord"
+              onClick={() => { setSignupSuccess(null); setIsLogin(true); setFormData((d) => ({ ...d, password: '' })); }}
+            >
+              OK, mag-login na
+            </button>
+          </div>
+        </div>,
+        document.body
+      )}
 
       <FacebookPageNote />
     </div>
