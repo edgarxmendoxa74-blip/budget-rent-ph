@@ -5,6 +5,7 @@ const isOccupied = (item) => {
   const value = String(item?.availability || '').toLowerCase().trim();
   return value === 'occupied' || value === 'accommodated' || value === 'rented' || value === 'unavailable';
 };
+const isStay = (item) => String(item?.type || item?.category || '').toLowerCase().includes('staycation');
 
 // Tinatayang lokasyon (id -> {lat,lng}) para sa listings na wala pang pin, galing sa address text.
 // Naka-cache sa browser; hanggang 12 listing lang bawat load, 1 request kada segundo.
@@ -14,7 +15,7 @@ export const useApproxCoords = (listings, enabled = true) => {
   useEffect(() => {
     if (!enabled) return undefined;
     const pending = listings
-      .filter((item) => item?.user_id && !isOccupied(item) && !toCoords(item) && item.location)
+      .filter((item) => item?.user_id && (!isOccupied(item) || isStay(item)) && !toCoords(item) && item.location)
       .slice(0, 12);
     let cancelled = false;
     (async () => {
