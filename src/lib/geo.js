@@ -2,6 +2,8 @@
 // Free mapping stack: OpenStreetMap tiles (display) + Nominatim (address search).
 // Pang-simula lang ang OSM tile server (light usage policy); lumipat sa OpenFreeMap o sariling PH tiles kapag lumaki ang traffic.
 
+import { registerPlugin } from '@capacitor/core';
+
 export const DEFAULT_CENTER = { lat: 14.5995, lng: 120.9842 }; // Manila
 
 export const TILE_URL = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
@@ -136,4 +138,31 @@ export const geocodeListingLocation = async (text) => {
     localStorage.setItem(GEO_CACHE_KEY, JSON.stringify(cache));
   } catch { /* puno ang storage o naka-block — okay lang */ }
   return found;
+};
+
+// ---- Location (GPS) ng mismong phone — Android app lang ----
+// Hiwalay ito sa app permission: puwedeng "allowed" ang app pero naka-off pa rin ang Location ng phone.
+const isNativeApp = () => Boolean(window.Capacitor?.isNativePlatform?.());
+const DeviceLocation = registerPlugin('DeviceLocation');
+
+// true/false sa native app; null kung hindi matiyak (browser o walang plugin)
+export const isDeviceLocationOn = async () => {
+  if (!isNativeApp()) return null;
+  try {
+    const res = await DeviceLocation.isEnabled();
+    return typeof res?.enabled === 'boolean' ? res.enabled : null;
+  } catch {
+    return null;
+  }
+};
+
+// Binubuksan ang Location settings ng phone; false kung hindi magawa
+export const openDeviceLocationSettings = async () => {
+  if (!isNativeApp()) return false;
+  try {
+    await DeviceLocation.openSettings();
+    return true;
+  } catch {
+    return false;
+  }
 };

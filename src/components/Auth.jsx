@@ -2,7 +2,7 @@ import { isAdminEmail } from '../lib/admin';
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { supabase } from '../lib/supabase';
-import { getCurrentPosition } from '../lib/geo';
+import { getCurrentPosition, isDeviceLocationOn, openDeviceLocationSettings } from '../lib/geo';
 import { Mail, Lock, User, ArrowRight, Loader2, Building2, MapPinOff, Phone, MessageCircle, Globe, X, Heart, Eye, EyeOff, BadgeCheck, Lightbulb, Search, MapPin, PlusCircle, UserPlus, Pencil, CheckCircle2 } from 'lucide-react';
 import './Auth.css';
 
@@ -152,6 +152,12 @@ const Auth = ({ onAuthSuccess }) => {
   // Sinisilip kung naka-on ang location bago pumasok bilang tenant; kung hindi, magsu-suggest lang (puwedeng laktawan).
   const handleEnterAsTenant = async () => {
     setCheckingLocation(true);
+    // Native app: tingnan muna kung naka-on ang Location ng phone (hiwalay sa app permission)
+    if ((await isDeviceLocationOn()) === false) {
+      setCheckingLocation(false);
+      setLocationPrompt('off');
+      return;
+    }
     try {
       await getCurrentPosition({ enableHighAccuracy: false, timeout: 8000, maximumAge: 0 });
     } catch (err) {
@@ -213,7 +219,12 @@ const Auth = ({ onAuthSuccess }) => {
                     : 'Naka-off ang Location (GPS) ng phone mo. I-on ito para makita ang mga paupahang malapit sa iyo at ang layo ng bawat isa.'}
                 </p>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 20 }}>
-                  <button className="auth-submit-btn" onClick={handleEnterAsTenant} disabled={checkingLocation}>
+                  {locationPrompt === 'off' && (
+                    <button className="auth-submit-btn" onClick={openDeviceLocationSettings}>
+                      <MapPin size={19} strokeWidth={2.4} /> Buksan ang Location Settings
+                    </button>
+                  )}
+                  <button className={`auth-submit-btn${locationPrompt === 'off' ? ' secondary' : ''}`} onClick={handleEnterAsTenant} disabled={checkingLocation}>
                     {checkingLocation ? 'Chine-check...' : 'Na-on ko na, magpatuloy'}
                   </button>
                   <button className="auth-submit-btn secondary" onClick={() => { setLocationPrompt(null); onAuthSuccess(); }}>
