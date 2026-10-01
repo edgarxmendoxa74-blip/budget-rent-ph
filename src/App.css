@@ -186,7 +186,7 @@
   top: calc(100% + 12px);
   right: 0;
   width: min(320px, calc(100vw - 32px));
-  background: #fff;
+  background: var(--primary-dark);
   border: 1px solid var(--border-subtle);
   border-radius: 20px;
   box-shadow: 0 20px 50px -12px rgba(0, 38, 82, 0.35);
@@ -204,6 +204,7 @@
 }
 
 .notif-head h4 {
+  color: #fff;
   margin: 0;
   font-size: 0.88rem;
   font-weight: 800;
@@ -245,7 +246,7 @@
 }
 
 .notif-item:hover {
-  background: var(--primary-light);
+  background: rgba(255, 255, 255, 0.1);
 }
 
 .notif-item.unread {
@@ -277,20 +278,21 @@
   margin: 0;
   font-size: 0.8rem;
   font-weight: 800;
-  color: var(--primary);
+  color: #fff;
 }
 
 .notif-body {
   margin: 2px 0 4px;
   font-size: 0.73rem;
   line-height: 1.45;
-  color: var(--text-muted);
+  color: #fff;
 }
 
 .notif-time {
   font-size: 0.65rem;
   font-weight: 700;
-  color: var(--secondary-dark);
+  color: #fff;
+  opacity: 0.8;
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
@@ -1145,13 +1147,13 @@
 .listing-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 12px;
+  gap: 10px;
 }
 
 .listing-card {
   position: relative;
   background: var(--card-bg);
-  border-radius: 18px;
+  border-radius: 16px;
   overflow: hidden;
   transition: all 0.3s var(--ease-pop);
   display: flex;
@@ -1160,7 +1162,7 @@
   border: 1px solid rgba(226, 232, 240, 0.9);
   box-shadow: 0 4px 14px rgba(0, 38, 82, 0.05);
   cursor: pointer;
-  padding: 10px;
+  padding: 8px;
 }
 
 .listing-card:hover {
@@ -1175,12 +1177,12 @@
 
 .image-container {
   width: 100%;
-  aspect-ratio: 4 / 3;
+  aspect-ratio: 3 / 2;
   flex-shrink: 0;
   position: relative;
   border-radius: 12px;
   overflow: hidden;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
   background: #F1F5F9;
 }
 
@@ -1269,7 +1271,7 @@
 }
 
 .card-title {
-  font-size: 0.9rem;
+  font-size: 0.84rem;
   font-weight: 800;
   color: var(--primary);
   margin: 0;
@@ -1287,7 +1289,7 @@
 }
 
 .price {
-  font-size: 1rem;
+  font-size: 0.92rem;
   font-weight: 800;
   color: #059669;
 }
@@ -1346,45 +1348,70 @@
 
 /* Modal Move-in Box */
 .modal-movein-box {
-  background: linear-gradient(135deg, var(--primary-light) 0%, #FFFFFF 100%);
-  border: 1.5px solid rgba(0, 59, 122, 0.15);
+  background: #fff;
+  border: 1.5px solid rgba(0, 59, 122, 0.14);
   border-radius: 20px;
-  padding: 18px 20px;
+  padding: 14px;
   margin: 16px 0 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
   box-shadow: 0 4px 16px rgba(0, 59, 122, 0.06);
 }
 
-.modal-movein-row {
+.modal-movein-title {
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 10px;
+  padding-left: 2px;
+}
+
+.modal-movein-grid {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr 1fr;
+  gap: 8px;
+}
+
+.modal-movein-cell {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 0.92rem;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: var(--primary-light);
+}
+
+.modal-movein-cell span {
+  font-size: 0.68rem;
+  font-weight: 700;
   color: var(--text-muted);
 }
 
-.modal-movein-row strong {
-  color: var(--text-main);
-  font-weight: 700;
-}
-
-.modal-movein-divider {
-  height: 1px;
-  background: rgba(0, 59, 122, 0.12);
-  margin: 4px 0;
-}
-
-.modal-movein-row.total {
-  color: var(--primary);
+.modal-movein-cell strong {
+  font-size: 1rem;
   font-weight: 800;
-  font-size: 1.05rem;
+  color: var(--primary);
+  overflow-wrap: anywhere;
 }
 
-.modal-movein-row.total strong {
-  color: var(--primary);
-  font-size: 1.18rem;
+.modal-movein-cell em {
+  font-style: normal;
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--secondary-dark);
+}
+
+.modal-movein-cell.rent {
+  background: linear-gradient(135deg, var(--primary), #00539E);
+}
+
+.modal-movein-cell.rent span { color: rgba(255, 255, 255, 0.75); }
+.modal-movein-cell.rent strong { color: #fff; font-size: 1.15rem; }
+
+@media (max-width: 420px) {
+  .modal-movein-grid { grid-template-columns: 1fr 1fr; }
+  .modal-movein-cell.rent { grid-column: 1 / -1; }
 }
 
 .card-price-row {
@@ -2735,8 +2762,17 @@
 .mine-edit { background: var(--primary); color: #fff; border-color: var(--primary); }
 .mine-delete { background: rgba(239, 68, 68, 0.1); color: #ef4444; border-color: rgba(239, 68, 68, 0.25); }
 @media (max-width: 480px) {
-  .mine-grid { grid-template-columns: 1fr; }
-  .mine-img { flex-basis: 92px; height: 92px; }
+  .mine-grid { grid-template-columns: 1fr; gap: 14px; }
+  .mine-card { flex-direction: column; gap: 10px; padding: 10px; }
+  .mine-img { flex: 0 0 auto; width: 100%; height: auto; aspect-ratio: 16 / 9; }
+  .mine-info { gap: 4px; }
+  .mine-name { font-size: 1rem; }
+  .mine-actions { padding-top: 8px; }
+  .mine-btn { padding: 10px 0; }
+  .bottom-nav { padding-left: 0; padding-right: 0; }
+  .nav-item { margin: 0; min-width: 0; }
+  .nav-item .nav-icon-box { width: 58px; height: 38px; }
+  .circle-plus { margin-left: 4px; margin-right: 4px; }
 }
 
 /* Landlord view: "+" icon na eksakto sa gitna ng bilog */
@@ -2855,4 +2891,67 @@
   cursor: pointer;
 }
 .notif-delete:hover { background: rgba(239, 68, 68, 0.1); color: #ef4444; }
-.notif-empty { padding: 24px 16px; text-align: center; color: var(--text-muted); font-size: 0.85rem; }
+.notif-empty { padding: 24px 16px; text-align: center; color: #fff; font-size: 0.85rem; }
+
+/* Updates tab — kapareho ng ibang nav chips */
+.nav-item.ico-updates .nav-icon-box {
+  background: rgba(0, 59, 122, 0.08);
+  color: var(--primary);
+  border-color: rgba(0, 59, 122, 0.14);
+}
+.nav-item.ico-updates.active,
+.nav-item.ico-updates:hover { color: var(--primary); }
+.nav-item.ico-updates.active .nav-icon-box {
+  background: var(--primary-gradient);
+  color: #fff;
+  border-color: rgba(0, 34, 74, 0.45);
+  box-shadow: 0 10px 20px -8px rgba(0, 59, 122, 0.7);
+  transform: scale(1.06);
+}
+.nav-item.ico-updates.active::after {
+  background: var(--primary-gradient);
+  box-shadow: 0 2px 8px rgba(0, 59, 122, 0.5);
+}
+@media (max-width: 480px) {
+  .nav-item .nav-icon-box { width: 52px; }
+}
+
+/* Landlord nav: 2 | "+" | 2 — grid para eksaktong nasa gitna ang plus button */
+.bottom-nav.landlord-nav {
+  display: grid;
+  grid-template-columns: 1fr 1fr 72px 1fr 1fr;
+  align-items: center;
+  justify-content: stretch;
+  padding-top: 0;
+}
+.bottom-nav.landlord-nav .nav-item {
+  margin: 0;
+  min-width: 0;
+  padding: 8px 2px;
+}
+.bottom-nav.landlord-nav .nav-item .nav-icon-box { width: 48px; height: 38px; }
+.bottom-nav.landlord-nav .nav-label { font-size: 0.68rem; white-space: nowrap; }
+.bottom-nav.landlord-nav .circle-plus {
+  justify-self: center;
+  align-self: center;
+  margin: -30px 0 0;
+  padding: 0;
+}
+.nav-item.ico-support .nav-icon-box {
+  background: rgba(0, 59, 122, 0.08);
+  color: var(--primary);
+  border-color: rgba(0, 59, 122, 0.14);
+}
+.nav-item.ico-support.active,
+.nav-item.ico-support:hover { color: var(--primary); }
+.nav-item.ico-support.active .nav-icon-box {
+  background: var(--primary-gradient);
+  color: #fff;
+  border-color: rgba(0, 34, 74, 0.45);
+  box-shadow: 0 10px 20px -8px rgba(0, 59, 122, 0.7);
+  transform: scale(1.06);
+}
+.nav-item.ico-support.active::after {
+  background: var(--primary-gradient);
+  box-shadow: 0 2px 8px rgba(0, 59, 122, 0.5);
+}

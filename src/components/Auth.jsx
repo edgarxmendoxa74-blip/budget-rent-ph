@@ -1,3 +1,4 @@
+import { isAdminEmail } from '../lib/admin';
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { supabase } from '../lib/supabase';
@@ -71,6 +72,9 @@ const Auth = ({ onAuthSuccess }) => {
     setError(null);
 
     try {
+      if (isAdminEmail(formData.email)) {
+        throw new Error('Ang account na ito ay para sa Admin Dashboard lamang. Hindi ito puwedeng gamitin sa app.');
+      }
       if (isLogin) {
         const { error } = await supabase.auth.signInWithPassword({
           email: formData.email,

@@ -4,8 +4,9 @@ import {
   Users, ClipboardList, Shield, LogOut, Search, 
   Check, X, Building2, Trash2, Star,
   Settings, BarChart3, Clock, Award, AlertCircle, RefreshCw, ImagePlus,
-  Download, Home, MessageSquare, MapPin, Megaphone, Pencil, Send
+  Download, Home, MapPin, Megaphone, Pencil, Send, Video
 } from 'lucide-react';
+import { updateThumbnail } from '../lib/updates';
 import { downloadCsv, fmtDate } from '../lib/csv';
 import './AdminPanel.css';
 
@@ -83,6 +84,10 @@ const AdminPanel = ({ onLogout }) => {
   const [announcements, setAnnouncements] = useState([]);
   const [annForm, setAnnForm] = useState({ id: null, title: '', body: '' });
   const [annSaving, setAnnSaving] = useState(false);
+  const EMPTY_UPD = { id: null, title: '', description: '', thumbnail_url: '', video_url: '' };
+  const [updates, setUpdates] = useState([]);
+  const [updForm, setUpdForm] = useState(EMPTY_UPD);
+  const [updSaving, setUpdSaving] = useState(false);
   const [hiddenPropertyIds, setHiddenPropertyIdsState] = useState(getHiddenPropertyIds());
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState(null);
@@ -98,20 +103,10 @@ const AdminPanel = ({ onLogout }) => {
     return landlords.filter(l => (l.owner_name || l.email)?.toLowerCase().includes(lowerQuery));
   }, [landlords, searchQuery]);
 
-  const pendingRequests = useMemo(() => {
-    return verificationRequests.filter(r => r.status === 'pending');
-  }, [verificationRequests]);
-
   const visibleProperties = useMemo(() => {
     const hiddenSet = new Set(hiddenPropertyIds);
     return allProperties.filter(p => !hiddenSet.has(p.id));
   }, [allProperties, hiddenPropertyIds]);
-
-  const propertyNameById = useMemo(() => {
-    const map = new Map();
-    allProperties.forEach(p => map.set(p.id, p.name || p.title || 'Untitled'));
-    return map;
-  }, [allProperties]);
 
   const filteredProperties = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
@@ -121,13 +116,16 @@ const AdminPanel = ({ onLogout }) => {
     );
   }, [allProperties, searchQuery]);
 
-  const filteredReviews = useMemo(() => {
-    const q = searchQuery.trim().toLowerCase();
-    if (!q) return reviews;
-    return reviews.filter(r =>
-      [propertyNameById.get(r.property_id), r.reviewer_name, r.comment].some(v => v?.toLowerCase().includes(q))
-    );
-  }, [reviews, searchQuery, propertyNameById]);
+  // Listings na naka-group ayon sa category (type)
+  const listingsByCategory = useMemo(() => {
+    const groups = new Map();
+    filteredProperties.forEach(p => {
+      const key = String(p.type || '').trim() || 'Others';
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key).push(p);
+    });
+    return [...groups.entries()].sort((a, b) => b[1].length - a[1].length);
+  }, [filteredProperties]);
 
   const stats = useMemo(() => {
     const now = new Date();
@@ -228,21 +226,6 @@ const AdminPanel = ({ onLogout }) => {
     { label: 'Posted', value: p => fmtDate(p.created_at) }
   ], filteredProperties);
 
-  const exportReviews = () => downloadCsv('budgetrent-reviews', [
-    { label: 'Property', value: r => propertyNameById.get(r.property_id) },
-    { label: 'Reviewer', value: r => r.reviewer_name },
-    { label: 'Rating', value: r => r.rating },
-    { label: 'Comment', value: r => r.comment },
-    { label: 'Date', value: r => fmtDate(r.created_at) }
-  ], filteredReviews);
-
-  const exportRequests = () => downloadCsv('budgetrent-verification-requests', [
-    { label: 'Full Name', value: r => r.full_name },
-    { label: 'Property', value: r => r.property_name },
-    { label: 'Status', value: r => r.status },
-    { label: 'Requested', value: r => fmtDate(r.created_at) }
-  ], verificationRequests);
-
   const exportSummary = () => downloadCsv('budgetrent-summary', [
     { label: 'Metric', value: r => r[0] },
     { label: 'Value', value: r => r[1] }
@@ -251,29 +234,80 @@ const AdminPanel = ({ onLogout }) => {
     ['Verified landlords', stats.verified],
     ['Expired plans', stats.expired],
     ['Plans expiring in 30 days', stats.expiringSoon.length],
-    ['Landlords without contact info', stats.noContact],
-    ['Total landlord logins', stats.totalLogins],
     ['Live listings', stats.listings],
     ['Hidden listings', stats.hidden],
     ['Available listings', stats.available],
     ['Occupied listings', stats.occupied],
-    ['New listings (30 days)', stats.newListings30],
-    ['Listings without map pin', stats.noPin],
-    ['Average price (PHP/mo)', stats.avgPrice],
-    ['Lowest price (PHP/mo)', stats.minPrice],
-    ['Highest price (PHP/mo)', stats.maxPrice],
-    ['Total reviews', stats.reviewCount],
-    ['Average rating', stats.avgRating],
-    ['Pending verification requests', stats.pendingCount],
     ['Approved verification requests', stats.approvedCount],
-    ...stats.byType.map(([k, v]) => [`Listings - ${k}`, v]),
-    ...stats.topAreas.map(([k, v]) => [`Area - ${k}`, v])
   ]);
 
   useEffect(() => {
     fetchData();
     loadAnnouncements();
+    loadUpdates();
   }, []);
+
+  // Updates tab ng app: thumbnail + video link
+  const loadUpdates = async () => {
+    const { data, error } = await supabase.from('app_updates').select('*').order('created_at', { ascending: false });
+    setUpdates(error ? [] : (data || []));
+  };
+
+  const updError = (error) => alert(
+    /app_updates|relation|does not exist|schema cache/i.test(error.message || '')
+      ? 'Wala pa ang "app_updates" table. Patakbuhin muna ang supabase/migrations/add_app_updates.sql sa Supabase SQL Editor.'
+      : 'Error: ' + error.message
+  );
+
+  // Image upload para sa thumbnail ng update (bucket: update-images)
+  const [updUploading, setUpdUploading] = useState(false);
+  const uploadUpdateImage = async (file) => {
+    if (!file) return;
+    if (!file.type.startsWith('image/')) return alert('Image file lang po (JPG, PNG, WebP).');
+    if (file.size > 5 * 1024 * 1024) return alert('Masyadong malaki ang image. Max 5MB.');
+    setUpdUploading(true);
+    try {
+      const ext = (file.name.split('.').pop() || 'jpg').toLowerCase();
+      const path = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+      const { error } = await supabase.storage.from('update-images').upload(path, file, { contentType: file.type });
+      if (error) throw error;
+      const { data: { publicUrl } } = supabase.storage.from('update-images').getPublicUrl(path);
+      setUpdForm(f => ({ ...f, thumbnail_url: publicUrl }));
+    } catch (err) {
+      alert(/bucket|not found/i.test(err.message || '')
+        ? 'Wala pa ang "update-images" bucket. Patakbuhin muna ang supabase/migrations/add_update_images_bucket.sql sa Supabase SQL Editor.'
+        : 'Hindi na-upload ang image: ' + err.message);
+    } finally {
+      setUpdUploading(false);
+    }
+  };
+
+  const saveUpdate = async (e) => {
+    e.preventDefault();
+    const row = {
+      title: updForm.title.trim(),
+      description: updForm.description.trim() || null,
+      thumbnail_url: updForm.thumbnail_url.trim() || null,
+      video_url: updForm.video_url.trim()
+    };
+    if (!row.title || !row.video_url) return;
+    setUpdSaving(true);
+    const { error } = updForm.id
+      ? await supabase.from('app_updates').update(row).eq('id', updForm.id)
+      : await supabase.from('app_updates').insert(row);
+    setUpdSaving(false);
+    if (error) return updError(error);
+    setUpdForm(EMPTY_UPD);
+    loadUpdates();
+  };
+
+  const deleteUpdate = async (u) => {
+    if (!window.confirm(`I-delete ang "${u.title}"? Mawawala ito sa Updates tab ng lahat ng users.`)) return;
+    const { error } = await supabase.from('app_updates').delete().eq('id', u.id);
+    if (error) return updError(error);
+    if (updForm.id === u.id) setUpdForm(EMPTY_UPD);
+    loadUpdates();
+  };
 
   // Announcements -> lumalabas bilang notification sa lahat ng users ng app
   const loadAnnouncements = async () => {
@@ -473,27 +507,6 @@ const AdminPanel = ({ onLogout }) => {
     alert('Payment details updated successfully.');
   };
 
-  const approveRequest = async (requestId, userId, userEmail) => {
-    try {
-      const now = new Date();
-      const expiry = new Date();
-      expiry.setFullYear(now.getFullYear() + 1);
-
-      await supabase.from('verification_requests').update({ status: 'approved' }).eq('id', requestId);
-      await supabase.from('properties').update({ 
-        is_verified: true,
-        subscription_status: 'Active',
-        subscription_date: now.toISOString(),
-        subscription_expiry: expiry.toISOString()
-      }).eq('user_id', userId);
-      
-      fetchData();
-      alert(`Approved! Subscription started for ${userEmail}`);
-    } catch (err) {
-      alert("Error approving");
-    }
-  };
-
   const viewLandlordListings = (landlordEmail) => {
     const listings = allProperties.filter(p => p.email === landlordEmail);
     setSelectedLandlordListings(listings);
@@ -601,13 +614,12 @@ const AdminPanel = ({ onLogout }) => {
           <button className={activeTab === 'analytics' ? 'active' : ''} onClick={() => setActiveTab('analytics')}><BarChart3 size={18}/> <span>Analytics</span></button>
           <button className={activeTab === 'landlords' ? 'active' : ''} onClick={() => setActiveTab('landlords')}><Users size={18}/> <span>Landlords</span></button>
           <button className={activeTab === 'announcements' ? 'active' : ''} onClick={() => setActiveTab('announcements')}><Megaphone size={18}/> <span>Notifications</span></button>
-          <button className={activeTab === 'requests' ? 'active' : ''} onClick={() => setActiveTab('requests')}><ClipboardList size={18}/> <span>Pending Requests</span> <span className="badge-count">{pendingRequests.length}</span></button>
+          <button className={activeTab === 'updates' ? 'active' : ''} onClick={() => setActiveTab('updates')}><Video size={18}/> <span>Updates (Video)</span></button>
         </div>
 
         <div className="sidebar-group">
           <label>Data</label>
           <button className={activeTab === 'listings' ? 'active' : ''} onClick={() => setActiveTab('listings')}><Home size={18}/> <span>Listings</span></button>
-          <button className={activeTab === 'reviews' ? 'active' : ''} onClick={() => setActiveTab('reviews')}><MessageSquare size={18}/> <span>Reviews</span></button>
         </div>
 
         <div className="sidebar-group">
@@ -675,15 +687,13 @@ const AdminPanel = ({ onLogout }) => {
         )}
 
         <section className="admin-content-view">
-          {activeTab !== 'payments' && activeTab !== 'announcements' && (
+          {activeTab !== 'payments' && activeTab !== 'announcements' && activeTab !== 'updates' && (
             <div className="admin-toolbar">
               <span>
                 {activeTab === 'analytics' && 'Key numbers for Budget Rent PH'}
                 {activeTab === 'landlords' && `${filteredLandlords.length} landlord(s)`}
                 {activeTab === 'subscriptions' && `${filteredLandlords.length} plan(s)`}
                 {activeTab === 'listings' && `${filteredProperties.length} listing(s)`}
-                {activeTab === 'reviews' && `${filteredReviews.length} review(s)`}
-                {activeTab === 'requests' && `${verificationRequests.length} request(s), ${pendingRequests.length} pending`}
               </span>
               <button
                 className="export-btn"
@@ -691,9 +701,8 @@ const AdminPanel = ({ onLogout }) => {
                   analytics: exportSummary,
                   landlords: exportLandlords,
                   subscriptions: exportSubscriptions,
-                  listings: exportListings,
-                  reviews: exportReviews,
-                  requests: exportRequests
+                  listings: exportListings
+
                 }[activeTab]}
               >
                 <Download size={14} /> Export CSV
@@ -706,19 +715,15 @@ const AdminPanel = ({ onLogout }) => {
               <div className="stat-row">
                 <div className="stat-card white">
                   <div className="stat-icon"><Users size={18} /></div>
-                  <div><label>Landlords</label><h3>{stats.landlords}</h3><small>{stats.noContact} without contact info</small></div>
+                  <div><label>Landlords</label><h3>{stats.landlords}</h3></div>
                 </div>
                 <div className="stat-card gold">
                   <div className="stat-icon"><Shield size={18} /></div>
-                  <div><label>Verified Badges</label><h3>{stats.verified}</h3><small>{stats.expired} expired plan(s)</small></div>
+                  <div><label>Verified Badges</label><h3>{stats.verified}</h3></div>
                 </div>
                 <div className="stat-card white">
                   <div className="stat-icon"><Building2 size={18} /></div>
-                  <div><label>Live Listings</label><h3>{stats.listings}</h3><small>+{stats.newListings30} in last 30 days</small></div>
-                </div>
-                <div className="stat-card navy">
-                  <div className="stat-icon"><RefreshCw size={18} /></div>
-                  <div><label>Pending Requests</label><h3>{stats.pendingCount}</h3><small>{stats.approvedCount} approved</small></div>
+                  <div><label>Live Listings</label><h3>{stats.listings}</h3></div>
                 </div>
               </div>
 
@@ -728,31 +733,6 @@ const AdminPanel = ({ onLogout }) => {
                   <div className="bar-row"><span>Available</span><div className="bar"><i style={{ width: `${stats.listings ? (stats.available / stats.listings) * 100 : 0}%` }} /></div><b>{stats.available}</b></div>
                   <div className="bar-row"><span>Occupied</span><div className="bar"><i className="danger" style={{ width: `${stats.listings ? (stats.occupied / stats.listings) * 100 : 0}%` }} /></div><b>{stats.occupied}</b></div>
                   <div className="bar-row"><span>Hidden</span><div className="bar"><i className="muted" style={{ width: `${allProperties.length ? (stats.hidden / allProperties.length) * 100 : 0}%` }} /></div><b>{stats.hidden}</b></div>
-                </div>
-
-                <div className="analytics-panel">
-                  <h4>Rent Prices (₱/mo)</h4>
-                  <div className="kv-row"><span>Average</span><b>₱{stats.avgPrice.toLocaleString()}</b></div>
-                  <div className="kv-row"><span>Lowest</span><b>₱{stats.minPrice.toLocaleString()}</b></div>
-                  <div className="kv-row"><span>Highest</span><b>₱{stats.maxPrice.toLocaleString()}</b></div>
-                  {stats.byType.map(([type, count]) => (
-                    <div className="kv-row" key={type}><span>{type}</span><b>{count}</b></div>
-                  ))}
-                </div>
-
-                <div className="analytics-panel">
-                  <h4><MapPin size={13} /> Top Areas</h4>
-                  {stats.topAreas.length === 0 && <div className="admin-empty small">No location data yet.</div>}
-                  {stats.topAreas.map(([area, count]) => (
-                    <div className="bar-row" key={area}><span>{area}</span><div className="bar"><i style={{ width: `${(count / stats.topAreas[0][1]) * 100}%` }} /></div><b>{count}</b></div>
-                  ))}
-                </div>
-
-                <div className="analytics-panel">
-                  <h4>Reviews · ★ {stats.avgRating} <small>({stats.reviewCount})</small></h4>
-                  {stats.ratingDist.map(([star, count]) => (
-                    <div className="bar-row" key={star}><span>{star}★</span><div className="bar"><i className="gold" style={{ width: `${stats.reviewCount ? (count / stats.reviewCount) * 100 : 0}%` }} /></div><b>{count}</b></div>
-                  ))}
                 </div>
 
                 <div className="analytics-panel wide">
@@ -766,41 +746,45 @@ const AdminPanel = ({ onLogout }) => {
                   ))}
                 </div>
 
-                <div className="analytics-panel wide">
-                  <h4>Data Quality</h4>
-                  <div className="kv-row"><span>Listings without map pin</span><b>{stats.noPin}</b></div>
-                  <div className="kv-row"><span>Landlords without contact info</span><b>{stats.noContact}</b></div>
-                  <div className="kv-row"><span>Total landlord logins</span><b>{stats.totalLogins}</b></div>
-                </div>
               </div>
             </div>
           )}
 
           {activeTab === 'listings' && (
-            <div className="admin-list">
-              <div className="admin-list-head listing-row">
-                <span>Listing</span><span>Type</span><span>Price</span><span>Status</span><span>Landlord</span>
-              </div>
-              {filteredProperties.length === 0 && <div className="admin-empty">No listings found.</div>}
-              {filteredProperties.map(p => {
-                const occupied = String(p.availability || '').toLowerCase() === 'occupied';
-                const hidden = hiddenPropertyIds.includes(p.id);
-                return (
-                  <div key={p.id} className="admin-list-row listing-row">
-                    <div className="row-user">
-                      <div className="row-avatar square">{p.image ? <img src={p.image} alt="" /> : <Home size={14} />}</div>
-                      <div className="row-user-info">
-                        <strong>{p.name || p.title}</strong>
-                        <small>{p.location || 'No location'}</small>
-                      </div>
+            <div className="listing-cats">
+              {listingsByCategory.length === 0 && <div className="admin-empty">No listings found.</div>}
+              {listingsByCategory.map(([category, items]) => (
+                <details key={category} className="listing-cat" open>
+                  <summary>
+                    <span className="listing-cat-name">{category}</span>
+                    <span className="listing-cat-count">{items.length}</span>
+                  </summary>
+                  <div className="admin-list">
+                    <div className="admin-list-head listing-row">
+                      <span>Listing</span><span>Type</span><span>Price</span><span>Status</span><span>Landlord</span>
                     </div>
-                    <span className="row-date">{p.type || '—'}</span>
-                    <span className="row-count">₱{Number(p.price || 0).toLocaleString()}</span>
-                    <span className={`status-pill ${hidden ? 'inactive' : occupied ? 'occupied' : 'active'}`}>{hidden ? 'Hidden' : occupied ? 'Occupied' : 'Available'}</span>
-                    <div className="row-user-info"><strong>{p.owner_name}</strong><small>{p.email}</small></div>
+                    {items.map(p => {
+                      const occupied = String(p.availability || '').toLowerCase() === 'occupied';
+                      const hidden = hiddenPropertyIds.includes(p.id);
+                      return (
+                        <div key={p.id} className="admin-list-row listing-row">
+                          <div className="row-user">
+                            <div className="row-avatar square">{p.image ? <img src={p.image} alt="" /> : <Home size={14} />}</div>
+                            <div className="row-user-info">
+                              <strong>{p.name || p.title}</strong>
+                              <small>{p.location || 'No location'}</small>
+                            </div>
+                          </div>
+                          <span className="row-date">{p.type || '—'}</span>
+                          <span className="row-count">₱{Number(p.price || 0).toLocaleString()}</span>
+                          <span className={`status-pill ${hidden ? 'inactive' : occupied ? 'occupied' : 'active'}`}>{hidden ? 'Hidden' : occupied ? 'Occupied' : 'Available'}</span>
+                          <div className="row-user-info"><strong>{p.owner_name}</strong><small>{p.email}</small></div>
+                        </div>
+                      );
+                    })}
                   </div>
-                );
-              })}
+                </details>
+              ))}
             </div>
           )}
 
@@ -854,21 +838,56 @@ const AdminPanel = ({ onLogout }) => {
             </div>
           )}
 
-          {activeTab === 'reviews' && (
-            <div className="admin-list">
-              <div className="admin-list-head review-row">
-                <span>Property</span><span>Reviewer</span><span>Rating</span><span>Date</span><span>Comment</span>
-              </div>
-              {filteredReviews.length === 0 && <div className="admin-empty">No reviews yet.</div>}
-              {filteredReviews.map(r => (
-                <div key={r.id} className="admin-list-row review-row">
-                  <div className="row-user-info"><strong>{propertyNameById.get(r.property_id) || 'Removed listing'}</strong></div>
-                  <span className="row-date">{r.reviewer_name || 'Reviewer'}</span>
-                  <span className="row-count">{r.rating}★</span>
-                  <span className="row-date">{fmtDate(r.created_at)}</span>
-                  <span className="row-comment">{r.comment || '—'}</span>
+          {activeTab === 'updates' && (
+            <div className="ann-wrap">
+              <form className="ann-form" onSubmit={saveUpdate}>
+                <h4>{updForm.id ? 'I-edit ang update' : 'Bagong update (video)'}</h4>
+                <p className="ann-hint">Lalabas ito sa Updates tab (tenant at landlord). Kapag YouTube link at walang thumbnail, awtomatikong kukunin ang thumbnail.</p>
+                <input type="text" placeholder="Title (hal. Bagong feature: Reviews)" maxLength={80} value={updForm.title}
+                  onChange={e => setUpdForm(f => ({ ...f, title: e.target.value }))} required />
+                <input type="url" placeholder="Video link (YouTube / Facebook / TikTok)" value={updForm.video_url}
+                  onChange={e => setUpdForm(f => ({ ...f, video_url: e.target.value }))} required />
+                <input type="url" placeholder="Thumbnail image link (optional)" value={updForm.thumbnail_url}
+                  onChange={e => setUpdForm(f => ({ ...f, thumbnail_url: e.target.value }))} />
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                  <input id="upd-image-file" type="file" accept="image/*" style={{ display: 'none' }}
+                    onChange={e => { uploadUpdateImage(e.target.files?.[0]); e.target.value = ''; }} />
+                  <label htmlFor="upd-image-file" className="ann-cancel" style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                    <ImagePlus size={15} /> {updUploading ? 'Ina-upload...' : 'Mag-upload ng image'}
+                  </label>
+                  {updForm.thumbnail_url && (
+                    <>
+                      <img src={updForm.thumbnail_url} alt="Thumbnail preview" style={{ height: 48, borderRadius: 8, objectFit: 'cover' }} />
+                      <button type="button" className="ann-cancel" onClick={() => setUpdForm(f => ({ ...f, thumbnail_url: '' }))}>Alisin</button>
+                    </>
+                  )}
                 </div>
-              ))}
+                <textarea rows={2} placeholder="Maikling description (optional)" maxLength={200} value={updForm.description}
+                  onChange={e => setUpdForm(f => ({ ...f, description: e.target.value }))} />
+                <div className="ann-actions">
+                  <button type="submit" className="ann-send" disabled={updSaving}>
+                    <Send size={15} /> {updSaving ? 'Saving...' : (updForm.id ? 'I-save ang pagbabago' : 'I-post')}
+                  </button>
+                  {updForm.id && <button type="button" className="ann-cancel" onClick={() => setUpdForm(EMPTY_UPD)}>Cancel</button>}
+                </div>
+              </form>
+
+              <div className="admin-list">
+                {updates.length === 0 && <div className="admin-empty">Wala pang update na na-post.</div>}
+                {updates.map(u => (
+                  <div key={u.id} className="ann-row">
+                    <div className="ann-row-text">
+                      <strong>{u.title}</strong>
+                      <p style={{ wordBreak: 'break-all' }}>{u.video_url}</p>
+                      <small>{fmtDate(u.created_at)}{updateThumbnail(u) ? '' : ' • walang thumbnail'}</small>
+                    </div>
+                    <div className="ann-row-btns">
+                      <button type="button" title="I-edit" onClick={() => setUpdForm({ id: u.id, title: u.title, description: u.description || '', thumbnail_url: u.thumbnail_url || '', video_url: u.video_url })}><Pencil size={15} /></button>
+                      <button type="button" title="I-delete" className="del" onClick={() => deleteUpdate(u)}><Trash2 size={15} /></button>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
 
@@ -936,32 +955,6 @@ const AdminPanel = ({ onLogout }) => {
                   </div>
                 </div>
               ))}
-            </div>
-          )}
-
-          {activeTab === 'requests' && (
-            <div className="admin-list">
-              {pendingRequests.length === 0 && <div className="admin-empty">No pending requests.</div>}
-              {pendingRequests.map(req => {
-                const landlord = landlords.find(l => l.user_id === req.user_id);
-                const avatar = landlord?.owner_avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(req.full_name)}&background=random`;
-                return (
-                  <div key={req.id} className="admin-list-row request-row">
-                    <div className="row-user">
-                      <div className="row-avatar"><img src={avatar} alt="" /></div>
-                      <div className="row-user-info">
-                        <strong>{req.full_name}</strong>
-                        <small>{req.property_name}</small>
-                      </div>
-                    </div>
-                    <span className="row-date"><Clock size={12}/> {new Date(req.created_at).toLocaleDateString()}</span>
-                    <span className="status-badge pending">Pending</span>
-                    <div className="row-actions">
-                      <button className="approve-btn" onClick={() => approveRequest(req.id, req.user_id, landlord?.email || req.full_name)}><Check size={14}/> Approve</button>
-                    </div>
-                  </div>
-                );
-              })}
             </div>
           )}
 

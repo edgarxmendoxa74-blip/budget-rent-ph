@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { Navigation, Loader2, MapPin, Star, X, ShieldCheck, Search, AlertCircle, Signal, LocateFixed, Radar, BadgeCheck, House, TreePalm, Route as RouteIcon, Car, Bus, Bike, ChevronDown, CalendarCheck, Send, Lightbulb } from 'lucide-react';
+import { Navigation, Loader2, MapPin, Star, X, ShieldCheck, Search, AlertCircle, Signal, LocateFixed, Radar, BadgeCheck, House, TreePalm, Route as RouteIcon, Car, Bus, Bike, Footprints, ChevronDown, ChevronUp, WifiOff, CalendarCheck, Send, Lightbulb } from 'lucide-react';
 import { TILE_URL, TILE_OPTIONS, MAP_OPTIONS, toCoords, distanceKm, formatDistance, geocodeAddress, inArea, getCurrentPosition } from '../lib/geo';
 import { useApproxCoords } from '../lib/useApproxCoords';
 import ListingActionSheet from './ListingActionSheet';
@@ -256,7 +256,7 @@ const RadarMap = ({ center, radiusKm, results, scanning, selectedId, onSelect, i
   return <div ref={mapEl} className="radar-map" />;
 };
 
-const MODE_ICONS = { tricycle: Bike, jeep: Bus, car: Car };
+const MODE_ICONS = { walk: Footprints, tricycle: Bike, jeep: Bus, car: Car };
 
 const RoutePanel = ({ route, activeMode, onMode, onClose, showSteps, onToggleSteps }) => {
   const name = route.item.name || route.item.location?.split(',')[0] || 'bahay';
@@ -279,7 +279,8 @@ const RoutePanel = ({ route, activeMode, onMode, onClose, showSteps, onToggleSte
   }
 
   const { data } = route;
-  const estimates = getEstimates(data);
+  // Lakad: lalabas lang kung malapit (hanggang 2 km)
+  const estimates = getEstimates(data).filter((e) => e.key !== 'walk' || e.available);
   const active = estimates.find((e) => e.key === activeMode) || estimates[estimates.length - 1];
   const note = data.distanceKm > 150
     ? 'Malayong biyahe ito — maaaring may sasakyang pandagat o eroplano. Tantiya lang ang oras.'
@@ -362,6 +363,19 @@ const FindNearbyPage = ({ listings, reviewStats, onSelectProperty, isLandlord, u
   const watchId = useRef(null);
   const scanTimer = useRef(null);
   const device = useMemo(getDeviceInfo, []);
+
+  // Internet check: kailangan ang net para sa mapa at sa paghahanap ng lugar
+  const [isOffline, setIsOffline] = useState(() => typeof navigator !== 'undefined' && navigator.onLine === false);
+  useEffect(() => {
+    const goOnline = () => setIsOffline(false);
+    const goOffline = () => setIsOffline(true);
+    window.addEventListener('online', goOnline);
+    window.addEventListener('offline', goOffline);
+    return () => {
+      window.removeEventListener('online', goOnline);
+      window.removeEventListener('offline', goOffline);
+    };
+  }, []);
 
   const locationFound = Boolean(center);
 
@@ -589,7 +603,89 @@ const FindNearbyPage = ({ listings, reviewStats, onSelectProperty, isLandlord, u
     if (center) runScan();
   };
 
+  const offlineModal = isOffline && (
+    <div className="modal-overlay" style={{ zIndex: 10000, backgroundColor: 'rgba(0,0,0,0.6)' }}>
+      <div className="modal-content animate-slide-up" role="alertdialog" aria-modal="true" aria-labelledby="offline-title" style={{ maxWidth: '380px', borderRadius: '24px', padding: '32px 24px', textAlign: 'center' }}>
+        <div className="near-confirm-icon"><WifiOff size={34} /></div>
+        <h2 id="offline-title" style={{ fontSize: '1.35rem', color: 'var(--primary)', marginBottom: '10px', fontWeight: 800 }}>Oops! Walang internet connection</h2>
+        <p style={{ color: 'var(--text-muted)', fontSize: '0.92rem', lineHeight: '1.6', marginBottom: '24px' }}>
+          Oops! You have no internet connection. Mag-connect sa internet (Wi-Fi o mobile data) at subukan ulit.
+        </p>
+        <button type="button" className="near-confirm-allow" onClick={() => setIsOffline(navigator.onLine === false)}>Try Again</button>
+      </div>
+    </div>
+  );
+
+  const confirmModal = showConfirm && (
+    <div className="modal-overlay" style={{ zIndex: 9999, backgroundColor: 'rgba(0,0,0,0.6)' }} onClick={() => setShowConfirm(false)}>
+      <div className="modal-content animate-slide-up" onClick={e => e.stopPropagation()} style={{ maxWidth: '400px', borderRadius: '24px', padding: '32px 24px', textAlign: 'center', position: 'relative' }}>
+        <button onClick={() => setShowConfirm(false)} style={{ position: 'absolute', top: '16px', right: '16px', background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}><X size={24} /></button>
+        <div className="near-confirm-icon"><Signal size={34} className="pulse" /></div>
+        <h2 style={{ fontSize: '1.4rem', color: 'var(--primary)', marginBottom: '10px', fontWeight: 800 }}>{device.isDesktop ? 'Allow Location Access?' : 'Enable Real-time Tracking?'}</h2>
+        <p style={{ color: 'var(--text-muted)', fontSize: '0.92rem', lineHeight: '1.6', marginBottom: '24px' }}>Gagamitin ng BudgetRentPH ang location mo para ipakita sa mapa ang pinakamalapit na available na bahay. Hindi ito sine-save o ibinabahagi.{device.isDesktop && <> Pagkatapos, i-click din ang <b>Allow</b> sa popup ng {device.browser}.</>}</p>
+        {!device.isDesktop && <MobileLocationTip isIOS={device.isIOS} />}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          <button onClick={startLiveTracking} className="near-confirm-allow"><ShieldCheck size={20} /> {device.isDesktop ? 'Allow Location' : 'Allow Live GPS'}</button>
+          <button onClick={() => setShowConfirm(false)} className="near-confirm-cancel">Cancel</button>
+        </div>
+      </div>
+    </div>
+  );
+
   // Unang screen: pumili muna ang tenant kung Find Rent o Staycation bago gumana ang Nearby
+  // Required muna ang Location (para mabilis na lumabas ang resulta pag pinili na ang Find Rent / Staycation)
+  if (!isLandlord && !intent && !locationFound) {
+    const blocked = errorType === 'denied' || errorType === 'insecure' || errorType === 'policy';
+    const noSignal = errorType === 'unavailable';
+    return (
+      <div className="page-section animate-fade-in" style={{ paddingBottom: '80px', backgroundColor: 'white' }}>
+        <header className="hero nearby-hero">
+          <HeroBudi message="I-ON muna ang Location ng phone mo para mabilis kong makita ang mga bahay malapit sa iyo!" />
+          <div className="hero-content">
+            <div className="nearby-title-row">
+              <span className="nearby-icon"><Navigation size={22} /></span>
+              <h2>I-ON ang Location</h2>
+            </div>
+            <p className="nearby-sub">Kailangan ito bago ka makapag-Find Rent o Staycation</p>
+          </div>
+        </header>
+        <main className="info-page-container" style={{ width: '100%', maxWidth: '800px', padding: '6px' }}>
+          <div className="near-empty">
+            <div>
+              <div className="near-pin"><Radar size={42} /></div>
+              <h3>{blocked ? 'Location Access Required' : 'I-ON ang Location para magpatuloy'}</h3>
+              {errorType === 'policy' && <p>Hindi pa pinapayagan ng website ang location sa ngayon. I-type na lang ang lugar sa ibaba.</p>}
+              {errorType === 'insecure' && <p>Gumagana lang ang location sa secure na link (<b>https://</b>). Buksan ang app gamit ang https link, o i-type ang lugar sa ibaba.</p>}
+              {errorType === 'denied' && (device.isDesktop
+                ? <><p>Naka-block ang location sa browser mo. Para magpatuloy:</p><DesktopLocationSteps os={device.os} browser={device.browser} /></>
+                : <p>Naka-block ang Location para sa app na ito. Pumunta sa <b>Phone Settings</b> &gt; <b>Location</b> at payagan ito, tapos bumalik dito at pindutin ang button sa ibaba.</p>)}
+              {noSignal && <p className="near-inline-error"><AlertCircle size={15} /> {device.isDesktop ? 'Hindi makuha ang location. Siguraduhing naka-ON ang Wi-Fi at Location services.' : 'Hindi makuha ang GPS signal. Siguraduhing naka-ON ang Location ng phone mo, tapos subukan ulit.'}</p>}
+
+              {errorType !== 'policy' && errorType !== 'insecure' && (
+                <button onClick={() => setShowConfirm(true)} disabled={locating} className="near-cta">
+                  {locating ? <><Loader2 size={22} className="animate-spin" /> Hinahanap ka...</> : <><MapPin size={20} /> {device.isDesktop ? 'Activate Location' : 'I-ON ang Location'}</>}
+                </button>
+              )}
+
+              {(errorType === 'policy' || errorType === 'insecure' || noSignal) && (
+                <form onSubmit={handleManualSearch} className="search-bar nearby-search" style={{ marginTop: 16 }}>
+                  <Search className="search-icon" size={20} />
+                  <input type="text" placeholder="Saan ka lilipat? (hal. Dagupan, Pangasinan)" value={manualQuery} onChange={(e) => setManualQuery(e.target.value)} />
+                  <button type="submit" className="nearby-search-btn" disabled={locating}>Search</button>
+                </form>
+              )}
+              {errorType === 'notfound' && <p className="near-inline-error"><AlertCircle size={15} /> Hindi mahanap ang lugar na iyon. Subukan ang ibang city o barangay.</p>}
+
+              {!device.isDesktop && !blocked && <MobileLocationTip isIOS={device.isIOS} />}
+            </div>
+          </div>
+        </main>
+        {confirmModal}
+        {offlineModal}
+      </div>
+    );
+  }
+
   if (!isLandlord && !intent) {
     return (
       <div className="page-section animate-fade-in" style={{ paddingBottom: '80px', backgroundColor: 'white' }}>
@@ -616,6 +712,7 @@ const FindNearbyPage = ({ listings, reviewStats, onSelectProperty, isLandlord, u
             </button>
           </div>
         </main>
+        {offlineModal}
       </div>
     );
   }
@@ -722,7 +819,7 @@ const FindNearbyPage = ({ listings, reviewStats, onSelectProperty, isLandlord, u
                     {locating ? <Loader2 size={14} className="animate-spin" /> : <Navigation size={14} />} Malapit sa akin
                   </button>
                 )}
-                <button className="stop-gps-btn" onClick={stopGps}>{mode === 'live' ? (device.isDesktop ? 'Stop Location' : 'Stop GPS') : 'Clear'}</button>
+                <button className="stop-gps-btn stop-yellow" onClick={stopGps}>{mode === 'live' ? (device.isDesktop ? 'Stop Location' : 'Stop GPS') : 'Clear'}</button>
               </div>
             </div>
 
@@ -870,21 +967,13 @@ const FindNearbyPage = ({ listings, reviewStats, onSelectProperty, isLandlord, u
         />
       )}
 
-      {showConfirm && (
-        <div className="modal-overlay" style={{ zIndex: 9999, backgroundColor: 'rgba(0,0,0,0.6)' }} onClick={() => setShowConfirm(false)}>
-          <div className="modal-content animate-slide-up" onClick={e => e.stopPropagation()} style={{ maxWidth: '400px', borderRadius: '24px', padding: '32px 24px', textAlign: 'center', position: 'relative' }}>
-            <button onClick={() => setShowConfirm(false)} style={{ position: 'absolute', top: '16px', right: '16px', background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}><X size={24} /></button>
-            <div className="near-confirm-icon"><Signal size={34} className="pulse" /></div>
-            <h2 style={{ fontSize: '1.4rem', color: 'var(--primary)', marginBottom: '10px', fontWeight: 800 }}>{device.isDesktop ? 'Allow Location Access?' : 'Enable Real-time Tracking?'}</h2>
-            <p style={{ color: 'var(--text-muted)', fontSize: '0.92rem', lineHeight: '1.6', marginBottom: '24px' }}>Gagamitin ng BudgetRentPH ang location mo para ipakita sa mapa ang pinakamalapit na available na bahay. Hindi ito sine-save o ibinabahagi.{device.isDesktop && <> Pagkatapos, i-click din ang <b>Allow</b> sa popup ng {device.browser}.</>}</p>
-            {!device.isDesktop && <MobileLocationTip isIOS={device.isIOS} />}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              <button onClick={startLiveTracking} className="near-confirm-allow"><ShieldCheck size={20} /> {device.isDesktop ? 'Allow Location' : 'Allow Live GPS'}</button>
-              <button onClick={() => setShowConfirm(false)} className="near-confirm-cancel">Cancel</button>
-            </div>
-          </div>
-        </div>
-      )}
+      <div className="near-scroll-arrows">
+        <button type="button" aria-label="Scroll pataas" onClick={() => window.scrollBy({ top: -window.innerHeight * 0.7, behavior: 'smooth' })}><ChevronUp size={22} /></button>
+        <button type="button" aria-label="Scroll pababa" onClick={() => window.scrollBy({ top: window.innerHeight * 0.7, behavior: 'smooth' })}><ChevronDown size={22} /></button>
+      </div>
+
+      {confirmModal}
+      {offlineModal}
     </div>
   );
 };

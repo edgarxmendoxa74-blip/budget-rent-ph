@@ -4,7 +4,7 @@ import { supabase } from '../lib/supabase';
 import './ReviewsSection.css';
 
 const MAX_WORDS = 30;
-const MAX_STARS = 3;
+const MAX_STARS = 5;
 const countWords = (t) => (t.trim() ? t.trim().split(/\s+/).length : 0);
 const limitWords = (t) => {
   let words = 0;
@@ -74,7 +74,7 @@ const ReviewsSection = ({ property, session, isGuest, reviews, loading, onChange
     e.preventDefault();
     if (!canReview) return;
     if (rating < 1) {
-      setError('Pumili muna ng rating (1–3 stars).');
+      setError('Pumili muna ng rating (1–5 stars).');
       return;
     }
     if (countWords(comment) > MAX_WORDS) {

@@ -139,6 +139,8 @@ const EditListings = ({ session, onClose, onListingUpdated, initialEditingItem =
         name: editingItem.name,
         type: editingItem.type,
         price: parseFloat(editingItem.price || 0),
+        advance_months: Math.max(0, parseInt(editingItem.advance_months ?? 1, 10) || 0),
+        deposit_months: Math.max(0, parseInt(editingItem.deposit_months ?? 2, 10) || 0),
         location: editingItem.location,
         latitude: toCoords(editingItem)?.lat ?? null,
         longitude: toCoords(editingItem)?.lng ?? null,
@@ -166,9 +168,11 @@ const EditListings = ({ session, onClose, onListingUpdated, initialEditingItem =
         .eq('id', editingItem.id);
 
       // Fallback kapag wala pa ang availability / latitude / longitude columns sa database
-      if (error && (error.code === '42703' || /availability|latitude|longitude|pets_allowed/i.test(error.message || ''))) {
+      if (error && (error.code === '42703' || /availability|latitude|longitude|pets_allowed|advance_months|deposit_months/i.test(error.message || ''))) {
         const legacyPayload = { ...payload };
         delete legacyPayload.pets_allowed;
+        delete legacyPayload.advance_months;
+        delete legacyPayload.deposit_months;
         delete legacyPayload.availability;
         delete legacyPayload.latitude;
         delete legacyPayload.longitude;
@@ -287,6 +291,20 @@ const EditListings = ({ session, onClose, onListingUpdated, initialEditingItem =
                 <div className="edit-form-group">
                   <label>Price (₱/mo)</label>
                   <input type="number" value={editingItem.price || ''} onChange={e => handleEditChange('price', e.target.value)} />
+                </div>
+              </div>
+              <div className="edit-form-row">
+                <div className="edit-form-group">
+                  <label>Advance (months)</label>
+                  <select value={String(editingItem.advance_months ?? 1)} onChange={e => handleEditChange('advance_months', e.target.value)}>
+                    {[0, 1, 2, 3, 4, 5, 6].map(n => <option key={n} value={n}>{n === 0 ? 'Walang advance' : `${n} month${n > 1 ? 's' : ''}`}</option>)}
+                  </select>
+                </div>
+                <div className="edit-form-group">
+                  <label>Deposit (months)</label>
+                  <select value={String(editingItem.deposit_months ?? 2)} onChange={e => handleEditChange('deposit_months', e.target.value)}>
+                    {[0, 1, 2, 3, 4, 5, 6].map(n => <option key={n} value={n}>{n === 0 ? 'Walang deposit' : `${n} month${n > 1 ? 's' : ''}`}</option>)}
+                  </select>
                 </div>
               </div>
               <div className="edit-form-group">

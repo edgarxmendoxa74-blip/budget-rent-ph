@@ -185,13 +185,14 @@ const ProfileModal = ({ session, onClose, isEditingInitial = false, onProfileUpd
           <span className={`role-badge ${isVerified ? 'verified' : userRole}`}>
             {isVerified ? 'Verified' : 'Standard Tier'}
           </span>
-          <h2 style={{ display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'center' }}>
+          <h2 className="profile-name">
             {isEditing ? 'Edit Profile' : (formData.fullName || 'Landlord')}
             {isVerified && <BadgeCheck size={24} className="verified-badge" />}
           </h2>
           <a href={`mailto:${formData.email}`} className="profile-email">{formData.email}</a>
         </div>
 
+        <div className="profile-body">
         {isEditing ? (
           <form onSubmit={handleUpdate} className="profile-form">
             <div className="form-group">
@@ -220,6 +221,7 @@ const ProfileModal = ({ session, onClose, isEditingInitial = false, onProfileUpd
               <label>WhatsApp Number</label>
               <input type="text" value={formData.whatsapp} onChange={e => setFormData({...formData, whatsapp: e.target.value})} />
             </div>
+            <button type="button" className="profile-cancel-btn" onClick={() => setIsEditing(false)}>Cancel</button>
             <button type="submit" className="save-btn" disabled={loading}>
               {loading ? <Loader2 className="animate-spin" size={20} /> : <><Save size={18} /> Save Changes</>}
             </button>
@@ -250,16 +252,16 @@ const ProfileModal = ({ session, onClose, isEditingInitial = false, onProfileUpd
                 </div>
               </div>
             )}
-            <div className="info-grid" style={{ display: 'block' }}>
+            <div className="info-grid">
               <div className="info-group">
                 <Globe size={18} />
                 <div className="info-content">
                   <label>Social Link</label>
-                  <p style={{ fontSize: '11px', wordBreak: 'break-all' }}>{formData.facebook || 'Not set'}</p>
+                  <p className="info-link">{formData.facebook || 'Not set'}</p>
                 </div>
               </div>
             </div>
-            <div className="info-group" style={{ marginTop: '8px' }}>
+            <div className="info-group">
               <MessageCircle size={18} />
               <div className="info-content">
                 <label>WhatsApp</label>
@@ -268,6 +270,7 @@ const ProfileModal = ({ session, onClose, isEditingInitial = false, onProfileUpd
             </div>
           </div>
         )}
+        </div>
       </div>
     </div>
   );

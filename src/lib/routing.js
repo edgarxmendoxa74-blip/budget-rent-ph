@@ -20,6 +20,7 @@ export const fetchRoute = async (from, to) => {
 
 // Tantiyang oras ayon sa sasakyan. Hindi ito eksakto: nag-iiba ang trapiko, pila, at hintuan.
 export const TRANSPORT_MODES = [
+  { key: 'walk', label: 'Lakad', maxKm: 2, minutes: (km) => (km / 4.8) * 60 },
   { key: 'tricycle', label: 'Tricycle', maxKm: 15, minutes: (km) => (km / 22) * 60 },
   { key: 'jeep', label: 'Jeep', maxKm: 60, minutes: (km) => (km / 18) * 60 },
   { key: 'car', label: 'Kotse', maxKm: Infinity, minutes: (km, route) => route.carMin * 1.25 }

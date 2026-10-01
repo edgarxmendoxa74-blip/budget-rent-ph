@@ -53,6 +53,6 @@ jobs:
       - name: Upload APK artifact
         uses: actions/upload-artifact@v6
         with:
-          name: budget-rent-ph-debug-apk
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+          name: BudgetRent-App
+          path: android/app/build/outputs/apk/debug/BudgetRent App.apk
           if-no-files-found: error

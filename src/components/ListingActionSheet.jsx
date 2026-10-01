@@ -46,7 +46,7 @@ const ListingActionSheet = ({ item, kind, onClose, onViewDetails }) => {
   const email = String(item?.email || '').trim();
   const encoded = encodeURIComponent(message);
 
-  // Reserve slot (staycation lang): ipinapadala sa WhatsApp ng owner kung meron, kung wala ay SMS
+  // Reserve slot (staycation lang): ipinapadala sa email ng owner
   const reserveMessage = useMemo(() => {
     const note = extra.trim() ? `
 ${extra.trim()}` : '';
@@ -60,10 +60,9 @@ ${nights ? `Tinatayang total: ${peso(total)}
 ` : ''}` +
       `Paki-confirm po kung puwede pa at paano ang reservation. Salamat po!${note}`;
   }, [name, item, checkIn, checkOut, nights, guests, total, extra]);
-  const waNumber = String(item?.owner_whatsapp || '').replace(/D/g, '');
-  const reserveHref = waNumber
-    ? `https://wa.me/${waNumber}?text=${encodeURIComponent(reserveMessage)}`
-    : phone ? `sms:${phone}?&body=${encodeURIComponent(reserveMessage)}` : null;
+  const reserveHref = email
+    ? `mailto:${email}?subject=${encodeURIComponent(`Reserve slot: ${name}`)}&body=${encodeURIComponent(reserveMessage)}`
+    : null;
 
   const options = [
     email && { key: 'mail', label: 'Email Owner', Icon: Mail, href: `mailto:${email}?subject=${encodeURIComponent(`${isBook ? 'Booking request' : 'Inquiry'}: ${name}`)}&body=${encoded}` },

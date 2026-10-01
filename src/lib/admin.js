@@ -9,3 +9,7 @@ const ADMIN_EMAILS = [
 // Case-insensitive: nilo-lowercase ng Supabase ang emails
 export const isAdminEmail = (email) =>
   ADMIN_EMAILS.includes(String(email || '').trim().toLowerCase());
+
+// Dito lang bubukas ang Admin Dashboard (palitan lang ito para ilipat ang URL)
+export const ADMIN_PATH = '/superadmin';
+export const isAdminPath = () => window.location.pathname.replace(/\/+$/, '') === ADMIN_PATH;

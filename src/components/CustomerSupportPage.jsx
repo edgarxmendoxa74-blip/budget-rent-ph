@@ -1,5 +1,9 @@
 import React, { useState } from 'react';
-import { CheckCircle2, ArrowLeft, Send, Loader2, User, Phone, MessageSquare, Mail, Info } from 'lucide-react';
+import { HeroBudi } from './MascotSplash';
+import { CheckCircle2, ArrowLeft, Send, Loader2, User, Phone, MessageSquare, Info } from 'lucide-react';
+
+// Facebook page na tumatanggap ng lahat ng customer support messages
+const SUPPORT_PAGE_ID = '61592163454566';
 
 const CustomerSupportPage = ({ onDone }) => {
   const [step, setStep] = useState(1);
@@ -9,17 +13,21 @@ const CustomerSupportPage = ({ onDone }) => {
   const handleSubmit = (e) => {
     e.preventDefault();
     setLoading(true);
-    
-    // Create mailto link
-    const subject = encodeURIComponent('Customer Support Request');
-    const body = encodeURIComponent(`Name: ${formData.name}\nPhone Number: ${formData.phone}\nIssue / Concern:\n${formData.issue}`);
-    
-    // Using setTimeout to simulate processing before redirecting
+
+    const message = `Customer Support Request
+Name: ${formData.name}
+Phone Number: ${formData.phone}
+Issue / Concern:
+${formData.issue}`;
+
+    // I-copy din ang mensahe in case hindi ma-prefill ng Messenger
+    try { navigator.clipboard?.writeText(message); } catch { /* ignore */ }
+
     setTimeout(() => {
-      window.location.href = `mailto:mendozajakong@gmail.com?subject=${subject}&body=${body}`;
+      window.open(`https://m.me/${SUPPORT_PAGE_ID}?text=${encodeURIComponent(message)}`, '_blank', 'noopener,noreferrer');
       setLoading(false);
       setStep(2);
-    }, 1200);
+    }, 600);
   };
 
   return (
@@ -129,7 +137,8 @@ const CustomerSupportPage = ({ onDone }) => {
         }
       `}</style>
 
-      <header className="hero branding-hero">
+      <header className="hero branding-hero" style={{ position: 'relative' }}>
+        <HeroBudi message="Hi! Ako si Budi. Sabihin mo lang ang concern mo at tutulungan ka ng team namin." />
         <div className="hero-content">
           <span className="branding-kicker">Help Center</span>
           <h2>Customer Support</h2>
@@ -183,16 +192,16 @@ const CustomerSupportPage = ({ onDone }) => {
               </div>
 
               <button type="submit" className="support-submit-btn" disabled={loading}>
-                {loading ? <Loader2 size={20} className="animate-spin" /> : <Mail size={20} />}
-                {loading ? ' Submitting...' : ' Submit Ticket'}
+                {loading ? <Loader2 size={20} className="animate-spin" /> : <Send size={20} />}
+                {loading ? ' Submitting...' : ' Send via Messenger'}
               </button>
             </form>
           </>
         ) : (
           <div className="success-box animate-fade-in">
             <CheckCircle2 size={64} color="#16a34a" style={{ margin: '0 auto 16px', display: 'block' }} />
-            <h3>Request Processed!</h3>
-            <p>Please check your email app to send the request.</p>
+            <h3>Messenger opened!</h3>
+            <p>I-send ang mensahe sa Messenger chat ng BudgetRentPH. Kung walang laman ang chat box, i-paste lang (nakopya na ang mensahe mo).</p>
             <button className="support-submit-btn" onClick={onDone} style={{ background: 'var(--secondary)', color: 'var(--primary)', marginTop: '24px' }}>
               <ArrowLeft size={20} /> Back to Dashboard
             </button>

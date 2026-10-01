@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useMemo, useRef, Suspense, lazy } from 'react';
 import { HeroBudi } from './components/MascotSplash';
-import { Search, MapPin, Bed, Bath, Wifi, Shield, Star, Menu, X, Heart, MessageCircle, Phone, LogOut, Building2, User, Users, Loader2, ClipboardList, Mail, BadgeCheck, Headset, ArrowLeft, Home, Navigation, Globe, Trash2, ChevronLeft, ChevronRight, Bell, FileText, HousePlus, LocateFixed, PawPrint, ScrollText, FileSignature, Info, House, TreePalm, Plus, Lightbulb } from 'lucide-react';
+import { Search, MapPin, Bed, Bath, Wifi, Shield, Star, Menu, X, Heart, MessageCircle, Phone, LogOut, Building2, User, Users, Loader2, ClipboardList, Mail, BadgeCheck, Headset, ArrowLeft, Home, Navigation, Globe, Trash2, ChevronLeft, ChevronRight, Bell, FileText, HousePlus, LocateFixed, PawPrint, ScrollText, FileSignature, Info, House, TreePalm, Plus, Lightbulb, Megaphone } from 'lucide-react';
 import { clearSupabaseSessionStorage, recoverFromJwtError, supabase, validateCurrentSession } from './lib/supabase';
-import { isAdminEmail } from './lib/admin';
+import { isAdminEmail, isAdminPath } from './lib/admin';
+import { playNotifySound, unlockNotifySound } from './lib/notifySound';
 import { useUserLocation } from './lib/useUserLocation';
 import { isInstalledApp, hasSeenTour, forceTourFromUrl } from './lib/tour';
 import { useApproxCoords } from './lib/useApproxCoords';
@@ -25,6 +26,7 @@ const AdminLogin = lazy(() => import('./components/AdminLogin'));
 const EmailVerificationHandler = lazy(() => import('./components/EmailVerificationHandler'));
 const AgreementDraft = lazy(() => import('./components/AgreementDraft'));
 const ReviewsSection = lazy(() => import('./components/ReviewsSection'));
+const UpdatesPage = lazy(() => import('./components/UpdatesPage'));
 
 // Custom Debounce Hook
 function useDebounce(value, delay) {
@@ -112,12 +114,11 @@ export const applySubscriptionExpiry = (properties) => {
 
 export const getMoveInBreakdown = (item) => {
   const price = Number(item?.price) || 0;
-  const advanceMonths = Number(item?.advance_months) || 1;
-  const depositMonths = Number(item?.deposit_months) || 2;
-  const advance = price * advanceMonths;
-  const deposit = price * depositMonths;
-  const estimatedMoveIn = advance + deposit;
-  return { price, advance, deposit, estimatedMoveIn };
+  // 0 ay valid (walang advance/deposit); default lang kapag walang naka-set
+  const toMonths = (v, fallback) => (v === null || v === undefined || v === '' || Number.isNaN(Number(v)) ? fallback : Math.max(0, Number(v)));
+  const advanceMonths = toMonths(item?.advance_months, 1);
+  const depositMonths = toMonths(item?.deposit_months, 2);
+  return { price, advanceMonths, depositMonths, advance: price * advanceMonths, deposit: price * depositMonths };
 };
 
 function ListingCard({ item, isFav, onToggleFavorite, onOpen, stats, distanceLabel }) {
@@ -256,7 +257,10 @@ function App() {
 
 
   useEffect(() => {
-    validateCurrentSession().then((session) => {
+    // Admin account ay para sa /superadmin lang — hindi ito ituturing na user session sa main app
+    const forAppOnly = (s) => (s && isAdminEmail(s.user?.email) && !isAdminPath() ? null : s);
+    validateCurrentSession().then((rawSession) => {
+      const session = forAppOnly(rawSession);
       setSession(session);
       if (session) {
         setIsGuest(false);
@@ -266,7 +270,8 @@ function App() {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((event, session) => {
+    } = supabase.auth.onAuthStateChange((event, rawSession) => {
+      const session = forAppOnly(rawSession);
       setSession(session);
       if (session) {
         setIsGuest(false);
@@ -282,8 +287,8 @@ function App() {
     fetchProperties(); // Initial fetch
     fetchReviews(); // Customer reviews (kasing-batch ng properties fetch)
 
-    // Check for /admin route
-    if (window.location.pathname === '/admin') {
+    // Check for /superadmin route
+    if (isAdminPath()) {
       setActiveTab('admin');
     }
 
@@ -381,7 +386,7 @@ function App() {
     localStorage.removeItem('budgetrent_guest');
     setIsGuest(false);
     setIsMenuOpen(false);
-    if (window.location.pathname === '/admin') {
+    if (isAdminPath()) {
       window.location.href = '/';
     }
   };
@@ -463,10 +468,22 @@ function App() {
     }
   });
 
+  // Tunog kapag may BAGONG announcement (hindi sa unang load)
+  const seenAnnIds = useRef(null);
   const loadAnnouncements = async () => {
     const { data, error } = await supabase.from('announcements').select('*').order('created_at', { ascending: false }).limit(30);
-    if (!error) setAnnouncements(data || []);
+    if (error) return;
+    const list = data || [];
+    const key = (a) => `${a.id}-${a.updated_at || a.created_at}`;
+    if (seenAnnIds.current && list.some(a => !seenAnnIds.current.has(key(a)))) playNotifySound();
+    seenAnnIds.current = new Set(list.map(key));
+    setAnnouncements(list);
   };
+
+  useEffect(() => {
+    window.addEventListener('pointerdown', unlockNotifySound, { once: true });
+    return () => window.removeEventListener('pointerdown', unlockNotifySound);
+  }, []);
 
   useEffect(() => {
     loadAnnouncements();
@@ -526,7 +543,7 @@ function App() {
 
 
 
-  if (!session && !isGuest && window.location.pathname !== '/admin') {
+  if (!session && !isGuest && !isAdminPath()) {
     return (
       <Suspense fallback={<div className="text-center py-10"><Loader2 className="animate-spin text-primary mx-auto" size={40} /></div>}>
         <Auth onAuthSuccess={() => { setIsGuest(true); localStorage.setItem('budgetrent_guest', 'true'); }} />
@@ -534,8 +551,8 @@ function App() {
     );
   }
 
-  // If visiting /admin specifically, override rendering to show AdminPanel if authorized (or AdminLogin if not)
-  if (window.location.pathname === '/admin') {
+  // If visiting /superadmin specifically, override rendering to show AdminPanel if authorized (or AdminLogin if not)
+  if (isAdminPath()) {
     if (!isOwner) {
       return (
         <Suspense fallback={<div className="text-center py-10"><Loader2 className="animate-spin text-primary mx-auto" size={40} /></div>}>
@@ -1184,6 +1201,12 @@ function App() {
         </div>
       )}
 
+      {activeTab === 'updates' && (
+        <Suspense fallback={<div className="text-center py-10"><Loader2 className="animate-spin text-primary mx-auto" size={40} /></div>}>
+          <UpdatesPage />
+        </Suspense>
+      )}
+
       {activeTab === 'verified' && (
         <Suspense fallback={<div className="text-center py-10"><Loader2 className="animate-spin text-primary mx-auto" size={40} /></div>}>
           <VerificationPage session={session} onDone={() => setActiveTab('mylistings')} />
@@ -1226,25 +1249,27 @@ function App() {
                 <p className="stay-reserve-note"><Info size={14} /> Occupied ngayon, pero puwede ka pa ring mag-reserve ng slot para sa ibang petsa.</p>
               )}
               {(() => {
-                const { price, advance, deposit, estimatedMoveIn } = getMoveInBreakdown(selectedProperty);
+                const { price, advance, deposit, advanceMonths, depositMonths } = getMoveInBreakdown(selectedProperty);
+                const peso = (n) => `₱${n.toLocaleString()}`;
+                const mo = (n) => `${n} ${n === 1 ? 'month' : 'months'}`;
                 return (
                   <div className="modal-movein-box">
-                    <div className="modal-movein-row">
-                      <span>Monthly Rent:</span>
-                      <strong>₱{price.toLocaleString()}</strong>
-                    </div>
-                    <div className="modal-movein-row">
-                      <span>Advance:</span>
-                      <span>₱{advance.toLocaleString()}</span>
-                    </div>
-                    <div className="modal-movein-row">
-                      <span>Deposit:</span>
-                      <span>₱{deposit.toLocaleString()}</span>
-                    </div>
-                    <div className="modal-movein-divider"></div>
-                    <div className="modal-movein-row total">
-                      <span>Estimated Move-in:</span>
-                      <strong>₱{estimatedMoveIn.toLocaleString()}</strong>
+                    <div className="modal-movein-title">Bayarin</div>
+                    <div className="modal-movein-grid">
+                      <div className="modal-movein-cell rent">
+                        <span>Monthly Rent</span>
+                        <strong>{peso(price)}</strong>
+                      </div>
+                      <div className="modal-movein-cell">
+                        <span>Advance</span>
+                        <strong>{advanceMonths > 0 ? peso(advance) : 'Wala'}</strong>
+                        <em>{mo(advanceMonths)}</em>
+                      </div>
+                      <div className="modal-movein-cell">
+                        <span>Deposit</span>
+                        <strong>{depositMonths > 0 ? peso(deposit) : 'Wala'}</strong>
+                        <em>{mo(depositMonths)}</em>
+                      </div>
                     </div>
                   </div>
                 );
@@ -1336,19 +1361,6 @@ function App() {
                 )}
               </div>
 
-              {selectedProperty.amenities?.length > 0 && (
-                <>
-                  <h3>Other Amenities</h3>
-                  <div className="amenities-list">
-                    {selectedProperty.amenities.map(a => (
-                      <div key={a} className="amenity-item">
-                        <Star size={16} className="text-secondary" /> <span>{a}</span>
-                      </div>
-                    ))}
-                  </div>
-                </>
-              )}
-
               <Suspense fallback={null}>
                 <ReviewsSection
                   property={selectedProperty}
@@ -1381,7 +1393,7 @@ function App() {
 
       {/* Navigation Bar */}
       {(!isOwner || activeTab !== 'admin') && (
-        <nav className="bottom-nav glass" aria-label="Main navigation">
+        <nav className={`bottom-nav glass${!isGuest ? ' landlord-nav' : ''}`} aria-label="Main navigation">
           {!isGuest ? (
             /* Landlord Navigation */
             <>
@@ -1393,6 +1405,14 @@ function App() {
                 <span className="nav-icon-box"><ClipboardList size={22} /></span>
                 <span className="nav-label">My Listings</span>
               </button>
+              <button
+                className={`nav-item ico-updates ${activeTab === 'updates' ? 'active' : ''}`}
+                onClick={() => setActiveTab('updates')}
+                aria-current={activeTab === 'updates' ? 'page' : undefined}
+              >
+                <span className="nav-icon-box"><Megaphone size={22} /></span>
+                <span className="nav-label">Updates</span>
+              </button>
               <button className="nav-item circle-plus" onClick={() => setIsPropertyFormOpen(true)} aria-label="List your property" title="List your property"><Plus size={34} strokeWidth={3.2} /></button>
               <button
                 className={`nav-item ico-account ${isProfileModalOpen ? 'active' : ''}`}
@@ -1400,6 +1420,14 @@ function App() {
               >
                 <span className="nav-icon-box"><User size={22} /></span>
                 <span className="nav-label">Account</span>
+              </button>
+              <button
+                className={`nav-item ico-support ${activeTab === 'support' ? 'active' : ''}`}
+                onClick={() => setActiveTab('support')}
+                aria-current={activeTab === 'support' ? 'page' : undefined}
+              >
+                <span className="nav-icon-box"><Headset size={22} /></span>
+                <span className="nav-label">Support</span>
               </button>
             </>
           ) : (
@@ -1420,6 +1448,14 @@ function App() {
               >
                 <span className="nav-icon-box"><Home size={22} /></span>
                 <span className="nav-label">Home</span>
+              </button>
+              <button
+                className={`nav-item ico-updates ${activeTab === 'updates' ? 'active' : ''}`}
+                onClick={() => setActiveTab('updates')}
+                aria-current={activeTab === 'updates' ? 'page' : undefined}
+              >
+                <span className="nav-icon-box"><Megaphone size={22} /></span>
+                <span className="nav-label">Updates</span>
               </button>
               <button
                 className={`nav-item ico-wish ${activeTab === 'wishlist' ? 'active' : ''}`}
