@@ -394,3 +394,27 @@
   .profile-header { padding: 32px 20px 22px; }
   .profile-body { padding: 18px 18px 26px; }
 }
+
+/* ===== Account modal: alignment fixes ===== */
+.profile-modal {
+  width: 100%;
+  box-sizing: border-box;
+  max-height: 90vh;
+  max-height: 90dvh;
+  overscroll-behavior: contain;
+}
+
+
+.profile-header { box-sizing: border-box; width: 100%; }
+.profile-header .role-badge { margin-bottom: 10px; }
+.profile-body { box-sizing: border-box; padding-bottom: calc(26px + env(safe-area-inset-bottom, 0px)); }
+
+.info-group { box-sizing: border-box; min-height: 60px; }
+.info-content { display: flex; flex-direction: column; justify-content: center; }
+.info-content p { margin: 0; }
+
+/* Desktop / tablet: nasa gitna, hindi nakadikit sa ibaba */
+@media (min-width: 600px) {
+  .modal-overlay:has(.profile-modal) { align-items: center; padding: 20px; }
+  .profile-modal { border-radius: 28px !important; }
+}
