@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { ShieldCheck, CheckCircle2, ArrowLeft, Loader2, Zap, AlertCircle, X as XIcon } from 'lucide-react';
 import { HeroBudi } from './MascotSplash';
+import { PAYMENT_METHODS } from '../lib/paymentMethods';
 
 const VerificationPage = ({ onDone, session }) => {
   const [step, setStep] = useState(1);
@@ -204,11 +205,7 @@ const VerificationPage = ({ onDone, session }) => {
             </div>
             
             <div style={{ display: 'grid', gap: '8px' }}>
-              {[
-                { method: 'GCash', name: 'EDGAR M.', number: '0917 123 4567', color: '#007dfe', qr: 'https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=GCash-09171234567' },
-                { method: 'Maya', name: 'EDGAR M.', number: '0917 123 4567', color: '#c335e5', qr: 'https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=Maya-09171234567' },
-                { method: 'Bank', name: 'EDGAR M.', number: '1234-5678-90', color: '#1e293b', qr: '' }
-              ].map((pay, pIdx) => (
+              {PAYMENT_METHODS.map((pay, pIdx) => (
                 <div key={pIdx} style={{ 
                   background: '#fafbfc', 
                   padding: '10px 14px', 

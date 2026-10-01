@@ -7,6 +7,7 @@ import {
   Download, Home, MapPin, Megaphone, Pencil, Send, Video
 } from 'lucide-react';
 import { updateThumbnail } from '../lib/updates';
+import { fetchPlans } from '../lib/plans';
 import { downloadCsv, fmtDate } from '../lib/csv';
 import './AdminPanel.css';
 
@@ -76,6 +77,15 @@ const getAdminAvatarFallback = ({ ownerName, businessName }) => {
 const AdminPanel = ({ onLogout }) => {
   const [activeTab, setActiveTab] = useState('analytics'); 
   const [paymentMethods, setPaymentMethods] = useState(getStoredPaymentMethods);
+  const [plans, setPlans] = useState([]);
+  const [renewSuccess, setRenewSuccess] = useState(null);
+  const [planOwner, setPlanOwner] = useState(null);
+  useEffect(() => {
+    if (!renewSuccess) return undefined;
+    const t = setTimeout(() => setRenewSuccess(null), 2500);
+    return () => clearTimeout(t);
+  }, [renewSuccess]);
+  useEffect(() => { fetchPlans().then(setPlans); }, []);
   
   const [landlords, setLandlords] = useState([]);
   const [verificationRequests, setVerificationRequests] = useState([]);
@@ -92,6 +102,7 @@ const AdminPanel = ({ onLogout }) => {
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [listingFilter, setListingFilter] = useState('paupahan'); // paupahan | staycation
   
   // Modals state
   const [isManageModalOpen, setIsManageModalOpen] = useState(false);
@@ -102,6 +113,14 @@ const AdminPanel = ({ onLogout }) => {
     const lowerQuery = searchQuery.toLowerCase();
     return landlords.filter(l => (l.owner_name || l.email)?.toLowerCase().includes(lowerQuery));
   }, [landlords, searchQuery]);
+
+  // Verified / may plan na (kasama ang Expired) = Managed Plans; ang iba = Verification Request
+  const isInPlans = (l) => l.is_verified || l.subscription_status === 'Expired' || !!l.subscription_date;
+  const requestLandlords = useMemo(() => filteredLandlords.filter(l => !isInPlans(l)), [filteredLandlords]);
+  const planLandlords = useMemo(() => filteredLandlords.filter(isInPlans), [filteredLandlords]);
+  const hasPendingRequest = (l) => verificationRequests.some(r =>
+    r.status === 'pending' && (r.email === l.email || (l.user_id && r.user_id === l.user_id))
+  );
 
   const visibleProperties = useMemo(() => {
     const hiddenSet = new Set(hiddenPropertyIds);
@@ -116,16 +135,28 @@ const AdminPanel = ({ onLogout }) => {
     );
   }, [allProperties, searchQuery]);
 
+  const isStaycation = (p) => String(p.type || '').trim().toLowerCase() === 'staycation';
+  const listingCounts = useMemo(() => ({
+    all: filteredProperties.length,
+    paupahan: filteredProperties.filter(p => !isStaycation(p)).length,
+    staycation: filteredProperties.filter(isStaycation).length
+  }), [filteredProperties]);
+  const shownProperties = useMemo(() => {
+    if (listingFilter === 'staycation') return filteredProperties.filter(isStaycation);
+    if (listingFilter === 'paupahan') return filteredProperties.filter(p => !isStaycation(p));
+    return filteredProperties;
+  }, [filteredProperties, listingFilter]);
+
   // Listings na naka-group ayon sa category (type)
   const listingsByCategory = useMemo(() => {
     const groups = new Map();
-    filteredProperties.forEach(p => {
+    shownProperties.forEach(p => {
       const key = String(p.type || '').trim() || 'Others';
       if (!groups.has(key)) groups.set(key, []);
       groups.get(key).push(p);
     });
     return [...groups.entries()].sort((a, b) => b[1].length - a[1].length);
-  }, [filteredProperties]);
+  }, [shownProperties]);
 
   const stats = useMemo(() => {
     const now = new Date();
@@ -191,7 +222,7 @@ const AdminPanel = ({ onLogout }) => {
     { label: 'Listings', value: l => allProperties.filter(p => p.email === l.email).length },
     { label: 'Login Count', value: l => l.login_count },
     { label: 'Last Login', value: l => fmtDate(l.last_login) }
-  ], filteredLandlords);
+  ], requestLandlords);
 
   const exportSubscriptions = () => downloadCsv('budgetrent-subscriptions', [
     { label: 'Name', value: l => l.owner_name },
@@ -200,7 +231,7 @@ const AdminPanel = ({ onLogout }) => {
     { label: 'Availed', value: l => fmtDate(l.subscription_date) },
     { label: 'Expiry', value: l => fmtDate(l.subscription_expiry) },
     { label: 'Verified', value: l => (l.is_verified ? 'Yes' : 'No') }
-  ], filteredLandlords);
+  ], planLandlords);
 
   const exportListings = () => downloadCsv('budgetrent-listings', [
     { label: 'Name', value: p => p.name || p.title },
@@ -224,7 +255,7 @@ const AdminPanel = ({ onLogout }) => {
     { label: 'Verified Landlord', value: p => (p.is_verified ? 'Yes' : 'No') },
     { label: 'Hidden', value: p => (hiddenPropertyIds.includes(p.id) ? 'Yes' : 'No') },
     { label: 'Posted', value: p => fmtDate(p.created_at) }
-  ], filteredProperties);
+  ], shownProperties);
 
   const exportSummary = () => downloadCsv('budgetrent-summary', [
     { label: 'Metric', value: r => r[0] },
@@ -463,28 +494,46 @@ const AdminPanel = ({ onLogout }) => {
     }
   };
 
-  const handleRenew = async (landlordEmail) => {
-    const confirmRenew = window.confirm(`Avail 1 Year Subscription for ${landlordEmail}? This will cost ₱100.`);
-    if (!confirmRenew) return;
+  const handleRenew = async (landlordEmail, planId = 'yearly') => {
+    const plan = plans.find(p => p.id === planId);
+    if (!plan) return alert('Plans not loaded yet. Try again.');
+    if (!window.confirm(`Avail ${plan.label} Subscription (${plan.note}) for ${landlordEmail}? This will cost ₱${plan.price}.`)) return;
 
     const now = new Date();
     const expiry = new Date();
-    expiry.setFullYear(now.getFullYear() + 1);
+    expiry.setMonth(now.getMonth() + plan.months);
 
     try {
       // Update properties belonging to this landlord email
-      await supabase.from('properties').update({
+      const { error } = await supabase.from('properties').update({
         is_verified: true,
         subscription_status: 'Active',
         subscription_date: now.toISOString(),
         subscription_expiry: expiry.toISOString()
       }).eq('email', landlordEmail);
-      
-      alert("Subscription Activated for 1 Year!");
+      if (error) throw error;
+
+      setRenewSuccess({ email: landlordEmail, label: plan.label, expiry: expiry.toLocaleDateString() });
+      setActiveTab('subscriptions');
       fetchData();
     } catch (err) {
       alert("Error: " + err.message);
     }
+  };
+
+  const handlePlanChange = (id, field, value) => {
+    setPlans(prev => prev.map(p => (p.id === id ? { ...p, [field]: value } : p)));
+  };
+
+  const handleSavePlans = async () => {
+    const rows = plans.map(p => ({ id: p.id, label: p.label, price: Number(p.price), months: Number(p.months), updated_at: new Date().toISOString() }));
+    if (rows.some(r => !(r.price >= 0) || !(r.months > 0) || !Number.isInteger(r.months))) {
+      return alert('Price must be 0 or more and duration a whole number of months (1+).');
+    }
+    const { error } = await supabase.from('subscription_plans').upsert(rows);
+    if (error) return alert('Error: ' + error.message + '\n(Did you run add_subscription_plans.sql?)');
+    alert('Subscription plans updated.');
+    fetchPlans().then(setPlans);
   };
 
   const handlePaymentMethodChange = (idx, field, value) => {
@@ -612,7 +661,7 @@ const AdminPanel = ({ onLogout }) => {
         <div className="sidebar-group">
           <label>Management</label>
           <button className={activeTab === 'analytics' ? 'active' : ''} onClick={() => setActiveTab('analytics')}><BarChart3 size={18}/> <span>Analytics</span></button>
-          <button className={activeTab === 'landlords' ? 'active' : ''} onClick={() => setActiveTab('landlords')}><Users size={18}/> <span>Landlords</span></button>
+          <button className={activeTab === 'landlords' ? 'active' : ''} onClick={() => setActiveTab('landlords')}><Users size={18}/> <span>Verification Request</span></button>
           <button className={activeTab === 'announcements' ? 'active' : ''} onClick={() => setActiveTab('announcements')}><Megaphone size={18}/> <span>Notifications</span></button>
           <button className={activeTab === 'updates' ? 'active' : ''} onClick={() => setActiveTab('updates')}><Video size={18}/> <span>Updates (Video)</span></button>
         </div>
@@ -626,6 +675,7 @@ const AdminPanel = ({ onLogout }) => {
           <label>Subscriptions</label>
           <button className={activeTab === 'subscriptions' ? 'active' : ''} onClick={() => setActiveTab('subscriptions')}><Star size={18}/> <span>Managed Plans</span></button>
           <button className={activeTab === 'payments' ? 'active' : ''} onClick={() => setActiveTab('payments')}><Settings size={18}/> <span>Payment Slots</span></button>
+          <button className={activeTab === 'plans' ? 'active' : ''} onClick={() => setActiveTab('plans')}><Clock size={18}/> <span>Subscription Plans</span></button>
         </div>
 
         <div className="sidebar-footer">
@@ -636,7 +686,7 @@ const AdminPanel = ({ onLogout }) => {
       <div className="admin-main">
         <header className="admin-header">
           <div>
-            <h2>{activeTab.charAt(0).toUpperCase() + activeTab.slice(1)} Dashboard</h2>
+            <h2>{({ landlords: 'Verification Request', subscriptions: 'Managed Plans', plans: 'Subscription Plans' }[activeTab] || (activeTab.charAt(0).toUpperCase() + activeTab.slice(1))) + ' Dashboard'}</h2>
             <p className="admin-header-sub">Managing live data from Budget Rent PH system</p>
           </div>
           <div className="search-bar">
@@ -691,9 +741,9 @@ const AdminPanel = ({ onLogout }) => {
             <div className="admin-toolbar">
               <span>
                 {activeTab === 'analytics' && 'Key numbers for Budget Rent PH'}
-                {activeTab === 'landlords' && `${filteredLandlords.length} landlord(s)`}
-                {activeTab === 'subscriptions' && `${filteredLandlords.length} plan(s)`}
-                {activeTab === 'listings' && `${filteredProperties.length} listing(s)`}
+                {activeTab === 'landlords' && `${requestLandlords.length} waiting for verification`}
+                {activeTab === 'subscriptions' && `${planLandlords.length} plan(s)`}
+                {activeTab === 'listings' && `${shownProperties.length} listing(s)`}
               </span>
               <button
                 className="export-btn"
@@ -752,6 +802,18 @@ const AdminPanel = ({ onLogout }) => {
 
           {activeTab === 'listings' && (
             <div className="listing-cats">
+              <div className="listing-filter">
+                {[['paupahan', 'Paupahan'], ['staycation', 'Staycation']].map(([key, label]) => (
+                  <button
+                    key={key}
+                    type="button"
+                    className={listingFilter === key ? 'active' : ''}
+                    onClick={() => setListingFilter(key)}
+                  >
+                    {label} <span>{listingCounts[key]}</span>
+                  </button>
+                ))}
+              </div>
               {listingsByCategory.length === 0 && <div className="admin-empty">No listings found.</div>}
               {listingsByCategory.map(([category, items]) => (
                 <details key={category} className="listing-cat" open>
@@ -769,7 +831,6 @@ const AdminPanel = ({ onLogout }) => {
                       return (
                         <div key={p.id} className="admin-list-row listing-row">
                           <div className="row-user">
-                            <div className="row-avatar square">{p.image ? <img src={p.image} alt="" /> : <Home size={14} />}</div>
                             <div className="row-user-info">
                               <strong>{p.name || p.title}</strong>
                               <small>{p.location || 'No location'}</small>
@@ -896,8 +957,8 @@ const AdminPanel = ({ onLogout }) => {
               <div className="admin-list-head landlord-row">
                 <span>Landlord</span><span>Status</span><span>Listings</span><span>Badge</span><span>Actions</span>
               </div>
-              {filteredLandlords.length === 0 && <div className="admin-empty">No landlords found.</div>}
-              {filteredLandlords.map(l => (
+              {requestLandlords.length === 0 && <div className="admin-empty">No landlords waiting for verification.</div>}
+              {requestLandlords.map(l => (
                 <div key={l.email} className="admin-list-row landlord-row">
                   <div className="row-user">
                     <div className="row-avatar">
@@ -908,7 +969,7 @@ const AdminPanel = ({ onLogout }) => {
                       <small>{l.email}</small>
                     </div>
                   </div>
-                  <span className={`status-pill ${l.is_verified ? 'active' : 'inactive'}`}>{l.subscription_status || 'Regular'}</span>
+                  <span className={`status-pill ${l.is_verified ? 'active' : 'inactive'}`}>{hasPendingRequest(l) ? 'Requested' : (l.subscription_status || 'Regular')}</span>
                   <span className="row-count">{visibleProperties.filter(p => p.email === l.email).length}</span>
                   <button
                     className={`badge-toggle ${l.is_verified ? 'on' : 'off'}`}
@@ -918,7 +979,8 @@ const AdminPanel = ({ onLogout }) => {
                   </button>
                   <div className="row-actions">
                     <button className="manage-btn" onClick={() => viewLandlordListings(l.email)}>Properties</button>
-                    <button className="verify-btn" onClick={() => handleRenew(l.email)}>{l.is_verified ? 'Renew' : 'Activate'}</button>
+                    <button className="verify-btn" onClick={() => handleRenew(l.email, 'monthly')}>{l.is_verified ? 'Monthly' : 'Verify Monthly'}</button>
+                    <button className="verify-btn" onClick={() => handleRenew(l.email, 'yearly')}>{l.is_verified ? 'Yearly' : 'Verify Yearly'}</button>
                     <button className="landlord-delete-btn" onClick={() => handleDeleteLandlord(l)} title="Delete landlord" aria-label="Delete landlord"><Trash2 size={14} /></button>
                   </div>
                 </div>
@@ -931,10 +993,10 @@ const AdminPanel = ({ onLogout }) => {
               <div className="admin-list-head sub-row">
                 <span>Landlord</span><span>Plan</span><span>Availed</span><span>Expiry</span><span>Action</span>
               </div>
-              {filteredLandlords.length === 0 && <div className="admin-empty">No landlords found.</div>}
-              {filteredLandlords.map(l => (
+              {planLandlords.length === 0 && <div className="admin-empty">No plans yet. Verified landlords will appear here.</div>}
+              {planLandlords.map(l => (
                 <div key={l.email} className="admin-list-row sub-row">
-                  <div className="row-user">
+                  <div className="row-user" onClick={() => setPlanOwner(l)} style={{ cursor: 'pointer' }} title="View properties">
                     <div className="row-avatar">
                       {l.owner_avatar ? <img src={l.owner_avatar} alt="" /> : l.owner_name?.charAt(0)}
                     </div>
@@ -951,7 +1013,8 @@ const AdminPanel = ({ onLogout }) => {
                     {l.subscription_expiry ? new Date(l.subscription_expiry).toLocaleDateString() : 'N/A'}
                   </span>
                   <div className="row-actions">
-                    <button className="manage-btn" onClick={() => handleRenew(l.email)}><RefreshCw size={13}/> Renew</button>
+                    <button className="manage-btn" onClick={() => handleRenew(l.email, 'monthly')}><RefreshCw size={13}/> Monthly</button>
+                    <button className="manage-btn" onClick={() => handleRenew(l.email, 'yearly')}><RefreshCw size={13}/> Yearly</button>
                   </div>
                 </div>
               ))}
@@ -988,8 +1051,59 @@ const AdminPanel = ({ onLogout }) => {
               <button className="save-all-btn" onClick={handleSavePaymentDetails}>Update Payment Details</button>
             </div>
           )}
+
+          {activeTab === 'plans' && (
+            <div className="admin-list">
+              <div className="admin-list-head slot-row">
+                <span>Plan</span><span>Label</span><span>Price (₱)</span><span>Duration (months)</span><span></span>
+              </div>
+              {plans.map(p => (
+                <div key={p.id} className="admin-list-row slot-row">
+                  <span className="slot-badge">{p.id.toUpperCase()}</span>
+                  <input type="text" value={p.label} aria-label="Plan label" onChange={e => handlePlanChange(p.id, 'label', e.target.value)} />
+                  <input type="text" inputMode="decimal" value={p.price} aria-label="Price" onChange={e => handlePlanChange(p.id, 'price', e.target.value.replace(/[^0-9.]/g, ''))} />
+                  <input type="text" inputMode="numeric" value={p.months} aria-label="Months" onChange={e => handlePlanChange(p.id, 'months', e.target.value.replace(/\D/g, ''))} />
+                  <span />
+                </div>
+              ))}
+              <button className="save-all-btn" onClick={handleSavePlans}>Save Plans</button>
+            </div>
+          )}
         </section>
       </div>
+
+      {renewSuccess && (
+        <div className="modal-overlay admin-dialog-overlay" onClick={() => setRenewSuccess(null)}>
+          <div className="modal-content admin-dialog admin-dialog-success animate-slide-up" onClick={e => e.stopPropagation()}>
+            <div className="success-icon"><Check size={36} color="#16a34a" /></div>
+            <h3>Successful!</h3>
+            <p>{renewSuccess.label} subscription activated for <strong>{renewSuccess.email}</strong> until {renewSuccess.expiry}. Moved to Managed Plans.</p>
+          </div>
+        </div>
+      )}
+
+      {planOwner && (() => {
+        const owned = allProperties.filter(p => p.email === planOwner.email || (planOwner.user_id && p.user_id === planOwner.user_id));
+        return (
+          <div className="modal-overlay admin-dialog-overlay" onClick={() => setPlanOwner(null)}>
+            <div className="modal-content admin-dialog animate-slide-up" onClick={e => e.stopPropagation()}>
+              <div className="admin-modal-head">
+                <h3>{planOwner.owner_name || planOwner.email}</h3>
+                <button onClick={() => setPlanOwner(null)} aria-label="Close"><X size={18}/></button>
+              </div>
+              <p className="admin-dialog-email">{planOwner.email}</p>
+              <div className="admin-dialog-total"><span>Total Properties</span><strong>{owned.length}</strong></div>
+              {owned.length === 0 ? (
+                <div className="admin-dialog-empty">No properties listed.</div>
+              ) : (
+                <ol className="admin-dialog-list">
+                  {owned.map((p, i) => <li key={p.id}><span>{i + 1}.</span>{p.name || p.title}</li>)}
+                </ol>
+              )}
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Modal - Manage Listings */}
       {isManageModalOpen && (

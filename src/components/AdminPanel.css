@@ -832,3 +832,25 @@
   text-align: center;
 }
 .listing-cat .admin-list { border: none; border-radius: 0; box-shadow: none; }
+
+.listing-filter { display: flex; gap: 8px; flex-wrap: wrap; }
+.listing-filter button { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border: 1px solid var(--border-subtle, #e2e8f0); border-radius: 999px; background: #fff; color: var(--admin-text-muted); font-family: inherit; font-size: 0.8rem; font-weight: 800; cursor: pointer; transition: all 0.2s; }
+.listing-filter button span { font-size: 0.7rem; padding: 1px 7px; border-radius: 999px; background: rgba(0, 0, 0, 0.06); }
+.listing-filter button.active { background: var(--admin-navy); border-color: var(--admin-navy); color: #fff; }
+.listing-filter button.active span { background: rgba(255, 255, 255, 0.2); }
+
+/* Centered small dialogs (plan owner properties, renew success) */
+.admin-dialog-overlay { align-items: center; padding: 16px; }
+.admin-dialog { width: min(92vw, 420px); max-width: 420px; margin: 0; padding: 22px; border-radius: 22px; max-height: 80vh; display: flex; flex-direction: column; box-shadow: 0 20px 50px rgba(0, 38, 82, 0.25); }
+.admin-dialog .admin-modal-head { flex-shrink: 0; }
+.admin-dialog-email { margin: 0 0 12px; font-size: 0.82rem; color: var(--admin-text-muted); word-break: break-all; }
+.admin-dialog-total { display: flex; align-items: center; justify-content: space-between; margin: 0 0 12px; padding: 10px 14px; border-radius: 12px; background: var(--primary-light); color: var(--admin-navy); font-size: 0.85rem; font-weight: 700; }
+.admin-dialog-total strong { font-size: 1.1rem; }
+.admin-dialog-list { list-style: none; margin: 0; padding: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; }
+.admin-dialog-list li { display: flex; gap: 10px; align-items: baseline; padding: 9px 12px; border: 1px solid var(--admin-border); border-radius: 10px; font-size: 0.88rem; color: var(--admin-text-dark); }
+.admin-dialog-list li span { flex-shrink: 0; min-width: 20px; font-weight: 800; color: var(--admin-text-muted); }
+.admin-dialog-empty { padding: 16px; text-align: center; color: var(--admin-text-muted); font-size: 0.85rem; }
+.admin-dialog-success { align-items: center; text-align: center; padding: 28px 22px; }
+.admin-dialog-success .success-icon { width: 64px; height: 64px; border-radius: 50%; background: #F0FDF4; display: flex; align-items: center; justify-content: center; margin-bottom: 14px; }
+.admin-dialog-success h3 { margin: 0 0 6px; color: var(--admin-navy); }
+.admin-dialog-success p { margin: 0; font-size: 0.9rem; color: var(--admin-text-muted); line-height: 1.5; }

@@ -24,6 +24,7 @@ const FindNearbyPage = lazy(() => import('./components/FindNearbyPage'));
 const AdminPanel = lazy(() => import('./components/AdminPanel'));
 const AdminLogin = lazy(() => import('./components/AdminLogin'));
 const EmailVerificationHandler = lazy(() => import('./components/EmailVerificationHandler'));
+const SubscriptionLock = lazy(() => import('./components/SubscriptionLock'));
 const AgreementDraft = lazy(() => import('./components/AgreementDraft'));
 const ReviewsSection = lazy(() => import('./components/ReviewsSection'));
 const UpdatesPage = lazy(() => import('./components/UpdatesPage'));
@@ -390,6 +391,15 @@ function App() {
       window.location.href = '/';
     }
   };
+
+  // Landlord na dating naka-subscribe at expired na ang plan = naka-lock ang app hanggang makapag-renew
+  const lockedExpiry = useMemo(() => {
+    if (isGuest || !session?.user?.id || session.user.user_metadata?.user_role !== 'landlord') return null;
+    const mine = properties.filter(p => p.user_id === session.user.id && p.subscription_date && p.subscription_expiry);
+    if (!mine.length) return null;
+    const latest = Math.max(...mine.map(p => new Date(p.subscription_expiry).getTime()));
+    return latest < Date.now() ? new Date(latest).toISOString() : null;
+  }, [properties, session, isGuest]);
 
   const maxBudget = parseBudget(budgetMax) || priceQuery;
 
@@ -1485,6 +1495,12 @@ function App() {
       {isProfileModalOpen && (
         <Suspense fallback={<div className="modal-overlay centered"><Loader2 className="animate-spin" color="white" size={40} /></div>}>
           <ProfileModal session={session} onClose={() => setIsProfileModalOpen(false)} isEditingInitial={isProfileEditing} onProfileUpdated={fetchProperties} />
+        </Suspense>
+      )}
+
+      {lockedExpiry && (
+        <Suspense fallback={null}>
+          <SubscriptionLock session={session} expiry={lockedExpiry} onLogout={handleLogout} onRefresh={fetchProperties} />
         </Suspense>
       )}
 
