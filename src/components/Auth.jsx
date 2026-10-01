@@ -2,7 +2,8 @@ import { isAdminEmail } from '../lib/admin';
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { supabase } from '../lib/supabase';
-import { Mail, Lock, User, ArrowRight, Loader2, Building2, Phone, MessageCircle, Globe, X, Heart, Eye, EyeOff, BadgeCheck, Lightbulb, Search, MapPin, PlusCircle, UserPlus, Pencil, CheckCircle2 } from 'lucide-react';
+import { getCurrentPosition } from '../lib/geo';
+import { Mail, Lock, User, ArrowRight, Loader2, Building2, MapPinOff, Phone, MessageCircle, Globe, X, Heart, Eye, EyeOff, BadgeCheck, Lightbulb, Search, MapPin, PlusCircle, UserPlus, Pencil, CheckCircle2 } from 'lucide-react';
 import './Auth.css';
 
 // Facebook page shown below the auth card (text only, not a link)
@@ -27,6 +28,9 @@ const readRememberedEmail = () => {
 
 const Auth = ({ onAuthSuccess }) => {
   const [view, setView] = useState('tenant'); // 'tenant' or 'landlord'
+  // Suggestion bago pumasok bilang tenant: null | 'denied' | 'off'
+  const [locationPrompt, setLocationPrompt] = useState(null);
+  const [checkingLocation, setCheckingLocation] = useState(false);
   const [isLogin, setIsLogin] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -145,6 +149,21 @@ const Auth = ({ onAuthSuccess }) => {
     ],
   };
 
+  // Sinisilip kung naka-on ang location bago pumasok bilang tenant; kung hindi, magsu-suggest lang (puwedeng laktawan).
+  const handleEnterAsTenant = async () => {
+    setCheckingLocation(true);
+    try {
+      await getCurrentPosition({ enableHighAccuracy: false, timeout: 8000, maximumAge: 0 });
+    } catch (err) {
+      setCheckingLocation(false);
+      if (err?.code === 1) { setLocationPrompt('denied'); return; }
+      if (err?.code === 2) { setLocationPrompt('off'); return; }
+    }
+    setCheckingLocation(false);
+    setLocationPrompt(null);
+    onAuthSuccess();
+  };
+
   if (view === 'tenant') {
     return (
       <div className="auth-container">
@@ -159,8 +178,8 @@ const Auth = ({ onAuthSuccess }) => {
           </div>
 
           <div className="auth-choice-grid">
-            <button className="auth-submit-btn" onClick={onAuthSuccess}>
-              <User size={19} strokeWidth={2.4} /> Enter as Tenant
+            <button className="auth-submit-btn" onClick={handleEnterAsTenant} disabled={checkingLocation}>
+              {checkingLocation ? <Loader2 size={19} className="animate-spin" /> : <User size={19} strokeWidth={2.4} />} Enter as Tenant
             </button>
             <button className="auth-submit-btn secondary" onClick={() => setView('landlord')}>
               <Building2 size={19} strokeWidth={2.4} /> Enter as Landlord
@@ -176,6 +195,35 @@ const Auth = ({ onAuthSuccess }) => {
               <Lightbulb size={17} /> Paano Gamitin?
             </button>
           </div>
+
+          {locationPrompt && createPortal(
+            <div className="modal-overlay centered" onClick={() => setLocationPrompt(null)}>
+              <div
+                role="dialog"
+                aria-modal="true"
+                className="animate-slide-up"
+                onClick={(e) => e.stopPropagation()}
+                style={{ background: '#fff', borderRadius: 20, padding: '28px 22px', width: 'min(92vw, 360px)', textAlign: 'center', color: '#1f2937' }}
+              >
+                <MapPinOff size={52} color="#f59e0b" />
+                <h3 style={{ margin: '14px 0 8px' }}>I-on muna ang Location</h3>
+                <p style={{ margin: 0, color: '#6b7280', lineHeight: 1.5, fontSize: '0.95rem' }}>
+                  {locationPrompt === 'denied'
+                    ? 'Naka-block ang location para sa app. Payagan ito sa Settings > Apps > Budget Rent PH > Permissions > Location para makita ang mga paupahang malapit sa iyo.'
+                    : 'Naka-off ang Location (GPS) ng phone mo. I-on ito para makita ang mga paupahang malapit sa iyo at ang layo ng bawat isa.'}
+                </p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 20 }}>
+                  <button className="auth-submit-btn" onClick={handleEnterAsTenant} disabled={checkingLocation}>
+                    {checkingLocation ? 'Chine-check...' : 'Na-on ko na, magpatuloy'}
+                  </button>
+                  <button className="auth-submit-btn secondary" onClick={() => { setLocationPrompt(null); onAuthSuccess(); }}>
+                    Magpatuloy nang walang location
+                  </button>
+                </div>
+              </div>
+            </div>,
+            document.body
+          )}
 
           {/* Portal to body: .auth-card's backdrop-filter would otherwise trap the fixed overlay inside the card */}
           {isHowToUseOpen && createPortal(
