@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { X, Phone, Mail, CalendarCheck, Send, Info, BookmarkCheck } from 'lucide-react';
+import { CallGateModal } from './CallGate';
 import './ListingActionSheet.css';
 
 const pad = (n) => String(n).padStart(2, '0');
@@ -24,6 +25,7 @@ const ListingActionSheet = ({ item, kind, onClose, onViewDetails }) => {
   const [checkOut, setCheckOut] = useState('');
   const [guests, setGuests] = useState(Math.min(2, capacity));
   const [extra, setExtra] = useState('');
+  const [callGateOpen, setCallGateOpen] = useState(false);
 
   const name = item?.name || item?.title || item?.location?.split(',')[0] || 'listing';
   const nights = isBook && checkIn && checkOut ? nightsBetween(checkIn, checkOut) : 0;
@@ -144,6 +146,7 @@ ${nights ? `Tinatayang total: ${peso(total)}
             <a
               key={key}
               href={datesValid || key === 'call' ? href : undefined}
+              onClick={key === 'call' ? (e) => { e.preventDefault(); setCallGateOpen(true); } : undefined}
               className={`act-option ${key} ${datesValid || key === 'call' ? '' : 'disabled'}`}
               aria-disabled={!(datesValid || key === 'call')}
             >
@@ -158,6 +161,7 @@ ${nights ? `Tinatayang total: ${peso(total)}
 
         <button type="button" className="act-details" onClick={() => { onClose(); onViewDetails(item); }}>Tingnan ang buong detalye</button>
       </div>
+      {callGateOpen && <CallGateModal phone={phone} propertyId={item?.id} ownerEmail={email} onClose={() => setCallGateOpen(false)} />}
     </div>,
     document.body
   );

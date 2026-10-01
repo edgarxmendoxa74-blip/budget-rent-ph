@@ -8,6 +8,7 @@ import { useUserLocation } from './lib/useUserLocation';
 import { isInstalledApp, hasSeenTour, forceTourFromUrl } from './lib/tour';
 import { useApproxCoords } from './lib/useApproxCoords';
 import { useAreaSearch } from './lib/useAreaSearch';
+import CallGateLink from './components/CallGate';
 import { toCoords, distanceKm, formatDistance, inArea } from './lib/geo';
 import './App.css';
 import './components/ProfileModal.css';
@@ -1383,9 +1384,9 @@ function App() {
               </Suspense>
 
               <div className="modal-actions">
-                <a href={`tel:${selectedProperty.contact}`} className="contact-btn call">
+                <CallGateLink phone={selectedProperty.contact} propertyId={selectedProperty.id} ownerEmail={selectedProperty.email} className="contact-btn call">
                   <Phone size={20} /> Call Owner
-                </a>
+                </CallGateLink>
                 <a href={`mailto:${selectedProperty.email}?subject=Inquiry about ${selectedProperty.name}`} className="contact-btn email">
                   <Mail size={20} /> Email Owner
                 </a>
@@ -1586,9 +1587,9 @@ function App() {
             
             <div className="modal-actions" style={{ position: 'static', background: 'transparent', flexDirection: 'row', width: '100%', gap: '8px', padding: '16px 20px 20px', margin: 0, justifyContent: 'center' }}>
                {viewingLandlord.contact ? (
-                 <a href={`tel:${viewingLandlord.contact}`} className="contact-btn call" style={{ flex: 1, padding: '12px', fontSize: '0.85rem', margin: 0 }}>
+                 <CallGateLink phone={viewingLandlord.contact} ownerEmail={viewingLandlord.email} className="contact-btn call" style={{ flex: 1, padding: '12px', fontSize: '0.85rem', margin: 0 }}>
                    <Phone size={18} /> Call
-                 </a>
+                 </CallGateLink>
                ) : (
                  <span className="contact-btn call" style={{ flex: 1, padding: '12px', fontSize: '0.85rem', margin: 0, opacity: 0.6, pointerEvents: 'none' }}>
                    <Phone size={18} /> No number
