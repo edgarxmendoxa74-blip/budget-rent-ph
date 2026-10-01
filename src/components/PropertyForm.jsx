@@ -24,6 +24,7 @@ const PropertyForm = ({ onClose, session, onListingAdded }) => {
     rooms: '1',
     secured: 'Yes',
     petsAllowed: 'No',
+    downPayment: '',
     kitchen: '0',
     email: session?.user?.user_metadata?.business_email || session?.user?.email || '',
     ownerBusinessName: session?.user?.user_metadata?.property_name || '',
@@ -149,6 +150,7 @@ const PropertyForm = ({ onClose, session, onListingAdded }) => {
         rooms: parseInt(formData.rooms || 1),
         secured: formData.secured,
         pets_allowed: formData.type === 'Staycation' ? formData.petsAllowed : 'No',
+        down_payment: formData.type === 'Staycation' ? Math.max(0, parseFloat(formData.downPayment || 0) || 0) : 0,
         kitchen: parseInt(formData.kitchen || 0),
         email: formData.email,
         amenities: amenities,
@@ -164,9 +166,10 @@ const PropertyForm = ({ onClose, session, onListingAdded }) => {
       let { error } = await supabase.from('properties').insert(payload);
 
       // Fallback kapag wala pa ang availability / latitude / longitude columns sa database
-      if (error && (error.code === '42703' || /availability|latitude|longitude|pets_allowed/i.test(error.message || ''))) {
+      if (error && (error.code === '42703' || /availability|latitude|longitude|pets_allowed|down_payment/i.test(error.message || ''))) {
         const legacyPayload = { ...payload };
         delete legacyPayload.pets_allowed;
+        delete legacyPayload.down_payment;
         delete legacyPayload.availability;
         delete legacyPayload.latitude;
         delete legacyPayload.longitude;
@@ -258,10 +261,17 @@ const PropertyForm = ({ onClose, session, onListingAdded }) => {
                 </select>
               </div>
               <div className="form-group">
-                <label>Monthly Price (₱)</label>
+                <label>{formData.type === 'Staycation' ? 'Price per Night (₱)' : 'Monthly Price (₱)'}</label>
                 <input name="price" type="number" placeholder="5000" required onChange={handleChange} />
               </div>
             </div>
+
+            {formData.type === 'Staycation' && (
+              <div className="form-group">
+                <label>Down Payment (₱)</label>
+                <input name="downPayment" type="number" min="0" placeholder="1000" value={formData.downPayment} onChange={handleChange} />
+              </div>
+            )}
 
             <div className="form-group">
               <label>Location</label>

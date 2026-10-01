@@ -160,6 +160,18 @@
   animation: notifPop 0.3s var(--ease-pop);
 }
 
+/* Green call-requests button sa header */
+.notif-btn.call-btn {
+  background: #10B981;
+  color: #fff;
+  border-radius: 50%;
+  box-shadow: 0 4px 10px rgba(16, 185, 129, 0.4);
+}
+
+.notif-btn.call-btn:hover {
+  background: #059669;
+}
+
 .notif-btn.has-unread {
   animation: notifPulse 0.5s var(--ease-pop);
 }

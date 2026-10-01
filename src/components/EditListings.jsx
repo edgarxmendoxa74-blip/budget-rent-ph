@@ -153,6 +153,7 @@ const EditListings = ({ session, onClose, onListingUpdated, initialEditingItem =
         rooms: parseInt(editingItem.rooms || 1),
         secured: editingItem.secured,
         pets_allowed: /staycation/i.test(editingItem.type || '') ? (editingItem.pets_allowed || 'No') : 'No',
+        down_payment: /staycation/i.test(editingItem.type || '') ? Math.max(0, parseFloat(editingItem.down_payment || 0) || 0) : 0,
         kitchen: parseInt(editingItem.kitchen || 0),
         email: editingItem.email,
         availability: editingItem.availability || 'Available',
@@ -168,8 +169,9 @@ const EditListings = ({ session, onClose, onListingUpdated, initialEditingItem =
         .eq('id', editingItem.id);
 
       // Fallback kapag wala pa ang availability / latitude / longitude columns sa database
-      if (error && (error.code === '42703' || /availability|latitude|longitude|pets_allowed|advance_months|deposit_months/i.test(error.message || ''))) {
+      if (error && (error.code === '42703' || /availability|latitude|longitude|pets_allowed|advance_months|deposit_months|down_payment/i.test(error.message || ''))) {
         const legacyPayload = { ...payload };
+        delete legacyPayload.down_payment;
         delete legacyPayload.pets_allowed;
         delete legacyPayload.advance_months;
         delete legacyPayload.deposit_months;
@@ -289,10 +291,16 @@ const EditListings = ({ session, onClose, onListingUpdated, initialEditingItem =
                   </select>
                 </div>
                 <div className="edit-form-group">
-                  <label>Price (₱/mo)</label>
+                  <label>{/staycation/i.test(editingItem.type || '') ? 'Price (₱/night)' : 'Price (₱/mo)'}</label>
                   <input type="number" value={editingItem.price || ''} onChange={e => handleEditChange('price', e.target.value)} />
                 </div>
               </div>
+              {/staycation/i.test(editingItem.type || '') ? (
+              <div className="edit-form-group">
+                <label>Down Payment (₱)</label>
+                <input type="number" min="0" value={editingItem.down_payment ?? ''} onChange={e => handleEditChange('down_payment', e.target.value)} />
+              </div>
+              ) : (
               <div className="edit-form-row">
                 <div className="edit-form-group">
                   <label>Advance (months)</label>
@@ -307,6 +315,7 @@ const EditListings = ({ session, onClose, onListingUpdated, initialEditingItem =
                   </select>
                 </div>
               </div>
+              )}
               <div className="edit-form-group">
                 <label>Location</label>
                 <input value={editingItem.location || ''} placeholder="Barangay, Bayan/City, Probinsya" onChange={e => handleEditChange('location', e.target.value)} />

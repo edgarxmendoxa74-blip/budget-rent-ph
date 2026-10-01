@@ -502,6 +502,26 @@ function App() {
     return () => clearInterval(t);
   }, []);
 
+  // Customer info requests (gustong magpa-tawag) para sa landlord; RLS ang naglilimita sa listings niya
+  const [inquiries, setInquiries] = useState([]);
+  const seenInquiryIds = useRef(null);
+  useEffect(() => {
+    if (!session?.user || isGuest) { setInquiries([]); seenInquiryIds.current = null; return; }
+    const myId = session.user.id;
+    const myEmail = String(session.user.email || '').toLowerCase();
+    const load = async () => {
+      const { data, error } = await supabase.from('customer_inquiries').select('*').order('created_at', { ascending: false }).limit(30);
+      if (error) return;
+      const list = (data || []).filter(r => r.user_id !== myId && (!isAdminEmail(myEmail) || String(r.owner_email || '').toLowerCase() === myEmail));
+      if (seenInquiryIds.current && list.some(r => !seenInquiryIds.current.has(r.id))) playNotifySound();
+      seenInquiryIds.current = new Set(list.map(r => r.id));
+      setInquiries(list);
+    };
+    load();
+    const t = setInterval(load, 30000);
+    return () => clearInterval(t);
+  }, [session, isGuest]);
+
   const timeAgo = (iso) => {
     const mins = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60000));
     if (mins < 1) return 'Just now';
@@ -527,6 +547,21 @@ function App() {
     }
     return items.filter(n => !deletedNotifs.includes(n.id));
   }, [isGuest, announcements, deletedNotifs]);
+
+  // Hiwalay na call requests (Phone icon sa header) para sa landlord
+  const callNotifs = useMemo(() => inquiries.map(r => ({
+    id: `inq-${r.id}`,
+    title: `${r.customer_name} gustong tumawag`,
+    phone: r.customer_phone,
+    time: timeAgo(r.created_at)
+  })).filter(n => !deletedNotifs.includes(n.id)), [inquiries, deletedNotifs]);
+  const callUnread = callNotifs.filter(n => !readNotifs.includes(n.id)).length;
+  const [isCallNotifOpen, setIsCallNotifOpen] = useState(false);
+  const markCallsRead = () => {
+    const next = [...new Set([...readNotifs, ...callNotifs.map(n => n.id)])];
+    setReadNotifs(next);
+    localStorage.setItem('budgetrent_read_notifs', JSON.stringify(next));
+  };
 
   const unreadCount = notifications.filter(n => !readNotifs.includes(n.id)).length;
 
@@ -602,10 +637,60 @@ function App() {
             </div>
           </div>
           <div className="nav-actions">
+            {!isGuest && session?.user && (
+              <div className="notif-wrap">
+                <button
+                  className={`menu-btn notif-btn call-btn${callUnread > 0 ? ' has-unread' : ''}`}
+                  onClick={() => { setIsNotifOpen(false); setIsCallNotifOpen(o => !o); }}
+                  aria-label="Call requests"
+                >
+                  <Phone size={22} />
+                  {callUnread > 0 && <span className="notif-badge">{callUnread}</span>}
+                </button>
+
+                {isCallNotifOpen && (
+                  <>
+                    <div className="notif-overlay" onClick={() => setIsCallNotifOpen(false)} />
+                    <div className="notif-panel animate-slide-up">
+                      <div className="notif-head">
+                        <h4>Call Requests</h4>
+                        <div className="notif-head-actions">
+                          {callUnread > 0 && <button onClick={markCallsRead}>Mark all as read</button>}
+                          {callNotifs.length > 0 && <button onClick={() => deleteNotifs(callNotifs.map(n => n.id))}>Clear all</button>}
+                        </div>
+                      </div>
+                      <div className="notif-list">
+                        {callNotifs.length === 0 && <p className="notif-empty">Wala pang gustong tumawag.</p>}
+                        {callNotifs.map(n => (
+                          <div key={n.id} className={`notif-item${readNotifs.includes(n.id) ? '' : ' unread'}`}
+                            onClick={() => {
+                              const next = [...new Set([...readNotifs, n.id])];
+                              setReadNotifs(next);
+                              localStorage.setItem('budgetrent_read_notifs', JSON.stringify(next));
+                            }}>
+                            <div className="notif-icon green"><Phone size={18} /></div>
+                            <div className="notif-text">
+                              <p className="notif-title">{n.title}</p>
+                              <p className="notif-body"><a href={`tel:${n.phone}`} style={{ color: 'inherit', fontWeight: 800 }}>{n.phone}</a></p>
+                              <span className="notif-time">{n.time}</span>
+                            </div>
+                            <button type="button" className="notif-delete" aria-label="Delete" title="Delete"
+                              onClick={(e) => { e.stopPropagation(); deleteNotifs([n.id]); }}>
+                              <Trash2 size={15} />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+
             <div className="notif-wrap">
               <button
                 className={`menu-btn notif-btn${unreadCount > 0 ? ' has-unread' : ''}`}
-                onClick={() => setIsNotifOpen(o => !o)}
+                onClick={() => { setIsCallNotifOpen(false); setIsNotifOpen(o => !o); }}
                 aria-label="Notifications"
               >
                 <Bell size={22} />
@@ -1263,6 +1348,24 @@ function App() {
                 const { price, advance, deposit, advanceMonths, depositMonths } = getMoveInBreakdown(selectedProperty);
                 const peso = (n) => `₱${n.toLocaleString()}`;
                 const mo = (n) => `${n} ${n === 1 ? 'month' : 'months'}`;
+                if (isStaycation(selectedProperty)) {
+                  const down = Number(selectedProperty.down_payment) || 0;
+                  return (
+                    <div className="modal-movein-box">
+                      <div className="modal-movein-title">Bayarin</div>
+                      <div className="modal-movein-grid">
+                        <div className="modal-movein-cell rent">
+                          <span>Per Night</span>
+                          <strong>{peso(price)}</strong>
+                        </div>
+                        <div className="modal-movein-cell">
+                          <span>Down Payment</span>
+                          <strong>{down > 0 ? peso(down) : 'Wala'}</strong>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                }
                 return (
                   <div className="modal-movein-box">
                     <div className="modal-movein-title">Bayarin</div>
