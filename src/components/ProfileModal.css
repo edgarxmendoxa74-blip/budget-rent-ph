@@ -418,3 +418,9 @@
   .modal-overlay:has(.profile-modal) { align-items: center; padding: 20px; }
   .profile-modal { border-radius: 28px !important; }
 }
+
+/* Mobile: bahagyang itaas ang account modal mula sa ibaba ng screen */
+@media (max-width: 599px) {
+  .modal-overlay:has(.profile-modal) { padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px)); box-sizing: border-box; }
+  .profile-modal { border-radius: 28px !important; max-height: calc(90dvh - 24px); }
+}
