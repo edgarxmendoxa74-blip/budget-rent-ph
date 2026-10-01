@@ -102,6 +102,9 @@ const AdminPanel = ({ onLogout }) => {
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [proofInput, setProofInput] = useState('');
+  const [proofUrl, setProofUrl] = useState('');
+  const [proofError, setProofError] = useState('');
   const [listingFilter, setListingFilter] = useState('paupahan'); // paupahan | staycation
   
   // Modals state
@@ -492,6 +495,19 @@ const AdminPanel = ({ onLogout }) => {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Private ang payment-proofs bucket: gumawa ng pansamantalang signed link (5 min) para sa admin
+  const viewPaymentProof = async () => {
+    const raw = proofInput.trim();
+    if (!raw) return;
+    // Tumatanggap ng path (userId/123.jpg) o ng lumang public URL
+    const path = raw.includes('/payment-proofs/') ? decodeURIComponent(raw.split('/payment-proofs/')[1].split('?')[0]) : raw;
+    setProofError('');
+    setProofUrl('');
+    const { data, error } = await supabase.storage.from('payment-proofs').createSignedUrl(path, 300);
+    if (error || !data?.signedUrl) return setProofError('Hindi makita ang file. Check ang path.');
+    setProofUrl(data.signedUrl);
   };
 
   const handleRenew = async (landlordEmail, planId = 'yearly') => {
@@ -990,6 +1006,21 @@ const AdminPanel = ({ onLogout }) => {
 
           {activeTab === 'subscriptions' && (
             <div className="admin-list">
+              <div className="proof-viewer">
+                <input
+                  type="text"
+                  value={proofInput}
+                  onChange={e => setProofInput(e.target.value)}
+                  placeholder="I-paste ang 'Proof of Payment (file)' path galing sa Messenger"
+                />
+                <button type="button" className="manage-btn" onClick={viewPaymentProof}>View Proof</button>
+                {proofError && <small className="proof-error">{proofError}</small>}
+                {proofUrl && (
+                  <a href={proofUrl} target="_blank" rel="noopener noreferrer">
+                    <img src={proofUrl} alt="Payment proof" />
+                  </a>
+                )}
+              </div>
               <div className="admin-list-head sub-row">
                 <span>Landlord</span><span>Plan</span><span>Availed</span><span>Expiry</span><span>Action</span>
               </div>

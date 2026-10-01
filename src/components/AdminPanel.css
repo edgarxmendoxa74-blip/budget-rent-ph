@@ -854,3 +854,8 @@
 .admin-dialog-success .success-icon { width: 64px; height: 64px; border-radius: 50%; background: #F0FDF4; display: flex; align-items: center; justify-content: center; margin-bottom: 14px; }
 .admin-dialog-success h3 { margin: 0 0 6px; color: var(--admin-navy); }
 .admin-dialog-success p { margin: 0; font-size: 0.9rem; color: var(--admin-text-muted); line-height: 1.5; }
+
+.proof-viewer { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 12px; margin-bottom: 10px; background: #fff; border: 1px solid var(--border-subtle, #e2e8f0); border-radius: 14px; }
+.proof-viewer input { flex: 1 1 240px; padding: 8px 12px; border: 1px solid var(--border-subtle, #e2e8f0); border-radius: 10px; font-family: inherit; font-size: 0.8rem; }
+.proof-viewer img { max-width: 260px; max-height: 340px; border-radius: 10px; border: 1px solid var(--border-subtle, #e2e8f0); }
+.proof-error { color: #ef4444; font-weight: 700; }

@@ -44,7 +44,6 @@ const SubscriptionLock = ({ session, expiry, onLogout, onRefresh }) => {
       const path = `${session.user.id}/${Date.now()}.${ext}`;
       const { error: upErr } = await supabase.storage.from('payment-proofs').upload(path, file, { contentType: file.type });
       if (upErr) throw upErr;
-      const { data: { publicUrl } } = supabase.storage.from('payment-proofs').getPublicUrl(path);
 
       const message = `Subscription Renewal Request
 Plan: ${selectedPlan.label} (₱${selectedPlan.price})
@@ -53,7 +52,7 @@ Phone: ${form.phone}
 Email: ${session.user.email}
 Payment Method: ${method}
 Reference No.: ${form.reference.trim() || 'N/A'}
-Proof of Payment: ${publicUrl}`;
+Proof of Payment (file): ${path}`;
 
       try { navigator.clipboard?.writeText(message); } catch { /* ignore */ }
       window.open(`https://m.me/${PAYMENT_PAGE_ID}?text=${encodeURIComponent(message)}`, '_blank', 'noopener,noreferrer');
