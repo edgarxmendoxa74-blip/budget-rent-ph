@@ -632,60 +632,6 @@ const FindNearbyPage = ({ listings, reviewStats, onSelectProperty, isLandlord, u
     </div>
   );
 
-  // Unang screen: pumili muna ang tenant kung Find Rent o Staycation bago gumana ang Nearby
-  // Required muna ang Location (para mabilis na lumabas ang resulta pag pinili na ang Find Rent / Staycation)
-  if (!isLandlord && !intent && !locationFound) {
-    const blocked = errorType === 'denied' || errorType === 'insecure' || errorType === 'policy';
-    const noSignal = errorType === 'unavailable';
-    return (
-      <div className="page-section animate-fade-in" style={{ paddingBottom: '80px', backgroundColor: 'white' }}>
-        <header className="hero nearby-hero">
-          <HeroBudi message="I-ON muna ang Location ng phone mo para mabilis kong makita ang mga bahay malapit sa iyo!" />
-          <div className="hero-content">
-            <div className="nearby-title-row">
-              <span className="nearby-icon"><Navigation size={22} /></span>
-              <h2>I-ON ang Location</h2>
-            </div>
-            <p className="nearby-sub">Kailangan ito bago ka makapag-Find Rent o Staycation</p>
-          </div>
-        </header>
-        <main className="info-page-container" style={{ width: '100%', maxWidth: '800px', padding: '6px' }}>
-          <div className="near-empty">
-            <div>
-              <div className="near-pin"><Radar size={42} /></div>
-              <h3>{blocked ? 'Location Access Required' : 'I-ON ang Location para magpatuloy'}</h3>
-              {errorType === 'policy' && <p>Hindi pa pinapayagan ng website ang location sa ngayon. I-type na lang ang lugar sa ibaba.</p>}
-              {errorType === 'insecure' && <p>Gumagana lang ang location sa secure na link (<b>https://</b>). Buksan ang app gamit ang https link, o i-type ang lugar sa ibaba.</p>}
-              {errorType === 'denied' && (device.isDesktop
-                ? <><p>Naka-block ang location sa browser mo. Para magpatuloy:</p><DesktopLocationSteps os={device.os} browser={device.browser} /></>
-                : <p>Naka-block ang Location para sa app na ito. Pumunta sa <b>Phone Settings</b> &gt; <b>Location</b> at payagan ito, tapos bumalik dito at pindutin ang button sa ibaba.</p>)}
-              {noSignal && <p className="near-inline-error"><AlertCircle size={15} /> {device.isDesktop ? 'Hindi makuha ang location. Siguraduhing naka-ON ang Wi-Fi at Location services.' : 'Hindi makuha ang GPS signal. Siguraduhing naka-ON ang Location ng phone mo, tapos subukan ulit.'}</p>}
-
-              {errorType !== 'policy' && errorType !== 'insecure' && (
-                <button onClick={() => setShowConfirm(true)} disabled={locating} className="near-cta">
-                  {locating ? <><Loader2 size={22} className="animate-spin" /> Hinahanap ka...</> : <><MapPin size={20} /> {device.isDesktop ? 'Activate Location' : 'I-ON ang Location'}</>}
-                </button>
-              )}
-
-              {(errorType === 'policy' || errorType === 'insecure' || noSignal) && (
-                <form onSubmit={handleManualSearch} className="search-bar nearby-search" style={{ marginTop: 16 }}>
-                  <Search className="search-icon" size={20} />
-                  <input type="text" placeholder="Saan ka lilipat? (hal. Dagupan, Pangasinan)" value={manualQuery} onChange={(e) => setManualQuery(e.target.value)} />
-                  <button type="submit" className="nearby-search-btn" disabled={locating}>Search</button>
-                </form>
-              )}
-              {errorType === 'notfound' && <p className="near-inline-error"><AlertCircle size={15} /> Hindi mahanap ang lugar na iyon. Subukan ang ibang city o barangay.</p>}
-
-              {!device.isDesktop && !blocked && <MobileLocationTip isIOS={device.isIOS} />}
-            </div>
-          </div>
-        </main>
-        {confirmModal}
-        {offlineModal}
-      </div>
-    );
-  }
-
   if (!isLandlord && !intent) {
     return (
       <div className="page-section animate-fade-in" style={{ paddingBottom: '80px', backgroundColor: 'white' }}>
