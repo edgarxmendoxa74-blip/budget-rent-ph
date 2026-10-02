@@ -1,8 +1,13 @@
 import React, { useEffect, useState, Suspense, lazy } from 'react';
 import './MascotSplash.css';
+import { takeBudiSplash, BUDI_SPLASH_EVENT } from '../lib/budiSplash';
 
 // three.js is heavy — load it only when the splash actually shows
-const BudiScene = lazy(() => import('./BudiScene.jsx'));
+// Kapag pumalya ang pag-load ng chunk, tawagin ang onFail (SVG fallback) imbes na mag-crash ang buong app
+const BudiScene = lazy(() => import('./BudiScene.jsx').catch((err) => {
+  console.warn('[BudiScene] hindi na-load ang 3D chunk', err);
+  return { default: function BudiSceneFailed({ onFail }) { useEffect(() => { onFail?.(); }, [onFail]); return null; } };
+}));
 
 // Phases: hop -> think -> idea -> exit
 const TIMELINE = [
@@ -13,10 +18,10 @@ const TIMELINE = [
 const DONE_AT = 6500;
 
 const CAPTIONS = {
-  hop: 'Kumusta! Ako si Budi 🐻',
-  think: 'Hmm... saan kaya may murang paupahan?',
-  idea: 'Ayun! May idea na ako! 💡',
-  exit: 'Tara, hanap na tayo!',
+  hop: 'Hi! I\'m Budi 🐻',
+  think: 'Hmm... where can we find an affordable rental?',
+  idea: 'Aha! I\'ve got an idea! 💡',
+  exit: 'Come on, let\'s start looking!',
 };
 
 export function Budi({ phase = 'hop', className = '' }) {
@@ -26,7 +31,7 @@ export function Budi({ phase = 'hop', className = '' }) {
       data-phase={phase}
       viewBox="0 -70 200 300"
       role="img"
-      aria-label="Budi, ang teddy bear mascot ng BudgetRent"
+      aria-label="Budi, the BudgetRent teddy bear mascot"
     >
       <defs>
         <radialGradient id="fFur" cx="35%" cy="28%" r="80%">
@@ -170,11 +175,40 @@ export function Budi({ phase = 'hop', className = '' }) {
   );
 }
 
+// Naka-mount palagi; nagpe-play lang ang splash kapag tinawag ang showBudiSplash() pagkatapos mag-login
 export default function MascotSplash() {
+  const [run, setRun] = useState(() => (takeBudiSplash() ? 1 : 0));
+
+  useEffect(() => {
+    const onShow = () => { if (takeBudiSplash()) setRun((n) => n + 1); };
+    window.addEventListener(BUDI_SPLASH_EVENT, onShow);
+    return () => window.removeEventListener(BUDI_SPLASH_EVENT, onShow);
+  }, []);
+
+  if (!run) return null;
+  return (
+    <SplashBoundary key={run}>
+      <SplashRun onDone={() => setRun(0)} />
+    </SplashBoundary>
+  );
+}
+
+// Kapag nag-error ang 3D Budi (chunk load / WebGL), SVG Budi na lang — huwag hayaang mag-white screen ang app
+class SplashBoundary extends React.Component {
+  state = { failed: false };
+  static getDerivedStateFromError() { return { failed: true }; }
+  componentDidCatch(err) { console.warn('[MascotSplash]', err); }
+  render() {
+    if (this.state.failed) return React.cloneElement(this.props.children, { forceSvg: true });
+    return this.props.children;
+  }
+}
+
+function SplashRun({ onDone, forceSvg = false }) {
   const [phase, setPhase] = useState('hop');
-  const [webglFailed, setWebglFailed] = useState(false);
+  const [webglFailed, setWebglFailed] = useState(forceSvg);
+  const [started, setStarted] = useState(forceSvg);
   const [done, setDone] = useState(false);
-  const [started, setStarted] = useState(false);
 
   // safety net: never let the splash block the app if the 3D chunk fails to load
   useEffect(() => {
@@ -190,6 +224,10 @@ export default function MascotSplash() {
     timers.push(setTimeout(() => setDone(true), DONE_AT));
     return () => timers.forEach(clearTimeout);
   }, [started]);
+
+  useEffect(() => {
+    if (done) onDone();
+  }, [done, onDone]);
 
   if (done) return null;
 
@@ -216,7 +254,7 @@ export default function MascotSplash() {
           Budget<span>Rent</span><small>ph</small>
         </div>
         <p className="mascot-caption" key={phase}>{CAPTIONS[phase]}</p>
-        <span className="mascot-skip">I-tap para i-skip</span>
+        <span className="mascot-skip">Tap to skip</span>
       </div>
     </div>
   );

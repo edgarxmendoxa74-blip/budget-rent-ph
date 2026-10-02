@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { isAdminEmail } from '../lib/admin';
+import { showBudiSplash } from '../lib/budiSplash';
 import { Mail, Lock, Shield, Loader2, ArrowLeft, Eye, EyeOff } from 'lucide-react';
 import './Auth.css'; // Reusing some auth styles
 
@@ -47,6 +48,7 @@ const AdminLogin = ({ onLoginSuccess, onBack }) => {
         localStorage.setItem('budgetrent_admin_bypass', 'true');
         rememberEmail();
         if (remember) await savePassword();
+        showBudiSplash();
         onLoginSuccess();
         return;
       }
@@ -65,6 +67,7 @@ const AdminLogin = ({ onLoginSuccess, onBack }) => {
 
       rememberEmail();
       if (remember) await savePassword();
+      showBudiSplash();
       onLoginSuccess();
     } catch (err) {
       setError(err.message + ". (Check your Email/Password)");
@@ -121,7 +124,7 @@ const AdminLogin = ({ onLoginSuccess, onBack }) => {
 
           <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.88rem', color: 'var(--text-muted)', cursor: 'pointer', textAlign: 'left' }}>
             <input type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)} style={{ width: 16, height: 16, margin: 0 }} />
-            Save email &amp; password sa device na ito
+            Save email &amp; password on this device
           </label>
 
           {error && <div className="auth-error">{error}</div>}

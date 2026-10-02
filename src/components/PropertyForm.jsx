@@ -118,9 +118,9 @@ const PropertyForm = ({ onClose, session, onListingAdded }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!session?.user) return alert('Dapat kang naka-log in!');
-    if (!image) return alert('Paki-upload muna ang litrato ng iyong property!');
-    if (!coords) return alert('Paki-pin muna ang lokasyon ng property sa mapa para makita ito ng tenants sa radar.');
+    if (!session?.user) return alert('You need to be logged in!');
+    if (!image) return alert('Please upload a photo of your property first!');
+    if (!coords) return alert('Please pin the property location on the map first so tenants can find it on the radar.');
     
     setLoading(true);
     
@@ -199,9 +199,9 @@ const PropertyForm = ({ onClose, session, onListingAdded }) => {
         <div className="modal-content property-modal success-modal animate-fade-in" onClick={e => e.stopPropagation()}>
           <div className="success-view">
             <CheckCircle size={64} className="success-icon" />
-            <h2>Sapat na ang impormasyon!</h2>
-            <p>Ang iyong property listing ay natanggap na at kasalukuyang sumasailalim sa maikling validation. Mackababalitaan ka namin agad!</p>
-            <button className="done-btn" onClick={onClose}>Bumalik sa Home</button>
+            <h2>All set!</h2>
+            <p>We&apos;ve received your property listing and it&apos;s now going through a quick validation. We&apos;ll get back to you soon!</p>
+            <button className="done-btn" onClick={onClose}>Back to Home</button>
           </div>
         </div>
       </div>
@@ -215,33 +215,33 @@ const PropertyForm = ({ onClose, session, onListingAdded }) => {
         
         <div className="modal-header-section">
           <span className="badge">Landlord Portal</span>
-          <h2>I-list ang iyong Property</h2>
-          <p>Tulungan kaming makahanap ng bagong tenant para sa iyong paupahan.</p>
+          <h2>List your Property</h2>
+          <p>Let us help you find new tenants for your rental.</p>
         </div>
 
         <div className="form-grid">
            {/* Benefits Section (unchanged) */}
            <div className="benefits-section">
-            <h3>Bakit dito mag-list?</h3>
+            <h3>Why list here?</h3>
             <div className="benefit-item">
               <Zap size={20} />
               <div>
-                <strong>Mabilis na Visibility</strong>
-                <p>Libo-libong students at professionals ang naghahanap dito araw-araw.</p>
+                <strong>Fast Visibility</strong>
+                <p>Thousands of students and professionals search here every day.</p>
               </div>
             </div>
             <div className="benefit-item">
               <Shield size={20} />
               <div>
                 <strong>Zero Commission</strong>
-                <p>Direktang sa iyo ang lahat ng kikitain. Walang hidden charges.</p>
+                <p>All earnings go directly to you. No hidden charges.</p>
               </div>
             </div>
             <div className="benefit-item">
               <TrendingUp size={20} />
               <div>
                 <strong>Easy Management</strong>
-                <p>Simple at diretso ang aming platform para sa mga owners.</p>
+                <p>Our platform is simple and straightforward for owners.</p>
               </div>
             </div>
           </div>
@@ -256,7 +256,7 @@ const PropertyForm = ({ onClose, session, onListingAdded }) => {
               <div className="form-group">
                 <label>Category</label>
                 <select name="type" value={formData.type} onChange={handleChange}>
-                  <option>Paupahan</option>
+                  <option value="Paupahan">Rental</option>
                   <option>Staycation</option>
                 </select>
               </div>
@@ -275,12 +275,12 @@ const PropertyForm = ({ onClose, session, onListingAdded }) => {
 
             <div className="form-group">
               <label>Location</label>
-              <input name="location" placeholder="Barangay, Bayan/City, Probinsya (hal. Bonuan, Dagupan, Pangasinan)" required onChange={handleChange} />
-              <span className="upload-hint">Isulat ang bayan at probinsya para makita ng mga tenants na naghahanap sa lugar na iyon.</span>
+              <input name="location" placeholder="Barangay, Town/City, Province (e.g. Bonuan, Dagupan, Pangasinan)" required onChange={handleChange} />
+              <span className="upload-hint">Include the town and province so tenants searching that area can find you.</span>
             </div>
 
             <div className="form-group">
-              <label>Pin sa Mapa <span style={{ color: '#ef4444' }}>(Required)</span></label>
+              <label>Pin on Map <span style={{ color: '#ef4444' }}>(Required)</span></label>
               <LocationPicker
                 value={coords}
                 addressHint={formData.location}
@@ -291,15 +291,15 @@ const PropertyForm = ({ onClose, session, onListingAdded }) => {
             <div className="form-group">
               <label>Availability Status</label>
               <select name="availability" value={formData.availability} onChange={handleChange}>
-                <option value="Available">Available — may bakante pa</option>
-                <option value="Occupied">Occupied — na-accommodate na</option>
+                <option value="Available">Available — has vacancies</option>
+                <option value="Occupied">Occupied — fully booked</option>
               </select>
-              <span className="upload-hint">I-update ito kapag puno na o nabakante ang unit.</span>
+              <span className="upload-hint">Update this when the unit fills up or becomes vacant.</span>
             </div>
 
             <div className="form-group image-upload-group">
                <label>Main Property Image <span style={{ color: '#ef4444' }}>(Required)</span></label>
-               <span className="upload-hint">Mag-upload ng malinaw na litrato para mas madaling mapansin ng mga tenants.</span>
+               <span className="upload-hint">Upload a clear photo so tenants notice your listing more easily.</span>
                <div className="image-upload-container">
                   <input type="file" id="prop-image" accept="image/*" hidden onChange={handleImageUpload} disabled={uploading} />
                   <label htmlFor="prop-image" className={`upload-box ${uploading ? 'disabled' : ''}`}>
@@ -381,7 +381,7 @@ const PropertyForm = ({ onClose, session, onListingAdded }) => {
             </div>
 
             <button type="submit" className="submit-listing-btn" disabled={uploading || loading}>
-              {loading ? <Loader2 className="animate-spin" /> : 'I-submit ang Listing'}
+              {loading ? <Loader2 className="animate-spin" /> : 'Submit Listing'}
             </button>
           </form>
         </div>

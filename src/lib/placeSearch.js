@@ -46,8 +46,8 @@ export const parseLocation = (location) => {
 };
 
 export const PLACE_LEVELS = {
-  lalawigan: 'Lalawigan',
-  bayan: 'Bayan / Lungsod',
+  lalawigan: 'Province',
+  bayan: 'Town / City',
   barangay: 'Barangay'
 };
 

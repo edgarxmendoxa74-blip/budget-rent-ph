@@ -228,7 +228,7 @@ export default function BudiScene({ phase = 'hop', onReady, onFail }) {
     let renderer;
     try {
       renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'low-power' });
-    } catch (e) {
+    } catch {
       onFail?.();
       return undefined;
     }
@@ -415,5 +415,5 @@ export default function BudiScene({ phase = 'hop', onReady, onFail }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  return <div className="budi-3d" ref={mountRef} role="img" aria-label="Budi, ang teddy bear mascot ng BudgetRent" />;
+  return <div className="budi-3d" ref={mountRef} role="img" aria-label="Budi, the BudgetRent teddy bear mascot" />;
 }

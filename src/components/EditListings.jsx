@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase';
 import LocationPicker from './LocationPicker';
 import { toCoords } from '../lib/geo';
 import './EditListings.css';
+import { ikImage } from '../lib/imagekit';
 
 const CATEGORIES = ['Paupahan', 'Staycation'];
 const normalizeCategory = (type) =>
@@ -93,7 +94,7 @@ const EditListings = ({ session, onClose, onListingUpdated, initialEditingItem =
       if (onListingUpdated) onListingUpdated();
     } catch (err) {
       if (err?.code === '42703' || /availability/i.test(err?.message || '')) {
-        alert('Wala pa ang "availability" column sa database. Patakbuhin muna ang SQL migration sa Supabase SQL Editor.');
+        alert('The "availability" column is missing in the database. Run the SQL migration in the Supabase SQL Editor first.');
       } else {
         alert('Error updating availability: ' + err.message);
       }
@@ -207,7 +208,7 @@ const EditListings = ({ session, onClose, onListingUpdated, initialEditingItem =
         <div className="edit-listings-top">
           <div className="edit-listings-header">
             <h2>My Listings</h2>
-            <p>I-manage ang iyong mga property listings.</p>
+            <p>Manage your property listings.</p>
           </div>
           <button className="close-edit-btn" onClick={onClose}><X size={20} /></button>
         </div>
@@ -217,19 +218,19 @@ const EditListings = ({ session, onClose, onListingUpdated, initialEditingItem =
             <div className="edit-loading"><Loader2 className="animate-spin" size={32} /> Loading...</div>
           ) : myListings.length === 0 ? (
             <div className="edit-empty">
-              <p>Wala ka pang listings. Mag-add ng property gamit ang "+" button.</p>
+              <p>You don&apos;t have any listings yet. Add a property using the "+" button.</p>
             </div>
           ) : (
             <div className="my-listings-list">
               {myListings.map(item => (
                 <div key={item.id} className="my-listing-item">
                   <div className="my-listing-img">
-                    <img src={item.image || '/placeholder.png'} alt={item.name} />
+                    <img src={ikImage(item.image, 480) || '/placeholder.png'} alt={item.name} />
                   </div>
                   <div className="my-listing-info">
                     <div className="my-listing-title-row">
                       <h4>{item.name}</h4>
-                      <span className="my-listing-type">{item.type}</span>
+                      <span className="my-listing-type">{item.type === 'Paupahan' ? 'Rental' : item.type}</span>
                     </div>
                     <div className="my-listing-meta">
                       <MapPin size={12} /> <span>{item.location}</span>
@@ -240,7 +241,7 @@ const EditListings = ({ session, onClose, onListingUpdated, initialEditingItem =
                         type="button"
                         className={`avail-toggle ${isOccupiedItem(item) ? 'occupied' : 'available'}`}
                         onClick={(e) => { e.stopPropagation(); handleToggleAvailability(item); }}
-                        title="I-toggle ang status: Available / Occupied"
+                        title="Toggle status: Available / Occupied"
                       >
                         {isOccupiedItem(item) ? 'Occupied' : 'Available'}
                       </button>
@@ -286,7 +287,7 @@ const EditListings = ({ session, onClose, onListingUpdated, initialEditingItem =
                 <div className="edit-form-group">
                   <label>Category</label>
                   <select value={editingItem.type || 'Paupahan'} onChange={e => handleEditChange('type', e.target.value)}>
-                    <option>Paupahan</option>
+                    <option value="Paupahan">Rental</option>
                     <option>Staycation</option>
                   </select>
                 </div>
@@ -305,23 +306,23 @@ const EditListings = ({ session, onClose, onListingUpdated, initialEditingItem =
                 <div className="edit-form-group">
                   <label>Advance (months)</label>
                   <select value={String(editingItem.advance_months ?? 1)} onChange={e => handleEditChange('advance_months', e.target.value)}>
-                    {[0, 1, 2, 3, 4, 5, 6].map(n => <option key={n} value={n}>{n === 0 ? 'Walang advance' : `${n} month${n > 1 ? 's' : ''}`}</option>)}
+                    {[0, 1, 2, 3, 4, 5, 6].map(n => <option key={n} value={n}>{n === 0 ? 'No advance' : `${n} month${n > 1 ? 's' : ''}`}</option>)}
                   </select>
                 </div>
                 <div className="edit-form-group">
                   <label>Deposit (months)</label>
                   <select value={String(editingItem.deposit_months ?? 2)} onChange={e => handleEditChange('deposit_months', e.target.value)}>
-                    {[0, 1, 2, 3, 4, 5, 6].map(n => <option key={n} value={n}>{n === 0 ? 'Walang deposit' : `${n} month${n > 1 ? 's' : ''}`}</option>)}
+                    {[0, 1, 2, 3, 4, 5, 6].map(n => <option key={n} value={n}>{n === 0 ? 'No deposit' : `${n} month${n > 1 ? 's' : ''}`}</option>)}
                   </select>
                 </div>
               </div>
               )}
               <div className="edit-form-group">
                 <label>Location</label>
-                <input value={editingItem.location || ''} placeholder="Barangay, Bayan/City, Probinsya" onChange={e => handleEditChange('location', e.target.value)} />
+                <input value={editingItem.location || ''} placeholder="Barangay, Town/City, Province" onChange={e => handleEditChange('location', e.target.value)} />
               </div>
               <div className="edit-form-group">
-                <label>Pin sa Mapa</label>
+                <label>Pin on Map</label>
                 <LocationPicker
                   key={editingItem.id}
                   value={toCoords(editingItem)}
@@ -332,8 +333,8 @@ const EditListings = ({ session, onClose, onListingUpdated, initialEditingItem =
               <div className="edit-form-group">
                 <label>Availability Status</label>
                 <select value={editingItem.availability || 'Available'} onChange={e => handleEditChange('availability', e.target.value)}>
-                  <option value="Available">Available — may bakante pa</option>
-                  <option value="Occupied">Occupied — na-accommodate na</option>
+                  <option value="Available">Available — has vacancies</option>
+                  <option value="Occupied">Occupied — fully booked</option>
                 </select>
               </div>
               <div className="edit-form-group">

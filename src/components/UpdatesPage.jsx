@@ -5,6 +5,7 @@ import { updateThumbnail } from '../lib/updates';
 import { fmtDate } from '../lib/csv';
 import { HeroBudi } from './MascotSplash';
 import './UpdatesPage.css';
+import { ikImage } from '../lib/imagekit';
 
 const UpdatesPage = () => {
   const [items, setItems] = useState([]);
@@ -24,23 +25,23 @@ const UpdatesPage = () => {
   return (
     <div className="page-section animate-fade-in">
       <header className="hero saved-hero">
-        <HeroBudi message="Narito ang mga bagong update ng BudgetRentPH. Panoorin mo!" />
+        <HeroBudi message="Here are the latest BudgetRentPH updates. Check them out!" />
         <div className="hero-content">
           <h2>What's New</h2>
-          <p>Panoorin ang mga bagong update sa app</p>
+          <p>Watch the latest app updates</p>
         </div>
       </header>
       <main className="updates-list">
         {loading ? (
           <div className="text-center py-10"><Loader2 className="animate-spin text-primary mx-auto" size={36} /></div>
         ) : items.length === 0 ? (
-          <div className="updates-empty">Wala pang update sa ngayon. Balik ka ulit mamaya!</div>
+          <div className="updates-empty">No updates yet. Check back later!</div>
         ) : items.map(u => {
           const thumb = updateThumbnail(u);
           return (
             <a key={u.id} className="update-card" href={u.video_url} target="_blank" rel="noopener noreferrer">
               <div className="update-thumb">
-                {thumb ? <img src={thumb} alt={u.title} loading="lazy" /> : <div className="update-thumb-empty" />}
+                {thumb ? <img src={ikImage(thumb, 400)} alt={u.title} loading="lazy" /> : <div className="update-thumb-empty" />}
                 <span className="update-play"><Play size={26} fill="currentColor" /></span>
               </div>
               <div className="update-body">

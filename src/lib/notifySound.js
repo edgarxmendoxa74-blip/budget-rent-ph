@@ -1,4 +1,4 @@
-// BudgetRentPH notification sound: dalawang malambing na "ding-ding" (pataas), parang masayang tawag ni Budi.
+// BudgetRentPH notification sound: tatlong ulit na malambing na "ding-ding" (pataas), parang masayang tawag ni Budi. Tumatagal ng 3 segundo.
 // Gawa sa Web Audio kaya walang audio file na dinadownload.
 let ctx = null;
 
@@ -36,13 +36,19 @@ const note = (c, freq, start, dur, gain) => {
   sparkle.stop(start + dur + 0.05);
 };
 
+const NOTIFY_ROUNDS = 3;
+
 export const playNotifySound = () => {
   try {
     const c = getCtx();
     if (!c) return;
     if (c.state === 'suspended') c.resume().catch(() => {});
     const t = c.currentTime + 0.02;
-    note(c, 784, t, 0.35, 0.16);          // G5
-    note(c, 1046.5, t + 0.16, 0.55, 0.18); // C6
+    // 3 ulit kada 1 segundo; ang huli ay mas mahaba ang tunog para matapos sa mismong 3 segundo
+    for (let i = 0; i < NOTIFY_ROUNDS; i += 1) {
+      const start = t + i * 1;
+      note(c, 784, start, 0.45, 0.16);                                   // G5
+      note(c, 1046.5, start + 0.16, i === NOTIFY_ROUNDS - 1 ? 0.8 : 0.7, 0.18); // C6
+    }
   } catch { /* walang audio — okay lang */ }
 };

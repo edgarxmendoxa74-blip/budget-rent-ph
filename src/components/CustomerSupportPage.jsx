@@ -138,7 +138,7 @@ ${formData.issue}`;
       `}</style>
 
       <header className="hero branding-hero" style={{ position: 'relative' }}>
-        <HeroBudi message="Hi! Ako si Budi. Sabihin mo lang ang concern mo at tutulungan ka ng team namin." />
+        <HeroBudi message="Hi! I’m Budi. Just tell us your concern and our team will help you out." />
         <div className="hero-content">
           <span className="branding-kicker">Help Center</span>
           <h2>Customer Support</h2>
@@ -201,7 +201,7 @@ ${formData.issue}`;
           <div className="success-box animate-fade-in">
             <CheckCircle2 size={64} color="#16a34a" style={{ margin: '0 auto 16px', display: 'block' }} />
             <h3>Messenger opened!</h3>
-            <p>I-send ang mensahe sa Messenger chat ng BudgetRentPH. Kung walang laman ang chat box, i-paste lang (nakopya na ang mensahe mo).</p>
+            <p>Send the message in the BudgetRentPH Messenger chat. If the chat box is empty, just paste it (your message has already been copied).</p>
             <button className="support-submit-btn" onClick={onDone} style={{ background: 'var(--secondary)', color: 'var(--primary)', marginTop: '24px' }}>
               <ArrowLeft size={20} /> Back to Dashboard
             </button>

@@ -5,22 +5,22 @@ import { TOUR_SEEN_KEY } from '../lib/tour';
 import './AppTour.css';
 
 const TENANT_STEPS = [
-  { Icon: House, tone: 'navy', title: 'Welcome sa BudgetRentPH!', text: 'Mura. Malapit. Mapagkakatiwalaan. Sandali lang ito — ituturo namin kung paano gamitin ang app.' },
-  { Icon: TreePalm, tone: 'gold', title: 'Paupahan o Staycation', text: 'Sa Home, piliin ang category sa itaas: Paupahan para sa buwan-buwan na upa, o Staycation para sa bakasyon at overnight stay.' },
-  { Icon: Search, tone: 'navy', title: 'Hanapin ang bagay sa budget mo', text: 'I-type ang lugar o budget (hal. 4000) sa search. Sa Staycation, piliin din ang petsa (When) at bilang ng bisita (Who).' },
-  { Icon: Navigation, tone: 'gold', title: 'Nearby: mga bahay malapit sa iyo', text: 'Pindutin ang Nearby sa ibaba, i-ON ang Location ng phone. Awtomatikong ii-scan ang paligid mo at lalabas sa mapa ang mga bahay at makikita ang layo at ruta.' },
-  { Icon: Heart, tone: 'red', title: 'I-save ang paborito', text: 'Pindutin ang ❤ sa listing para mapunta sa Wishlist mo. Doon mo ulit makikita ang mga na-save.' },
-  { Icon: CalendarCheck, tone: 'green', title: 'Mag-inquire o mag-book', text: 'Buksan ang listing at pindutin ang Inquire (paupahan) o Book (staycation). Puwede kang mag-email, tumawag, o mag-Reserve Slot sa owner.' },
-  { Icon: Bell, tone: 'gold', title: 'Notifications', text: 'Pindutin ang bell sa itaas para sa mga update mula sa BudgetRentPH. Puwede mong i-delete ang mga notification na hindi mo na kailangan.' },
+  { Icon: House, tone: 'navy', title: 'Welcome to BudgetRentPH!', text: 'Affordable. Nearby. Trustworthy. This will only take a moment — we’ll show you how to use the app.' },
+  { Icon: TreePalm, tone: 'gold', title: 'Rentals or Staycations', text: 'On Home, pick a category at the top: Rentals for monthly rent, or Staycation for vacations and overnight stays.' },
+  { Icon: Search, tone: 'navy', title: 'Find a place within your budget', text: 'Type a location or budget (e.g. 4000) in the search. For Staycations, also pick the dates (When) and number of guests (Who).' },
+  { Icon: Navigation, tone: 'gold', title: 'Nearby: homes close to you', text: 'Tap Nearby at the bottom and turn ON your phone’s Location. We’ll automatically scan your area and show homes on the map, with the distance and route.' },
+  { Icon: Heart, tone: 'red', title: 'Save your favorites', text: 'Tap the ❤ on a listing to add it to your Wishlist. You can find your saved listings there anytime.' },
+  { Icon: CalendarCheck, tone: 'green', title: 'Inquire or book', text: 'Open a listing and tap Inquire (rentals) or Book (staycations). You can email, call, or Reserve a Slot with the owner.' },
+  { Icon: Bell, tone: 'gold', title: 'Notifications', text: 'Tap the bell at the top for updates from BudgetRentPH. You can delete notifications you no longer need.' },
 ];
 
 const LANDLORD_STEPS = [
-  { Icon: House, tone: 'navy', title: 'Welcome, Landlord!', text: 'Ituturo namin kung paano mag-post at mag-manage ng mga listing mo.' },
-  { Icon: Plus, tone: 'gold', title: 'Mag-post ng listing', text: 'Pindutin ang malaking + sa gitna ng ibaba. Ilagay ang detalye, litrato, at i-pin ang lokasyon sa mapa para makita ka ng mga tenant sa Nearby.' },
-  { Icon: ClipboardList, tone: 'navy', title: 'My Listings', text: 'Dito lahat ng listing mo. I-toggle ang Available / Occupied, i-edit ang detalye, o i-delete ang listing.' },
-  { Icon: BadgeCheck, tone: 'green', title: 'Get Verified', text: 'Mag-verify ng account para makuha ang badge at mas magtiwala ang mga tenant sa iyo. Nasa menu (☰) ito.' },
-  { Icon: FileSignature, tone: 'gold', title: 'Agreement Draft', text: 'Gumawa ng kontrata para sa tenant mo sa menu (☰) at i-download bilang PNG.' },
-  { Icon: Bell, tone: 'gold', title: 'Notifications', text: 'Pindutin ang bell sa itaas para sa mga update mula sa BudgetRentPH.' },
+  { Icon: House, tone: 'navy', title: 'Welcome, Landlord!', text: 'We’ll show you how to post and manage your listings.' },
+  { Icon: Plus, tone: 'gold', title: 'Post a listing', text: 'Tap the big + at the bottom center. Add the details and photos, and pin the location on the map so tenants can find you in Nearby.' },
+  { Icon: ClipboardList, tone: 'navy', title: 'My Listings', text: 'All your listings are here. Toggle Available / Occupied, edit the details, or delete a listing.' },
+  { Icon: BadgeCheck, tone: 'green', title: 'Get Verified', text: 'Verify your account to get a badge and earn more trust from tenants. You’ll find it in the menu (☰).' },
+  { Icon: FileSignature, tone: 'gold', title: 'Agreement Draft', text: 'Create a contract for your tenant from the menu (☰) and download it as a PNG.' },
+  { Icon: Bell, tone: 'gold', title: 'Notifications', text: 'Tap the bell at the top for updates from BudgetRentPH.' },
 ];
 
 const AppTour = ({ isLandlord, onClose }) => {
@@ -50,7 +50,7 @@ const AppTour = ({ isLandlord, onClose }) => {
   return createPortal(
     <div className="tour-overlay" role="dialog" aria-modal="true" aria-label="App tour">
       <div className="tour-card animate-slide-up">
-        <button type="button" className="tour-close" aria-label="Isara ang tour" onClick={finish}><X size={18} /></button>
+        <button type="button" className="tour-close" aria-label="Close tour" onClick={finish}><X size={18} /></button>
 
         <div className="tour-body" key={i}>
           <span className={`tour-icon ${step.tone}`}><Icon size={40} strokeWidth={2.2} /></span>
@@ -64,7 +64,7 @@ const AppTour = ({ isLandlord, onClose }) => {
 
         <div className="tour-actions">
           {last ? (
-            <button type="button" className="tour-next" onClick={finish}>Simulan na!</button>
+            <button type="button" className="tour-next" onClick={finish}>Let’s go!</button>
           ) : (
             <>
               <button type="button" className="tour-skip" onClick={finish}>Skip</button>

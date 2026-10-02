@@ -595,3 +595,32 @@
 .signup-success-card p { margin: 0 0 10px; font-size: 0.9rem; line-height: 1.6; color: var(--text-muted, #64748b); overflow-wrap: anywhere; }
 .signup-success-card strong { color: var(--primary, #003b7a); }
 .signup-success-card .auth-submit-btn { width: 100%; margin-top: 10px; }
+
+/* Tenant sign-up: select at date field ay kapareho ng text input */
+.input-group select {
+  width: 100%;
+  padding: 13px 14px 13px 44px;
+  border: 1.5px solid var(--border);
+  border-radius: 14px;
+  font-size: 15px;
+  font-weight: 500;
+  background: #F8FAFC;
+  color: var(--text-main);
+  appearance: none;
+}
+
+.input-group select:focus {
+  outline: none;
+  border-color: var(--primary);
+  background: white;
+  box-shadow: var(--ring);
+}
+
+.auth-field-label {
+  display: block;
+  margin: 2px 0 -6px 4px;
+  text-align: left;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--text-muted);
+}

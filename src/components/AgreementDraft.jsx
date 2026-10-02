@@ -219,11 +219,11 @@ const AgreementDraft = ({ session }) => {
   return (
     <div className="page-section animate-fade-in">
       <header className="hero branding-hero">
-        <HeroBudi message="Punan ang detalye at gagawa ako ng kontrata para sa tenant mo." />
+        <HeroBudi message="Fill in the details and I'll draft a contract for your tenant." />
         <div className="hero-content">
           <span className="branding-kicker">Landlord Tools</span>
           <h2>Agreement Draft</h2>
-          <p>Gumawa ng kontrata sa iyong tenant at i-download bilang PDF</p>
+          <p>Create a contract for your tenant and download it as a PDF</p>
         </div>
       </header>
 
@@ -264,7 +264,7 @@ const AgreementDraft = ({ session }) => {
                 rows={3}
                 value={form.terms}
                 onChange={e => set('terms', e.target.value)}
-                placeholder="Kahit anong dagdag na patakaran..."
+                placeholder="Any additional rules..."
               />
             </div>
 
@@ -272,7 +272,7 @@ const AgreementDraft = ({ session }) => {
               className="agr-generate-btn"
               onClick={generatePDF}
               disabled={generating || !form.tenantName}
-              title={!form.tenantName ? 'Ilagay muna ang tenant name' : 'Generate PDF'}
+              title={!form.tenantName ? 'Enter the tenant name first' : 'Generate PDF'}
             >
               {generating ? <Loader2 size={18} className="animate-spin" /> : <Download size={18} />}
               {generating ? 'Generating...' : 'Generate PDF Draft'}
@@ -280,11 +280,11 @@ const AgreementDraft = ({ session }) => {
 
             {done && (
               <div className="agr-success">
-                <CheckCircle size={16} /> Na-download na ang agreement PDF sa iyong device.
+                <CheckCircle size={16} /> The agreement PDF has been downloaded to your device.
               </div>
             )}
             {!form.tenantName && (
-              <p className="agr-hint">Ilagay ang tenant name para ma-activate ang generation.</p>
+              <p className="agr-hint">Enter the tenant name to enable PDF generation.</p>
             )}
           </section>
 

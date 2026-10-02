@@ -7,6 +7,7 @@ import { newId, rememberGuestBooking } from '../lib/guestBookings';
 import { supabase } from '../lib/supabase';
 import { validatePhone } from '../lib/validation';
 import './ListingActionSheet.css';
+import { ikImage } from '../lib/imagekit';
 
 const pad = (n) => String(n).padStart(2, '0');
 const toDateInput = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
@@ -54,6 +55,19 @@ const ListingActionSheet = ({ item, kind, onClose, onViewDetails }) => {
   const [placed, setPlaced] = useState(null); // { id, token } ng naipadalang booking
   const [chatOpen, setChatOpen] = useState(false);
 
+  // Tenant account: i-prefill ang pangalan at number mula sa account (puwede pa ring baguhin)
+  useEffect(() => {
+    let alive = true;
+    supabase.auth.getSession().then(({ data }) => {
+      const meta = data?.session?.user?.user_metadata;
+      if (!alive || meta?.user_role !== 'tenant') return;
+      const local = /^639\d{9}$/.test(meta.phone || '') ? `0${meta.phone.slice(2)}` : (meta.phone || '');
+      setCustName((v) => v || meta.full_name || '');
+      setCustPhone((v) => v || local);
+    });
+    return () => { alive = false; };
+  }, []);
+
   // Mga petsang confirmed na (petsa lang, walang personal info)
   useEffect(() => {
     if (!isBook || !item?.id) return;
@@ -80,11 +94,11 @@ const ListingActionSheet = ({ item, kind, onClose, onViewDetails }) => {
     const cleanName = custName.trim();
     const phoneCheck = validatePhone(custPhone);
     const cleanEmail = custEmail.trim();
-    if (cleanName.length < 2) return setSendError('Ilagay ang buong pangalan mo.');
-    if (!phoneCheck.isValid) return setSendError('Maglagay ng valid na PH number (hal. 09171234567).');
-    if (cleanEmail && !/^\S+@\S+\.\S+$/.test(cleanEmail)) return setSendError('Hindi valid ang email.');
-    if (isBook && !agree) return setSendError('I-check muna na sumasang-ayon ka sa house rules at booking terms.');
-    if (!isBook && !rentDate) return setSendError('Pumili ng petsa ng lipat o pagbisita.');
+    if (cleanName.length < 2) return setSendError('Please enter your full name.');
+    if (!phoneCheck.isValid) return setSendError('Enter a valid PH number (e.g. 09171234567).');
+    if (cleanEmail && !/^\S+@\S+\.\S+$/.test(cleanEmail)) return setSendError('Invalid email address.');
+    if (isBook && !agree) return setSendError('Please confirm that you agree to the house rules and booking terms.');
+    if (!isBook && !rentDate) return setSendError('Pick a move-in or visit date.');
     setSending(true);
     setSendError('');
     try { localStorage.setItem(CUSTOMER_KEY, JSON.stringify({ name: cleanName, phone: phoneCheck.sanitized, email: cleanEmail })); } catch { /* ignore */ }
@@ -105,10 +119,11 @@ const ListingActionSheet = ({ item, kind, onClose, onViewDetails }) => {
       : { ...common, kind: 'rent', check_in: rentDate, check_out: null, guests: occupants, adults: occupants, children: 0, pets: false, total_price: Number(item?.price) || 0, down_payment: 0 };
     const { error } = await supabase.from('booking_requests').insert(payload);
     setSending(false);
-    if (error) return setSendError(error.message || 'Hindi naipadala. Subukan ulit.');
+    if (error) return setSendError(error.message || "Couldn't send. Please try again.");
     rememberGuestBooking({ id, token, title: name, kind: payload.kind });
     setPlaced({ id, token });
     setSent(true);
+    setChatOpen(true); // kusang bubukas ang chat para makita agad ang booking details na naipadala
   };
 
   const callOption = phone && (
@@ -119,18 +134,18 @@ const ListingActionSheet = ({ item, kind, onClose, onViewDetails }) => {
 
   const header = (
     <>
-      <button type="button" className="act-close" aria-label="Isara" onClick={onClose}><X size={18} /></button>
+      <button type="button" className="act-close" aria-label="Close" onClick={onClose}><X size={18} /></button>
       <div className="act-head">
         <span className={`act-badge ${isBook ? 'stay' : 'rent'}`}>{isBook ? <CalendarCheck size={20} /> : <Send size={20} />}</span>
         <div>
-          <h3>{isBook ? (step === 2 && !sent ? 'Confirm & Book' : 'Book Here') : 'Mag-inquire'}</h3>
+          <h3>{isBook ? (step === 2 && !sent ? 'Confirm & Book' : 'Book Here') : 'Inquire'}</h3>
           <p>{name}</p>
         </div>
       </div>
       <div className="act-summary">
-        <img src={item?.image || '/placeholder.png'} alt="" />
+        <img src={ikImage(item?.image, 240) || '/placeholder.png'} alt="" />
         <div>
-          <strong>{peso(item?.price)}<em>{isBook ? '/gabi' : '/buwan'}</em></strong>
+          <strong>{peso(item?.price)}<em>{isBook ? '/night' : '/month'}</em></strong>
           <span>{item?.location}</span>
         </div>
       </div>
@@ -139,9 +154,9 @@ const ListingActionSheet = ({ item, kind, onClose, onViewDetails }) => {
 
   const breakdown = nights >= 1 && (
     <div className="act-breakdown">
-      <div><span>{peso(item?.price)} × {nights} gabi</span><strong>{peso(total)}</strong></div>
-      {downPayment > 0 && <div><span>Down payment (para ma-secure ang booking)</span><strong>{peso(downPayment)}</strong></div>}
-      {downPayment > 0 && <div><span>Balance pagdating</span><strong>{peso(total - downPayment)}</strong></div>}
+      <div><span>{peso(item?.price)} × {nights} night{nights > 1 ? 's' : ''}</span><strong>{peso(total)}</strong></div>
+      {downPayment > 0 && <div><span>Down payment (to secure the booking)</span><strong>{peso(downPayment)}</strong></div>}
+      {downPayment > 0 && <div><span>Balance due on arrival</span><strong>{peso(total - downPayment)}</strong></div>}
       <div className="total"><span>Total</span><strong>{peso(total)}</strong></div>
     </div>
   );
@@ -156,18 +171,18 @@ const ListingActionSheet = ({ item, kind, onClose, onViewDetails }) => {
           {sent ? (
             <div className="act-success">
               <CheckCircle2 size={44} color="#059669" />
-              <h4>Naipadala na ang booking request!</h4>
-              <p>{prettyDate(checkIn)} → {prettyDate(checkOut)} • {nights} gabi • {guests} guest{guests > 1 ? 's' : ''}</p>
-              <p>Maghintay ng kumpirmasyon ng owner. Tatawagan ka nila sa {custPhone}. Wala pang bayad na kinuha.</p>
+              <h4>Booking request sent!</h4>
+              <p>{prettyDate(checkIn)} → {prettyDate(checkOut)} • {nights} night{nights > 1 ? 's' : ''} • {guests} guest{guests > 1 ? 's' : ''}</p>
+              <p>Please wait for the owner to confirm. They&apos;ll call you at {custPhone}. No payment has been taken.</p>
               <button type="button" className="act-option reserve" style={{ width: '100%', border: 'none', cursor: 'pointer', marginTop: 10 }} onClick={() => setChatOpen(true)}>
-                <MessageCircle size={18} /> Mag-chat sa owner
+                <MessageCircle size={18} /> Chat with owner
               </button>
-              <button type="button" className="act-details" onClick={onClose}>Isara</button>
+              <button type="button" className="act-details" onClick={onClose}>Close</button>
             </div>
           ) : step === 1 ? (
             <>
               {/^(occupied|accommodated|rented|unavailable)$/i.test(String(item?.availability || '').trim()) && (
-                <p className="act-hint"><Info size={14} /> Occupied ngayon ang staycation na ito, pero puwede ka pa ring mag-book para sa ibang petsa.</p>
+                <p className="act-hint"><Info size={14} /> This staycation is currently occupied, but you can still book other dates.</p>
               )}
 
               <div className="act-form">
@@ -198,17 +213,17 @@ const ListingActionSheet = ({ item, kind, onClose, onViewDetails }) => {
                 {petsAllowed && (
                   <label className="act-check wide">
                     <input type="checkbox" checked={pets} onChange={(e) => setPets(e.target.checked)} />
-                    <span><PawPrint size={14} /> May kasamang alagang hayop</span>
+                    <span><PawPrint size={14} /> Bringing a pet</span>
                   </label>
                 )}
               </div>
 
-              {overlaps && <p className="act-hint"><Info size={14} /> Booked na ang ilan sa mga petsang ito. Pumili ng ibang petsa.</p>}
+              {overlaps && <p className="act-hint"><Info size={14} /> Some of these dates are already booked. Please pick other dates.</p>}
               {bookedRanges.length > 0 && (
-                <p className="act-hint"><Info size={14} /> Booked na: {bookedRanges.map((r) => `${prettyDate(r.check_in)} → ${prettyDate(r.check_out)}`).join(', ')}</p>
+                <p className="act-hint"><Info size={14} /> Already booked: {bookedRanges.map((r) => `${prettyDate(r.check_in)} → ${prettyDate(r.check_out)}`).join(', ')}</p>
               )}
               {breakdown}
-              {!datesValid && !overlaps && <p className="act-hint"><Info size={14} /> Pumili muna ng check-in at check-out.</p>}
+              {!datesValid && !overlaps && <p className="act-hint"><Info size={14} /> Pick your check-in and check-out dates first.</p>}
 
               <div className="act-options stacked" style={{ marginTop: 14 }}>
                 <button type="button" className="act-option reserve" style={{ border: 'none', cursor: 'pointer' }}
@@ -220,20 +235,20 @@ const ListingActionSheet = ({ item, kind, onClose, onViewDetails }) => {
             </>
           ) : (
             <>
-              <button type="button" className="act-back" onClick={() => { setStep(1); setSendError(''); }}><ArrowLeft size={14} /> Baguhin ang petsa</button>
+              <button type="button" className="act-back" onClick={() => { setStep(1); setSendError(''); }}><ArrowLeft size={14} /> Change dates</button>
 
               <div className="act-trip">
                 <div><span>Check-in</span><strong>{prettyDate(checkIn)}</strong></div>
                 <div><span>Check-out</span><strong>{prettyDate(checkOut)}</strong></div>
-                <div><span>Guests</span><strong>{adults} adult{adults > 1 ? 's' : ''}{children ? `, ${children} bata` : ''}{pets ? ' + pet' : ''}</strong></div>
+                <div><span>Guests</span><strong>{adults} adult{adults > 1 ? 's' : ''}{children ? `, ${children} child${children > 1 ? 'ren' : ''}` : ''}{pets ? ' + pet' : ''}</strong></div>
               </div>
 
               {breakdown}
 
-              <h4 className="act-section-title">Detalye ng guest</h4>
+              <h4 className="act-section-title">Guest details</h4>
               <div className="act-form">
                 <label className="wide">
-                  Buong pangalan
+                  Full name
                   <input type="text" maxLength={80} autoComplete="name" placeholder="Juan Dela Cruz" value={custName} onChange={(e) => setCustName(e.target.value)} />
                 </label>
                 <label>
@@ -245,21 +260,21 @@ const ListingActionSheet = ({ item, kind, onClose, onViewDetails }) => {
                   <input type="email" maxLength={120} autoComplete="email" placeholder="juan@email.com" value={custEmail} onChange={(e) => setCustEmail(e.target.value)} />
                 </label>
                 <label className="wide">
-                  Oras ng pagdating
+                  Arrival time
                   <select value={arrival} onChange={(e) => setArrival(e.target.value)}>
-                    <option value="">Hindi pa sigurado</option>
+                    <option value="">Not sure yet</option>
                     {ARRIVAL_TIMES.map((t) => <option key={t} value={t}>{t}</option>)}
                   </select>
                 </label>
                 <label className="wide">
-                  Mensahe sa owner (optional)
-                  <input type="text" maxLength={200} placeholder="hal. Celebration po ito / may kasamang bata" value={extra} onChange={(e) => setExtra(e.target.value)} />
+                  Message to owner (optional)
+                  <input type="text" maxLength={200} placeholder="e.g. It's a celebration / bringing kids" value={extra} onChange={(e) => setExtra(e.target.value)} />
                 </label>
               </div>
 
               <label className="act-check agree">
                 <input type="checkbox" checked={agree} onChange={(e) => setAgree(e.target.checked)} />
-                <span>Sumasang-ayon ako sa house rules ng owner{downPayment > 0 ? ` at sa down payment na ${peso(downPayment)} para ma-secure ang booking` : ''}.</span>
+                <span>I agree to the owner&apos;s house rules{downPayment > 0 ? ` and the ${peso(downPayment)} down payment to secure the booking` : ''}.</span>
               </label>
 
               <button type="button" className="act-option reserve" style={{ width: '100%', border: 'none', cursor: 'pointer', marginTop: 12 }}
@@ -267,11 +282,11 @@ const ListingActionSheet = ({ item, kind, onClose, onViewDetails }) => {
                 {sending ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />} Send Booking Request
               </button>
               {sendError && <p className="act-hint" style={{ color: '#dc2626' }}><Info size={14} /> {sendError}</p>}
-              <p className="act-note"><Info size={14} /> Request lang ito — ang owner pa rin ang magkukumpirma ng booking. Wala pang bayad na kinukuha dito.</p>
+              <p className="act-note"><Info size={14} /> This is only a request — the owner will still confirm the booking. No payment is taken here.</p>
             </>
           )}
 
-          <button type="button" className="act-details" onClick={() => { onClose(); onViewDetails(item); }}>Tingnan ang buong detalye</button>
+          {onViewDetails && <button type="button" className="act-details" onClick={() => { onClose(); onViewDetails(item); }}>View full details</button>}
         </div>
         {callGateOpen && <CallGateModal phone={phone} propertyId={item?.id} ownerEmail={email} onClose={() => setCallGateOpen(false)} />}
         {chatOpen && placed && <BookingChat bookingId={placed.id} token={placed.token} role="guest" title={name} onClose={() => setChatOpen(false)} />}
@@ -290,29 +305,29 @@ const ListingActionSheet = ({ item, kind, onClose, onViewDetails }) => {
         {sent ? (
           <div className="act-success">
             <CheckCircle2 size={44} color="#059669" />
-            <h4>Naipadala na ang booking request!</h4>
-            <p>Petsa: {prettyDate(rentDate)} • {occupants} tao</p>
-            <p>Maghintay ng sagot ng owner. Puwede mo siyang i-chat dito para sa mga tanong.</p>
+            <h4>Booking request sent!</h4>
+            <p>Date: {prettyDate(rentDate)} • {occupants} {occupants > 1 ? 'people' : 'person'}</p>
+            <p>Please wait for the owner&apos;s reply. You can chat with them here if you have questions.</p>
             <button type="button" className="act-option reserve" style={{ width: '100%', border: 'none', cursor: 'pointer', marginTop: 10 }} onClick={() => setChatOpen(true)}>
-              <MessageCircle size={18} /> Mag-chat sa owner
+              <MessageCircle size={18} /> Chat with owner
             </button>
-            <button type="button" className="act-details" onClick={onClose}>Isara</button>
+            <button type="button" className="act-details" onClick={onClose}>Close</button>
           </div>
         ) : (
           <>
             <div className="act-form">
               <label className="wide">
-                Gustong petsa ng lipat o pagbisita
+                Preferred move-in or visit date
                 <input type="date" min={today} value={rentDate} onChange={(e) => setRentDate(e.target.value)} />
               </label>
               <label className="wide">
-                Ilang tao ang titira
+                Number of occupants
                 <select value={occupants} onChange={(e) => setOccupants(Number(e.target.value))}>
-                  {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => <option key={n} value={n}>{n} tao</option>)}
+                  {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => <option key={n} value={n}>{n} {n > 1 ? 'people' : 'person'}</option>)}
                 </select>
               </label>
               <label className="wide">
-                Buong pangalan
+                Full name
                 <input type="text" maxLength={80} autoComplete="name" placeholder="Juan Dela Cruz" value={custName} onChange={(e) => setCustName(e.target.value)} />
               </label>
               <label>
@@ -324,8 +339,8 @@ const ListingActionSheet = ({ item, kind, onClose, onViewDetails }) => {
                 <input type="email" maxLength={120} autoComplete="email" placeholder="juan@email.com" value={custEmail} onChange={(e) => setCustEmail(e.target.value)} />
               </label>
               <label className="wide">
-                Mensahe sa owner (optional)
-                <input type="text" maxLength={200} placeholder="hal. Puwede po ba akong pumunta bukas?" value={extra} onChange={(e) => setExtra(e.target.value)} />
+                Message to owner (optional)
+                <input type="text" maxLength={200} placeholder="e.g. Can I drop by tomorrow?" value={extra} onChange={(e) => setExtra(e.target.value)} />
               </label>
             </div>
 
@@ -333,14 +348,13 @@ const ListingActionSheet = ({ item, kind, onClose, onViewDetails }) => {
               <button type="button" className="act-option reserve" style={{ border: 'none', cursor: 'pointer' }} disabled={sending} onClick={sendRequest}>
                 {sending ? <Loader2 size={18} className="animate-spin" /> : <CalendarCheck size={18} />} Book Here
               </button>
-              {callOption}
             </div>
             {sendError && <p className="act-hint" style={{ color: '#dc2626' }}><Info size={14} /> {sendError}</p>}
-            <p className="act-note"><Info size={14} /> Request lang ito — ang owner pa rin ang magkukumpirma ng availability. Walang bayad na kinukuha dito.</p>
+            <p className="act-note"><Info size={14} /> This is only a request — the owner will still confirm availability. No payment is taken here.</p>
           </>
         )}
 
-        <button type="button" className="act-details" onClick={() => { onClose(); onViewDetails(item); }}>Tingnan ang buong detalye</button>
+        {onViewDetails && <button type="button" className="act-details" onClick={() => { onClose(); onViewDetails(item); }}>View full details</button>}
       </div>
       {callGateOpen && <CallGateModal phone={phone} propertyId={item?.id} ownerEmail={email} onClose={() => setCallGateOpen(false)} />}
       {chatOpen && placed && <BookingChat bookingId={placed.id} token={placed.token} role="guest" title={name} onClose={() => setChatOpen(false)} />}

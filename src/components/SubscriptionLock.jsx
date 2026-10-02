@@ -26,8 +26,8 @@ const SubscriptionLock = ({ session, expiry, onLogout, onRefresh }) => {
   const pickFile = (e) => {
     const f = e.target.files?.[0];
     if (!f) return;
-    if (!f.type.startsWith('image/')) return setError('Image lang po ang pwede (JPG/PNG).');
-    if (f.size > 5 * 1024 * 1024) return setError('Masyadong malaki ang image (max 5MB).');
+    if (!f.type.startsWith('image/')) return setError('Only images are allowed (JPG/PNG).');
+    if (f.size > 5 * 1024 * 1024) return setError('Image is too large (max 5MB).');
     setError('');
     setFile(f);
     setPreview(URL.createObjectURL(f));
@@ -35,8 +35,8 @@ const SubscriptionLock = ({ session, expiry, onLogout, onRefresh }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!selectedPlan) return setError('Hindi pa na-load ang plans, subukan ulit.');
-    if (!file) return setError('Mag-upload muna ng proof of payment.');
+    if (!selectedPlan) return setError("Plans haven't loaded yet, please try again.");
+    if (!file) return setError('Please upload your proof of payment first.');
     setLoading(true);
     setError('');
     try {
@@ -58,7 +58,7 @@ Proof of Payment (file): ${path}`;
       window.open(`https://m.me/${PAYMENT_PAGE_ID}?text=${encodeURIComponent(message)}`, '_blank', 'noopener,noreferrer');
       setSent(true);
     } catch (err) {
-      setError(err.message || 'Hindi na-upload. Check ang connection at subukan ulit.');
+      setError(err.message || 'Upload failed. Check your connection and try again.');
     } finally {
       setLoading(false);
     }
@@ -73,7 +73,7 @@ Proof of Payment (file): ${path}`;
           </div>
           <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 900, color: '#003366' }}>Subscription Expired</h2>
           <p style={{ margin: '6px 0 0', fontSize: '0.82rem', color: '#64748b', lineHeight: 1.5 }}>
-            Nag-expire ang subscription mo{expiry ? ` noong ${new Date(expiry).toLocaleDateString()}` : ''}. Mag-renew para magamit ulit ang app.
+            Your subscription expired{expiry ? ` on ${new Date(expiry).toLocaleDateString()}` : ''}. Renew to use the app again.
           </p>
         </div>
 
@@ -82,7 +82,7 @@ Proof of Payment (file): ${path}`;
             <CheckCircle2 size={48} color="#16a34a" style={{ margin: '0 auto 10px' }} />
             <h3 style={{ margin: '0 0 6px', color: '#003366' }}>Request Sent!</h3>
             <p style={{ fontSize: '0.85rem', color: '#64748b', lineHeight: 1.5 }}>
-              I-send ang mensahe sa Messenger chat ng BudgetRentPH (nakopya na rin ito kung walang laman ang chat box). Kapag na-verify ang payment mo, mag-a-unlock ang app.
+              Send the message in the BudgetRentPH Messenger chat (it&apos;s also copied to your clipboard in case the chat box is empty). The app will unlock once your payment is verified.
             </p>
             <button onClick={onRefresh} style={{ width: '100%', padding: '13px', borderRadius: '14px', background: '#003366', color: 'white', fontWeight: 800, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: '8px' }}>
               <RefreshCw size={16} /> Check Status
@@ -134,7 +134,7 @@ Proof of Payment (file): ${path}`;
             <div>
               <label style={labelStyle}>Proof of Payment (screenshot) *</label>
               <label style={{ ...inputStyle, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', cursor: 'pointer', borderStyle: 'dashed', color: '#003366', fontWeight: 700 }}>
-                <Upload size={16} /> {file ? 'Palitan ang image' : 'Upload image'}
+                <Upload size={16} /> {file ? 'Change image' : 'Upload image'}
                 <input type="file" accept="image/*" onChange={pickFile} style={{ display: 'none' }} />
               </label>
               {preview && <img src={preview} alt="Proof preview" style={{ marginTop: 8, width: '100%', maxHeight: 180, objectFit: 'contain', borderRadius: 12, border: '1px solid #e2e8f0', background: '#f8fafc' }} />}

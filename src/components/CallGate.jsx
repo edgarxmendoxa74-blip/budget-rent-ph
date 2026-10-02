@@ -23,8 +23,8 @@ export const CallGateModal = ({ phone, propertyId, ownerEmail, onClose }) => {
     e.preventDefault();
     const cleanName = name.trim();
     const phoneCheck = validatePhone(customerPhone);
-    if (cleanName.length < 2) return setError('Ilagay ang buong pangalan mo.');
-    if (!phoneCheck.isValid) return setError('Maglagay ng valid na PH number (hal. 09171234567).');
+    if (cleanName.length < 2) return setError('Please enter your full name.');
+    if (!phoneCheck.isValid) return setError('Enter a valid PH number (e.g. 09171234567).');
 
     setBusy(true);
     setError('');
@@ -51,7 +51,7 @@ export const CallGateModal = ({ phone, propertyId, ownerEmail, onClose }) => {
     <div style={{ position: 'fixed', inset: 0, zIndex: 20050, background: 'rgba(0, 20, 45, 0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }} onClick={onClose}>
       <form onSubmit={handleSubmit} onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="Customer information"
         style={{ position: 'relative', background: '#fff', width: '100%', maxWidth: '400px', borderRadius: '22px', padding: '22px', boxShadow: '0 20px 50px rgba(0,0,0,0.3)' }}>
-        <button type="button" aria-label="Isara" onClick={onClose} style={{ position: 'absolute', top: 12, right: 12, border: 'none', background: '#f1f5f9', borderRadius: '50%', width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><X size={16} /></button>
+        <button type="button" aria-label="Close" onClick={onClose} style={{ position: 'absolute', top: 12, right: 12, border: 'none', background: '#f1f5f9', borderRadius: '50%', width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><X size={16} /></button>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
           <span style={{ width: 40, height: 40, borderRadius: 12, background: '#e0f2fe', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><ShieldCheck size={22} color="#0369a1" /></span>
@@ -59,15 +59,15 @@ export const CallGateModal = ({ phone, propertyId, ownerEmail, onClose }) => {
         </div>
 
         <p style={{ margin: '0 0 14px', fontSize: '0.82rem', lineHeight: 1.55, color: '#475569' }}>
-          Para sa seguridad ng mga owner at guest, ilagay muna ang iyong pangalan at contact number bago tumawag.
-          Makikita lang ito ng admin at ng owner ng listing, at gagamitin lang para sa inquiry na ito. Hindi ito ibabahagi sa iba.
+          For the safety of owners and guests, please enter your name and contact number before calling.
+          Only the admin and the listing owner can see this, and it will only be used for this inquiry. It won&apos;t be shared with anyone else.
         </p>
 
-        <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 800, color: '#003366', marginBottom: 4 }}>Buong pangalan</label>
+        <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 800, color: '#003366', marginBottom: 4 }}>Full name</label>
         <input type="text" value={name} onChange={(e) => setName(e.target.value)} maxLength={80} autoComplete="name" placeholder="Juan Dela Cruz"
           style={{ width: '100%', boxSizing: 'border-box', padding: '11px 12px', borderRadius: 12, border: '1px solid #cbd5e1', fontSize: '0.9rem', marginBottom: 12, fontFamily: 'inherit' }} />
 
-        <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 800, color: '#003366', marginBottom: 4 }}>Contact number mo</label>
+        <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 800, color: '#003366', marginBottom: 4 }}>Your contact number</label>
         <input type="tel" value={customerPhone} onChange={(e) => setCustomerPhone(e.target.value)} maxLength={16} autoComplete="tel" placeholder="09171234567" inputMode="tel"
           style={{ width: '100%', boxSizing: 'border-box', padding: '11px 12px', borderRadius: 12, border: '1px solid #cbd5e1', fontSize: '0.9rem', marginBottom: 6, fontFamily: 'inherit' }} />
 
@@ -75,7 +75,7 @@ export const CallGateModal = ({ phone, propertyId, ownerEmail, onClose }) => {
 
         <button type="submit" disabled={busy}
           style={{ width: '100%', marginTop: 14, padding: '13px', borderRadius: 14, border: 'none', background: '#003366', color: '#fff', fontWeight: 800, fontSize: '0.9rem', cursor: busy ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, fontFamily: 'inherit' }}>
-          {busy ? <Loader2 size={16} className="animate-spin" /> : <Phone size={16} />} Magpatuloy at Tumawag
+          {busy ? <Loader2 size={16} className="animate-spin" /> : <Phone size={16} />} Continue & Call
         </button>
       </form>
     </div>,

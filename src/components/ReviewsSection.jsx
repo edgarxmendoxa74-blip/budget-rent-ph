@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Star, Loader2, Trash2, Pencil, Check, X, MessageSquare } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import './ReviewsSection.css';
+import { ikImage } from '../lib/imagekit';
 
 const MAX_WORDS = 30;
 const MAX_STARS = 5;
@@ -37,7 +38,7 @@ export const StarRow = ({ value, size = 14, onChange, label, max = MAX_STARS }) 
   );
 };
 
-const ReviewsSection = ({ property, session, isGuest, reviews, loading, onChanged }) => {
+const ReviewsSection = ({ property, session, reviews, loading, onChanged }) => {
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -50,18 +51,17 @@ const ReviewsSection = ({ property, session, isGuest, reviews, loading, onChange
     return acc;
   }, { sum: 0, count: 0 });
   const avg = stats.count ? stats.sum / stats.count : 0;
+  const distribution = reviews.reduce((acc, r) => {
+    const n = Math.min(MAX_STARS, Math.max(1, Math.round(Number(r.rating) || 0)));
+    acc[n] += 1;
+    return acc;
+  }, { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 });
 
   const userId = session?.user?.id;
   const isOwner = Boolean(userId && property?.user_id && property.user_id === userId);
   const myReview = userId ? reviews.find(r => r.user_id === userId) : null;
-  const isAnon = !userId;
-  const canReview = !isOwner;
-
-  const doneKey = `budgetrent_reviewed_${property?.id}`;
-  const [anonDone, setAnonDone] = useState(() => {
-    try { return localStorage.getItem(doneKey) === '1'; } catch { return false; }
-  });
-  const [anonName, setAnonName] = useState('');
+  // May account lang ang puwedeng mag-review (isa kada listing; may unique constraint sa database)
+  const canReview = Boolean(userId) && !isOwner;
 
   const resetForm = () => {
     setRating(0);
@@ -74,54 +74,37 @@ const ReviewsSection = ({ property, session, isGuest, reviews, loading, onChange
     e.preventDefault();
     if (!canReview) return;
     if (rating < 1) {
-      setError('Pumili muna ng rating (1–5 stars).');
+      setError('Please choose a rating first (1–5 stars).');
       return;
     }
     if (countWords(comment) > MAX_WORDS) {
-      setError(`Masyadong mahaba ang review. Max ${MAX_WORDS} words.`);
+      setError(`Your review is too long. Max ${MAX_WORDS} words.`);
       return;
     }
 
     setSubmitting(true);
     setError(null);
     try {
-      if (isAnon) {
-        const { error: insertError } = await supabase
-          .from('property_reviews')
-          .insert({
-            property_id: property.id,
-            user_id: null,
-            rating,
-            comment: comment.trim() || null,
-            reviewer_name: anonName.trim().slice(0, 40) || 'Tenant',
-            reviewer_avatar: null,
-          });
-        if (insertError) throw insertError;
-        try { localStorage.setItem(doneKey, '1'); } catch { /* ignore */ }
-        setAnonDone(true);
-        setAnonName('');
-      } else {
-        const meta = session.user.user_metadata || {};
-        const payload = {
-          property_id: property.id,
-          user_id: userId,
-          rating,
-          comment: comment.trim() || null,
-          reviewer_name: meta.full_name || session.user.email?.split('@')[0] || 'Reviewer',
-          reviewer_avatar: meta.avatar_url || null,
-        };
+      const meta = session.user.user_metadata || {};
+      const payload = {
+        property_id: property.id,
+        user_id: userId,
+        rating,
+        comment: comment.trim() || null,
+        reviewer_name: meta.full_name || session.user.email?.split('@')[0] || 'Reviewer',
+        reviewer_avatar: meta.avatar_url || null,
+      };
 
-        const { error: upsertError } = await supabase
-          .from('property_reviews')
-          .upsert(payload, { onConflict: 'property_id,user_id' });
+      const { error: upsertError } = await supabase
+        .from('property_reviews')
+        .upsert(payload, { onConflict: 'property_id,user_id' });
 
-        if (upsertError) throw upsertError;
-      }
+      if (upsertError) throw upsertError;
 
       resetForm();
       onChanged?.();
     } catch (err) {
-      setError(err?.message || 'Hindi na-post ang review. Subukan muli.');
+      setError(err?.message || 'Couldn’t post your review. Please try again.');
     } finally {
       setSubmitting(false);
     }
@@ -140,7 +123,7 @@ const ReviewsSection = ({ property, session, isGuest, reviews, loading, onChange
       resetForm();
       onChanged?.();
     } catch (err) {
-      setError(err?.message || 'Hindi na-delete ang review.');
+      setError(err?.message || 'Couldn’t delete your review.');
     } finally {
       setSubmitting(false);
     }
@@ -161,7 +144,7 @@ const ReviewsSection = ({ property, session, isGuest, reviews, loading, onChange
     }
   };
 
-  const showForm = canReview && (isAnon ? !anonDone : (!myReview || editing));
+  const showForm = canReview && (!myReview || editing);
 
   return (
     <section className="reviews-section">
@@ -172,14 +155,26 @@ const ReviewsSection = ({ property, session, isGuest, reviews, loading, onChange
           <MessageSquare size={18} />
           <h3>Customer Reviews</h3>
         </div>
-        {stats.count > 0 && (
-          <div className="reviews-summary">
-            <Star size={15} fill="currentColor" />
-            <strong>{avg.toFixed(1)}</strong>
-            <span>· {stats.count} review{stats.count > 1 ? 's' : ''}</span>
-          </div>
-        )}
       </div>
+
+      {stats.count > 0 && (
+        <div className="reviews-overview">
+          <div className="reviews-score">
+            <strong>{avg.toFixed(1)}</strong>
+            <StarRow value={Math.round(avg)} size={15} label={`Average rating ${avg.toFixed(1)} out of ${MAX_STARS}`} />
+            <span>{stats.count} review{stats.count > 1 ? 's' : ''}</span>
+          </div>
+          <ul className="reviews-bars" aria-label="Rating breakdown">
+            {[5, 4, 3, 2, 1].map(n => (
+              <li key={n}>
+                <span>{n}</span>
+                <div className="reviews-bar"><i style={{ width: `${(distribution[n] / stats.count) * 100}%` }} /></div>
+                <em>{distribution[n]}</em>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {loading ? (
         <div className="reviews-loading"><Loader2 size={20} className="animate-spin" /> Loading reviews...</div>
@@ -188,8 +183,8 @@ const ReviewsSection = ({ property, session, isGuest, reviews, loading, onChange
           {stats.count === 0 ? (
             <div className="reviews-empty">
               <Star size={28} />
-              <p>Wala pang reviews para sa listing na ito.</p>
-              {canReview && <span>Ang unang mag-review — tulungan ang iba sa pipiliin nila.</span>}
+              <p>No reviews for this listing yet.</p>
+              {canReview && <span>Be the first to review — help others decide.</span>}
             </div>
           ) : (
             <ul className="reviews-list">
@@ -199,7 +194,7 @@ const ReviewsSection = ({ property, session, isGuest, reviews, loading, onChange
                   <li key={r.id} className={`review-item${mine ? ' mine' : ''}`}>
                     <div className="review-avatar">
                       {r.reviewer_avatar ? (
-                        <img src={r.reviewer_avatar} alt="" loading="lazy" />
+                        <img src={ikImage(r.reviewer_avatar, 80)} alt="" loading="lazy" />
                       ) : (
                         <span>{(r.reviewer_name || 'R').charAt(0).toUpperCase()}</span>
                       )}
@@ -208,7 +203,7 @@ const ReviewsSection = ({ property, session, isGuest, reviews, loading, onChange
                       <div className="review-meta">
                         <span className="review-name">
                           {r.reviewer_name || 'Reviewer'}
-                          {mine && <em className="review-you">Ikaw</em>}
+                          {mine && <em className="review-you">You</em>}
                         </span>
                         <span className="review-date">{formatDate(r.created_at)}</span>
                       </div>
@@ -233,32 +228,22 @@ const ReviewsSection = ({ property, session, isGuest, reviews, loading, onChange
 
           {canReview && myReview && !editing && (
             <button type="button" className="reviews-write-btn" onClick={startEdit}>
-              <Pencil size={14} /> I-edit ang iyong review
+              <Pencil size={14} /> Edit your review
             </button>
           )}
 
           {showForm && (
             <form className="review-form" onSubmit={handleSubmit}>
-              <h4>{editing ? 'I-edit ang review' : 'Mag-iwan ng review'}</h4>
-              {isAnon && (
-                <input
-                  className="review-form-name"
-                  type="text"
-                  placeholder="Pangalan (optional)"
-                  value={anonName}
-                  maxLength={40}
-                  onChange={(e) => setAnonName(e.target.value)}
-                />
-              )}
+              <h4>{editing ? 'Edit review' : 'Leave a review'}</h4>
               <div className="review-form-rating">
-                <StarRow value={rating} size={22} onChange={setRating} label="Ang iyong rating" />
+                <StarRow value={rating} size={22} onChange={setRating} label="Your rating" />
                 <span className="review-form-hint">
-                  {rating > 0 ? `${rating}/${MAX_STARS}` : 'Piliin ang rating'}
+                  {rating > 0 ? `${rating}/${MAX_STARS}` : 'Select a rating'}
                 </span>
               </div>
               <textarea
                 className="review-form-textarea"
-                placeholder="Ano ang naging experience mo sa listing na ito? (optional)"
+                placeholder="How was your experience with this listing? (optional)"
                 value={comment}
                 onChange={(e) => setComment(limitWords(e.target.value))}
                 rows={3}
@@ -273,20 +258,20 @@ const ReviewsSection = ({ property, session, isGuest, reviews, loading, onChange
                   )}
                   <button type="submit" className="review-btn submit" disabled={submitting || rating < 1}>
                     {submitting ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
-                    {editing ? 'I-save' : 'Post Review'}
+                    {editing ? 'Save' : 'Post Review'}
                   </button>
                 </div>
               </div>
             </form>
           )}
 
-          {!canReview && (
+          {isOwner && (
             <p className="review-gate">
-              Ikaw ang may-ari ng listing na ito — hindi ka puwedeng mag-review sa sarili mo.
+              You own this listing — you can’t review your own listing.
             </p>
           )}
-          {isAnon && anonDone && (
-            <p className="review-gate">Salamat sa iyong review!</p>
+          {!userId && (
+            <p className="review-gate">Log in to leave a review.</p>
           )}
 
           {error && <div className="review-error">{error}</div>}

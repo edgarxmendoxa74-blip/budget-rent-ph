@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { WifiOff, RefreshCw } from 'lucide-react';
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
 // Real reachability check: navigator.onLine can say "true" on wifi with no data.
 async function canReachNetwork() {
@@ -10,7 +11,7 @@ async function canReachNetwork() {
   const ctrl = new AbortController();
   const t = setTimeout(() => ctrl.abort(), 6000);
   try {
-    await fetch(`${SUPABASE_URL}/auth/v1/health`, { method: 'GET', mode: 'no-cors', cache: 'no-store', signal: ctrl.signal });
+    await fetch(`${SUPABASE_URL}/auth/v1/health${SUPABASE_KEY ? `?apikey=${encodeURIComponent(SUPABASE_KEY)}` : ''}`, { method: 'GET', mode: 'no-cors', cache: 'no-store', signal: ctrl.signal });
     return true;
   } catch {
     return false;
@@ -58,9 +59,9 @@ export default function OfflineGate({ children }) {
       padding: '24px', textAlign: 'center', fontFamily: 'inherit', color: '#1f2937',
     }}>
       <WifiOff size={64} color="#ef4444" />
-      <h2 style={{ margin: '20px 0 8px', fontSize: '1.4rem' }}>Walang internet connection</h2>
+      <h2 style={{ margin: '20px 0 8px', fontSize: '1.4rem' }}>No internet connection</h2>
       <p style={{ margin: 0, maxWidth: 320, color: '#6b7280', lineHeight: 1.5 }}>
-        Kailangan ng internet o mobile data para magamit ang Budget Rent PH. Paki-check ang WiFi o mobile data mo at subukan ulit.
+        Budget Rent PH needs internet or mobile data to work. Please check your WiFi or mobile data and try again.
       </p>
       <button
         onClick={recheck}
@@ -71,7 +72,7 @@ export default function OfflineGate({ children }) {
           display: 'inline-flex', alignItems: 'center', gap: 8, opacity: checking ? 0.7 : 1,
         }}
       >
-        <RefreshCw size={18} /> {checking ? 'Chine-check...' : 'Subukan ulit'}
+        <RefreshCw size={18} /> {checking ? 'Checking...' : 'Try again'}
       </button>
     </div>
   );

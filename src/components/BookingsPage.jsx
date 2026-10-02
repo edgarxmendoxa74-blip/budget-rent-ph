@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
-import { CalendarCheck, Phone, Mail, Users, PawPrint, Clock, CheckCircle2, XCircle, MessageCircle } from 'lucide-react';
+import { Phone, Mail, Users, PawPrint, Clock, CheckCircle2, XCircle, MessageCircle, Trash2 } from 'lucide-react';
+import { HeroBudi } from './MascotSplash';
 import BookingChat from './BookingChat';
 import './BookingsPage.css';
 
@@ -7,7 +8,7 @@ const FILTERS = [
   { key: 'pending', label: 'Pending' },
   { key: 'confirmed', label: 'Confirmed' },
   { key: 'declined', label: 'Declined' },
-  { key: 'all', label: 'Lahat' }
+  { key: 'all', label: 'All' }
 ];
 
 const peso = (n) => `₱${Number(n || 0).toLocaleString()}`;
@@ -15,7 +16,7 @@ const pretty = (s) => new Date(`${s}T00:00:00`).toLocaleDateString('en-PH', { mo
 const nightsOf = (a, b) => Math.round((new Date(`${b}T00:00:00`) - new Date(`${a}T00:00:00`)) / 86400000);
 
 // Lahat ng staycation booking requests para sa landlord (RLS ang naglilimita sa listings niya)
-const BookingsPage = ({ bookings, properties, onSetStatus, unread = {}, onChatChanged }) => {
+const BookingsPage = ({ bookings, properties, onSetStatus, onDismiss, unread = {}, onChatChanged }) => {
   const [filter, setFilter] = useState('pending');
   const [busyId, setBusyId] = useState(null);
   const [chat, setChat] = useState(null);
@@ -40,13 +41,21 @@ const BookingsPage = ({ bookings, properties, onSetStatus, unread = {}, onChatCh
     setBusyId(null);
   };
 
+  const remove = async (b) => {
+    if (!window.confirm(`Remove ${b.customer_name}’s booking from your list? This won’t affect the guest or the dates already booked.`)) return;
+    setBusyId(b.id);
+    await onDismiss(b.id);
+    setBusyId(null);
+  };
+
   return (
     <div className="page-section animate-fade-in bookings-page">
-      <header className="bookings-head">
-        <span className="bookings-icon"><CalendarCheck size={22} /></span>
-        <div>
+      <header className="hero branding-hero">
+        <HeroBudi message={counts.pending > 0 ? `You have ${counts.pending} pending booking request${counts.pending > 1 ? 's' : ''}! 📬` : 'Booking requests from guests will show up here. 📬'} />
+        <div className="hero-content">
+          <span className="branding-kicker">Landlord</span>
           <h2>Bookings</h2>
-          <p>Mga booking request ng mga guest (staycation at paupahan)</p>
+          <p>Booking requests from guests (staycations and rentals)</p>
         </div>
       </header>
 
@@ -59,7 +68,7 @@ const BookingsPage = ({ bookings, properties, onSetStatus, unread = {}, onChatCh
         ))}
       </div>
 
-      {list.length === 0 && <p className="bookings-empty">Wala pang booking dito.</p>}
+      {list.length === 0 && <p className="bookings-empty">No bookings here yet.</p>}
 
       <div className="bookings-list">
         {list.map((b) => (
@@ -67,21 +76,21 @@ const BookingsPage = ({ bookings, properties, onSetStatus, unread = {}, onChatCh
             <div className="booking-top">
               <div>
                 <strong>{b.customer_name}</strong>
-                <span>{nameOf(b.property_id)} • {b.kind === 'rent' ? 'Paupahan' : 'Staycation'}</span>
+                <span>{nameOf(b.property_id)} • {b.kind === 'rent' ? 'Rental' : 'Staycation'}</span>
               </div>
               <em className={`booking-status ${b.status}`}>{b.status === 'pending' ? 'Pending' : b.status === 'confirmed' ? 'Confirmed' : 'Declined'}</em>
             </div>
 
             <div className="booking-dates">
-              <div><span>{b.kind === 'rent' ? 'Lipat / bisita' : 'Check-in'}</span><strong>{pretty(b.check_in)}</strong></div>
+              <div><span>{b.kind === 'rent' ? 'Move-in / visit' : 'Check-in'}</span><strong>{pretty(b.check_in)}</strong></div>
               {b.check_out && <div><span>Check-out</span><strong>{pretty(b.check_out)}</strong></div>}
-              {b.check_out && <div><span>Gabi</span><strong>{nightsOf(b.check_in, b.check_out)}</strong></div>}
+              {b.check_out && <div><span>Nights</span><strong>{nightsOf(b.check_in, b.check_out)}</strong></div>}
             </div>
 
             <div className="booking-meta">
-              <span><Users size={14} /> {b.kind === 'rent' ? `${b.guests} tao` : `${b.adults || b.guests} adult${(b.adults || b.guests) > 1 ? 's' : ''}${b.children ? `, ${b.children} bata` : ''}`}</span>
-              {b.pets && <span><PawPrint size={14} /> May alagang hayop</span>}
-              {b.arrival_time && <span><Clock size={14} /> {b.arrival_time}</span>}
+              <span><Users size={12} /> {b.kind === 'rent' ? `${b.guests} ${b.guests > 1 ? 'people' : 'person'}` : `${b.adults || b.guests} adult${(b.adults || b.guests) > 1 ? 's' : ''}${b.children ? `, ${b.children} ${b.children > 1 ? 'children' : 'child'}` : ''}`}</span>
+              {b.pets && <span><PawPrint size={12} /> With pets</span>}
+              {b.arrival_time && <span><Clock size={12} /> {b.arrival_time}</span>}
             </div>
 
             {b.kind !== 'rent' && Number(b.total_price) > 0 && (
@@ -92,18 +101,21 @@ const BookingsPage = ({ bookings, properties, onSetStatus, unread = {}, onChatCh
             {b.note && <p className="booking-note">"{b.note}"</p>}
 
             <div className="booking-contact">
-              <a href={`tel:${b.customer_phone}`}><Phone size={14} /> {b.customer_phone}</a>
-              {b.customer_email && <a href={`mailto:${b.customer_email}`}><Mail size={14} /> {b.customer_email}</a>}
+              <a href={`tel:${b.customer_phone}`}><Phone size={12} /> {b.customer_phone}</a>
+              {b.customer_email && <a href={`mailto:${b.customer_email}`}><Mail size={12} /> {b.customer_email}</a>}
             </div>
 
             <div className="booking-actions">
-              <button type="button" className="chat" onClick={() => setChat({ id: b.id, title: b.customer_name })}><MessageCircle size={16} /> Chat{unread[b.id] > 0 && <span className="chat-unread">{unread[b.id]}</span>}</button>
+              <button type="button" className="chat" onClick={() => setChat({ id: b.id, title: b.customer_name })}><MessageCircle size={14} /> Chat{unread[b.id] > 0 && <span className="chat-unread">{unread[b.id]}</span>}</button>
+              {b.status !== 'pending' && onDismiss && (
+                <button type="button" className="decline" disabled={busyId === b.id} onClick={() => remove(b)}><Trash2 size={14} /> Delete</button>
+              )}
             </div>
 
             {b.status === 'pending' && (
               <div className="booking-actions">
-                <button type="button" className="confirm" disabled={busyId === b.id} onClick={() => act(b.id, 'confirmed')}><CheckCircle2 size={16} /> Confirm</button>
-                <button type="button" className="decline" disabled={busyId === b.id} onClick={() => act(b.id, 'declined')}><XCircle size={16} /> Decline</button>
+                <button type="button" className="confirm" disabled={busyId === b.id} onClick={() => act(b.id, 'confirmed')}><CheckCircle2 size={14} /> Confirm</button>
+                <button type="button" className="decline" disabled={busyId === b.id} onClick={() => act(b.id, 'declined')}><XCircle size={14} /> Decline</button>
               </div>
             )}
           </article>

@@ -4,12 +4,13 @@ import {
   Users, ClipboardList, Shield, LogOut, Search, 
   Check, X, Building2, Trash2, Star,
   Settings, BarChart3, Clock, Award, AlertCircle, RefreshCw, ImagePlus,
-  Download, Home, MapPin, Megaphone, Pencil, Send, Video
+  Download, Home, MapPin, Megaphone, Pencil, Send, Video, User
 } from 'lucide-react';
 import { updateThumbnail } from '../lib/updates';
 import { fetchPlans } from '../lib/plans';
 import { downloadCsv, fmtDate } from '../lib/csv';
 import './AdminPanel.css';
+import { ikImage } from '../lib/imagekit';
 
 const HIDDEN_PROPERTIES_KEY = 'budgetrent_hidden_properties';
 const PAYMENT_METHODS_KEY = 'budgetrent_payment_methods';
@@ -74,6 +75,17 @@ const getAdminAvatarFallback = ({ ownerName, businessName }) => {
   return `https://ui-avatars.com/api/?name=${encodeURIComponent(ownerName || businessName || 'Landlord')}&background=random`;
 };
 
+// 639171234567 -> 09171234567
+const tenantPhone = (phone) => (/^639\d{9}$/.test(phone || '') ? `0${phone.slice(2)}` : (phone || ''));
+const tenantAge = (iso) => {
+  const b = new Date(`${iso}T00:00:00`);
+  if (Number.isNaN(b.getTime())) return null;
+  const now = new Date();
+  let age = now.getFullYear() - b.getFullYear();
+  if (now.getMonth() < b.getMonth() || (now.getMonth() === b.getMonth() && now.getDate() < b.getDate())) age -= 1;
+  return age;
+};
+
 const AdminPanel = ({ onLogout }) => {
   const [activeTab, setActiveTab] = useState('analytics'); 
   const [paymentMethods, setPaymentMethods] = useState(getStoredPaymentMethods);
@@ -88,6 +100,8 @@ const AdminPanel = ({ onLogout }) => {
   useEffect(() => { fetchPlans().then(setPlans); }, []);
   
   const [landlords, setLandlords] = useState([]);
+  const [tenants, setTenants] = useState([]);
+  const [tenantsError, setTenantsError] = useState('');
   const [verificationRequests, setVerificationRequests] = useState([]);
   const [allProperties, setAllProperties] = useState([]);
   const [reviews, setReviews] = useState([]);
@@ -99,7 +113,7 @@ const AdminPanel = ({ onLogout }) => {
   const [updForm, setUpdForm] = useState(EMPTY_UPD);
   const [updSaving, setUpdSaving] = useState(false);
   const [hiddenPropertyIds, setHiddenPropertyIdsState] = useState(getHiddenPropertyIds());
-  const [loading, setLoading] = useState(true);
+  const [, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [proofInput, setProofInput] = useState('');
@@ -129,6 +143,13 @@ const AdminPanel = ({ onLogout }) => {
     const hiddenSet = new Set(hiddenPropertyIds);
     return allProperties.filter(p => !hiddenSet.has(p.id));
   }, [allProperties, hiddenPropertyIds]);
+
+  // Tenant accounts (walang email): hanapin ayon sa pangalan, number, o work status
+  const filteredTenants = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return tenants;
+    return tenants.filter(t => [t.full_name, t.work_status, tenantPhone(t.phone), t.phone].some(v => String(v || '').toLowerCase().includes(q)));
+  }, [tenants, searchQuery]);
 
   const filteredProperties = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
@@ -235,6 +256,17 @@ const AdminPanel = ({ onLogout }) => {
     { label: 'Expiry', value: l => fmtDate(l.subscription_expiry) },
     { label: 'Verified', value: l => (l.is_verified ? 'Yes' : 'No') }
   ], planLandlords);
+
+  const exportTenants = () => downloadCsv('budgetrent-tenants', [
+    { label: 'Name', value: t => t.full_name },
+    { label: 'Mobile', value: t => tenantPhone(t.phone) },
+    { label: 'Birthday', value: t => t.birthday },
+    { label: 'Age', value: t => tenantAge(t.birthday) },
+    { label: 'Work Status', value: t => t.work_status },
+    { label: 'Bookings', value: t => t.bookings },
+    { label: 'Joined', value: t => fmtDate(t.created_at) },
+    { label: 'Last Login', value: t => fmtDate(t.last_sign_in_at) }
+  ], filteredTenants);
 
   const exportListings = () => downloadCsv('budgetrent-listings', [
     { label: 'Name', value: p => p.name || p.title },
@@ -404,9 +436,7 @@ const AdminPanel = ({ onLogout }) => {
       setReviews(rError ? [] : (rData || []));
       const normalizedProperties = normalizePropertyOwnerProfiles(propData || []);
       const hiddenIds = getHiddenPropertyIds();
-      const hiddenPropertyIdSet = new Set(hiddenIds);
       setHiddenPropertyIdsState(hiddenIds);
-      const visiblePropertyRows = normalizedProperties.filter(p => !hiddenPropertyIdSet.has(p.id));
 
       // Create a unique list of landlords from listings, prioritizing those with avatars
       const landlordMap = {};
@@ -478,6 +508,11 @@ const AdminPanel = ({ onLogout }) => {
         }
         return p;
       });
+
+      // Tenant accounts: RPC na admin lang ang puwede (kung wala pa ang SQL migration, hindi masisira ang dashboard)
+      const { data: tData, error: tError } = await supabase.rpc('admin_list_tenants');
+      setTenants(tError ? [] : (tData || []));
+      setTenantsError(tError ? (tError.message || 'Hindi mabasa ang tenants.') : '');
 
       setLandlords(checkedLandlords);
       setVerificationRequests(vData || []);
@@ -685,6 +720,7 @@ const AdminPanel = ({ onLogout }) => {
         <div className="sidebar-group">
           <label>Data</label>
           <button className={activeTab === 'listings' ? 'active' : ''} onClick={() => setActiveTab('listings')}><Home size={18}/> <span>Listings</span></button>
+          <button className={activeTab === 'tenants' ? 'active' : ''} onClick={() => setActiveTab('tenants')}><User size={18}/> <span>Tenants</span></button>
         </div>
 
         <div className="sidebar-group">
@@ -760,6 +796,7 @@ const AdminPanel = ({ onLogout }) => {
                 {activeTab === 'landlords' && `${requestLandlords.length} waiting for verification`}
                 {activeTab === 'subscriptions' && `${planLandlords.length} plan(s)`}
                 {activeTab === 'listings' && `${shownProperties.length} listing(s)`}
+                {activeTab === 'tenants' && `${filteredTenants.length} tenant account(s)`}
               </span>
               <button
                 className="export-btn"
@@ -767,7 +804,8 @@ const AdminPanel = ({ onLogout }) => {
                   analytics: exportSummary,
                   landlords: exportLandlords,
                   subscriptions: exportSubscriptions,
-                  listings: exportListings
+                  listings: exportListings,
+                  tenants: exportTenants
 
                 }[activeTab]}
               >
@@ -862,6 +900,39 @@ const AdminPanel = ({ onLogout }) => {
                   </div>
                 </details>
               ))}
+            </div>
+          )}
+
+          {activeTab === 'tenants' && (
+            <div className="admin-list">
+              {tenantsError && (
+                <div className="admin-empty">
+                  Hindi mabasa ang tenants ({tenantsError}). Patakbuhin muna ang <b>add_admin_tenants.sql</b> sa Supabase SQL Editor.
+                </div>
+              )}
+              {!tenantsError && filteredTenants.length === 0 && <div className="admin-empty">Wala pang tenant account.</div>}
+              {filteredTenants.length > 0 && (
+                <>
+                  <div className="admin-list-head tenant-row">
+                    <span>Tenant</span><span>Mobile</span><span>Birthday</span><span>Work status</span><span>Bookings</span><span>Joined</span><span>Last login</span>
+                  </div>
+                  {filteredTenants.map(t => (
+                    <div key={t.id} className="admin-list-row tenant-row">
+                      <div className="row-user">
+                        <div className="row-user-info">
+                          <strong>{t.full_name || '—'}</strong>
+                        </div>
+                      </div>
+                      <span className="row-date">{tenantPhone(t.phone) || '—'}</span>
+                      <span className="row-date">{t.birthday ? `${t.birthday} (${tenantAge(t.birthday) ?? '?'})` : '—'}</span>
+                      <span className="row-date">{t.work_status || '—'}</span>
+                      <span className="row-count">{t.bookings}</span>
+                      <span className="row-date">{fmtDate(t.created_at) || '—'}</span>
+                      <span className="row-date">{fmtDate(t.last_sign_in_at) || '—'}</span>
+                    </div>
+                  ))}
+                </>
+              )}
             </div>
           )}
 
@@ -978,7 +1049,7 @@ const AdminPanel = ({ onLogout }) => {
                 <div key={l.email} className="admin-list-row landlord-row">
                   <div className="row-user">
                     <div className="row-avatar">
-                      {l.owner_avatar ? <img src={l.owner_avatar} alt="" /> : l.owner_name?.charAt(0)}
+                      {l.owner_avatar ? <img src={ikImage(l.owner_avatar, 80)} alt="" /> : l.owner_name?.charAt(0)}
                     </div>
                     <div className="row-user-info">
                       <strong>{l.owner_name} {l.is_verified && <Award size={13} color="#007dfe" />}</strong>
@@ -1029,7 +1100,7 @@ const AdminPanel = ({ onLogout }) => {
                 <div key={l.email} className="admin-list-row sub-row">
                   <div className="row-user" onClick={() => setPlanOwner(l)} style={{ cursor: 'pointer' }} title="View properties">
                     <div className="row-avatar">
-                      {l.owner_avatar ? <img src={l.owner_avatar} alt="" /> : l.owner_name?.charAt(0)}
+                      {l.owner_avatar ? <img src={ikImage(l.owner_avatar, 80)} alt="" /> : l.owner_name?.charAt(0)}
                     </div>
                     <div className="row-user-info">
                       <strong>{l.owner_name}</strong>

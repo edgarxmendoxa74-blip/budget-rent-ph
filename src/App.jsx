@@ -1,19 +1,21 @@
 import React, { useState, useEffect, useMemo, useRef, Suspense, lazy } from 'react';
 import { HeroBudi } from './components/MascotSplash';
-import { Search, MapPin, Bed, Bath, Wifi, Shield, Star, Menu, X, Heart, MessageCircle, Phone, LogOut, Building2, User, Users, Loader2, ClipboardList, Mail, BadgeCheck, Headset, ArrowLeft, Home, Navigation, Globe, Trash2, ChevronLeft, ChevronRight, Bell, FileText, HousePlus, LocateFixed, PawPrint, ScrollText, FileSignature, Info, House, TreePalm, Plus, Lightbulb, Megaphone, CalendarCheck } from 'lucide-react';
+import { Search, MapPin, Bed, Bath, Wifi, Shield, Star, Menu, X, Heart, MessageCircle, Phone, LogOut, Building2, User, Users, Loader2, ClipboardList, Mail, BadgeCheck, Headset, ArrowLeft, Home, Navigation, Globe, Trash2, ChevronLeft, ChevronRight, Bell, FileText, HousePlus, LocateFixed, PawPrint, ScrollText, FileSignature, Info, House, TreePalm, Plus, Lightbulb, Megaphone, CalendarCheck, Inbox } from 'lucide-react';
 import { clearSupabaseSessionStorage, recoverFromJwtError, supabase, validateCurrentSession } from './lib/supabase';
 import { isAdminEmail, isAdminPath } from './lib/admin';
 import { playNotifySound, unlockNotifySound } from './lib/notifySound';
 import { useUserLocation } from './lib/useUserLocation';
-import { getGuestBookings } from './lib/guestBookings';
 import { isInstalledApp, hasSeenTour, forceTourFromUrl } from './lib/tour';
 import { useApproxCoords } from './lib/useApproxCoords';
 import { useAreaSearch } from './lib/useAreaSearch';
+import { NEW_TENANT_KEY } from './lib/tenantAuth';
+import { fetchDismissedIds, dismissBooking } from './lib/bookingDismissals';
 import { matchesPlaceQuery, buildPlaceIndex, suggestPlaces, PLACE_LEVELS } from './lib/placeSearch';
 import CallGateLink from './components/CallGate';
 import { toCoords, distanceKm, formatDistance, inArea } from './lib/geo';
 import './App.css';
 import './components/ProfileModal.css';
+import { ikImage } from './lib/imagekit';
 
 // Lazy loaded components
 const Auth = lazy(() => import('./components/Auth'));
@@ -24,7 +26,10 @@ const EditListings = lazy(() => import('./components/EditListings'));
 const VerificationPage = lazy(() => import('./components/VerificationPage'));
 const CustomerSupportPage = lazy(() => import('./components/CustomerSupportPage'));
 const BookingsPage = lazy(() => import('./components/BookingsPage'));
-const MyBookingsPage = lazy(() => import('./components/MyBookingsPage'));
+const InboxPage = lazy(() => import('./components/InboxPage'));
+const WelcomeModal = lazy(() => import('./components/WelcomeModal'));
+const TenantAccountModal = lazy(() => import('./components/TenantAccountModal'));
+const ListingActionSheet = lazy(() => import('./components/ListingActionSheet'));
 const FindNearbyPage = lazy(() => import('./components/FindNearbyPage'));
 const AdminPanel = lazy(() => import('./components/AdminPanel'));
 const AdminLogin = lazy(() => import('./components/AdminLogin'));
@@ -50,6 +55,7 @@ function useDebounce(value, delay) {
 
 const CATEGORIES = ["Paupahan", "Staycation"];
 const CATEGORY_ICON = { Paupahan: House, Staycation: TreePalm };
+const CATEGORY_LABEL = { Paupahan: 'Rentals', Staycation: 'Staycation' };
 
 // Budget input sa home search: max na presyo kada buwan (0/blank = lahat)
 const parseBudget = (value) => Math.max(0, Number(value) || 0);
@@ -68,7 +74,7 @@ const isOccupied = (item) => {
 // Tinatayang kasya sa staycation: 2 guests kada kwarto (wala pang capacity field sa database)
 const stayCapacity = (item) => Math.max(1, Number(item?.rooms) || 1) * 2;
 // Staycation na occupied: puwede pa ring mag-reserve ng slot para sa ibang petsa
-const availabilityLabel = (item) => (isOccupied(item) ? (isStaycation(item) ? 'Occupied • Reserve pa' : 'Occupied') : 'Available');
+const availabilityLabel = (item) => (isOccupied(item) ? (isStaycation(item) ? 'Occupied • Can still reserve' : 'Occupied') : 'Available');
 const HIDDEN_PROPERTIES_KEY = 'budgetrent_hidden_properties';
 
 const getHiddenPropertyIds = () => {
@@ -134,7 +140,7 @@ function ListingCard({ item, isFav, onToggleFavorite, onOpen, stats, distanceLab
       onClick={() => onOpen(item)}
     >
       <div className="image-container">
-        <img src={item.image || '/placeholder.png'} alt={item.name || item.title} loading="lazy" />
+        <img src={ikImage(item.image, 480) || '/placeholder.png'} alt={item.name || item.title} loading="lazy" />
         <span className={`avail-badge ${isOccupied(item) ? 'occupied' : 'available'}`}>
           {availabilityLabel(item)}
         </span>
@@ -149,7 +155,7 @@ function ListingCard({ item, isFav, onToggleFavorite, onOpen, stats, distanceLab
         </button>
         {distanceLabel && (
           <span className="card-km-chip" title={distanceLabel}>
-            <Navigation size={11} /> {distanceLabel.replace(' mula sa iyo', '')}
+            <Navigation size={11} /> {distanceLabel.replace(' from you', '')}
           </span>
         )}
         {isFav && (
@@ -164,14 +170,9 @@ function ListingCard({ item, isFav, onToggleFavorite, onOpen, stats, distanceLab
             <h4 className="card-title">{item.location?.split(',')[0] || item.name}</h4>
             <p className="card-subtitle">
               {item.type || item.category || 'Rental Property'}
-              {isStaycation(item) && <span> • hanggang {stayCapacity(item)} guests</span>}
+              {isStaycation(item) && <span> • up to {stayCapacity(item)} guests</span>}
             </p>
           </div>
-        </div>
-
-        <div className="card-price-row">
-          <span className="price-tag">₱{item.price?.toLocaleString() || 0}</span>
-          <span className="price-period">{isStaycation(item) ? '/gabi' : '/month'}</span>
           {stats?.count > 0 && (
             <span className="card-rating" title={`${stats.avg.toFixed(1)} out of 3`}>
               <Star size={11} fill="currentColor" strokeWidth={0} />
@@ -179,6 +180,11 @@ function ListingCard({ item, isFav, onToggleFavorite, onOpen, stats, distanceLab
               <em>({stats.count})</em>
             </span>
           )}
+        </div>
+
+        <div className="card-price-row">
+          <span className="price-tag">₱{item.price?.toLocaleString() || 0}</span>
+          <span className="price-period">{isStaycation(item) ? '/night' : '/month'}</span>
         </div>
       </div>
     </div>
@@ -203,7 +209,20 @@ function App() {
   const [reviews, setReviews] = useState([]);
   const [reviewsLoading, setReviewsLoading] = useState(true);
   const [loading, setLoading] = useState(true);
-  const [isGuest, setIsGuest] = useState(localStorage.getItem('budgetrent_guest') === 'true');
+  // Tenant = account na may mobile number (walang email). Landlord = may email at verification.
+  const isGuest = session?.user?.user_metadata?.user_role === 'tenant';
+  // Welcome message pagkatapos mag-sign up ng tenant (nakaflag sa sessionStorage ng Auth)
+  const [showWelcome, setShowWelcome] = useState(false);
+  const [isTenantAccountOpen, setIsTenantAccountOpen] = useState(false);
+  useEffect(() => {
+    if (!isGuest) return;
+    try {
+      if (sessionStorage.getItem(NEW_TENANT_KEY)) {
+        sessionStorage.removeItem(NEW_TENANT_KEY);
+        setShowWelcome(true);
+      }
+    } catch { /* ignore */ }
+  }, [isGuest]);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isTourOpen, setIsTourOpen] = useState(false);
   const [isNotifOpen, setIsNotifOpen] = useState(false);
@@ -242,10 +261,19 @@ function App() {
 
   // Layo ng bawat listing mula sa lokasyon ng tenant (kung pinayagan ang location)
   const userLoc = useUserLocation();
+  // "Not now" sa banner: isang beses lang bawat session
+  const [locBannerHidden, setLocBannerHidden] = useState(() => {
+    try { return sessionStorage.getItem('budgetrent_loc_banner_hidden') === '1'; } catch { return false; }
+  });
+  const hideLocBanner = () => {
+    setLocBannerHidden(true);
+    try { sessionStorage.setItem('budgetrent_loc_banner_hidden', '1'); } catch { /* okay lang */ }
+  };
+  const locNeedsFix = ['denied', 'off', 'unavailable'].includes(userLoc.status);
 
   // App tour: kusang lalabas sa unang bukas ng naka-install na app (o ?tour=1). Puwede ring buksan sa menu.
   useEffect(() => {
-    if (!session && !isGuest) return;
+    if (!session) return;
     if (forceTourFromUrl() || (isInstalledApp() && !hasSeenTour())) setIsTourOpen(true);
   }, [session, isGuest]);
   // Staycation 'Where': hanapin ang buong lugar sa mapa, hindi lang text sa address
@@ -253,13 +281,14 @@ function App() {
   // Hanapin ang buong lugar (lalawigan/bayan/barangay) sa mapa para sa Paupahan at Staycation
   const stayArea = useAreaSearch(debouncedSearchQuery, (selectedCategory === 'Staycation' || selectedCategory === 'Paupahan') && !priceQuery);
   const [searchFocused, setSearchFocused] = useState(false);
+  const [bookSheet, setBookSheet] = useState(null); // { item, kind } para sa Book Here sa property modal
   const approxCoords = useApproxCoords(properties, Boolean(userLoc.coords) || Boolean(stayArea));
   const getDistanceLabel = (item) => {
     if (!userLoc.coords || !item) return null;
     const pinned = toCoords(item);
     const coords = pinned || approxCoords[item.id];
     if (!coords) return null;
-    return `${pinned ? '' : '≈ '}${formatDistance(distanceKm(userLoc.coords, coords))} mula sa iyo`;
+    return `${pinned ? '' : '≈ '}${formatDistance(distanceKm(userLoc.coords, coords))} from you`;
   };
 
 
@@ -270,10 +299,6 @@ function App() {
     validateCurrentSession().then((rawSession) => {
       const session = forAppOnly(rawSession);
       setSession(session);
-      if (session) {
-        setIsGuest(false);
-        localStorage.removeItem('budgetrent_guest');
-      }
     });
 
     const {
@@ -281,10 +306,6 @@ function App() {
     } = supabase.auth.onAuthStateChange((event, rawSession) => {
       const session = forAppOnly(rawSession);
       setSession(session);
-      if (session) {
-        setIsGuest(false);
-        localStorage.removeItem('budgetrent_guest');
-      }
       if (event === 'SIGNED_OUT') {
         const hiddenProperties = localStorage.getItem(HIDDEN_PROPERTIES_KEY);
         clearSupabaseSessionStorage();
@@ -302,6 +323,18 @@ function App() {
 
     return () => subscription.unsubscribe();
   }, []);
+
+  // Pagka-log in (o pagpalit ng account): tenant → Home, landlord → My Listings.
+  // Hindi na madadala ang tab na naiwan ng dating naka-log in.
+  const landedUserIdRef = useRef(null);
+  useEffect(() => {
+    const userId = session?.user?.id || null;
+    if (userId === landedUserIdRef.current) return;
+    landedUserIdRef.current = userId;
+    if (!userId || isAdminPath()) return;
+    setSelectedProperty(null);
+    setActiveTab(session.user.user_metadata?.user_role === 'landlord' ? 'mylistings' : 'home');
+  }, [session]);
 
   // Landlords should always land on their own section (never the tenant home feed)
   useEffect(() => {
@@ -383,16 +416,27 @@ function App() {
     if (error) {
       setStatus(item.availability || 'Available');
       alert(error.code === '42703' || /availability/i.test(error.message || '')
-        ? 'Wala pa ang "availability" column sa database. Patakbuhin muna ang SQL migration sa Supabase SQL Editor.'
+        ? 'The "availability" column does not exist in the database yet. Run the SQL migration in the Supabase SQL Editor first.'
         : 'Error updating availability: ' + error.message);
     }
   };
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
+    // Local sign-out is instant (no network); revoke the server session in the background so a slow connection doesn't stall logout
+    const accessToken = session?.access_token;
+    await supabase.auth.signOut({ scope: 'local' });
+    if (accessToken) {
+      fetch(`${import.meta.env.VITE_SUPABASE_URL}/auth/v1/logout`, {
+        method: 'POST',
+        headers: {
+          apikey: import.meta.env.VITE_SUPABASE_ANON_KEY || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+          Authorization: `Bearer ${accessToken}`,
+        },
+        keepalive: true,
+      }).catch(() => {});
+    }
     localStorage.removeItem('budgetrent_admin_bypass');
     localStorage.removeItem('budgetrent_guest');
-    setIsGuest(false);
     setIsMenuOpen(false);
     if (isAdminPath()) {
       window.location.href = '/';
@@ -535,11 +579,12 @@ function App() {
       const list = (data || []).filter(mine);
       // Staycation booking requests (kung wala pa ang table, tahimik na lalaktawan)
       const { data: bData } = await supabase.from('booking_requests').select('*').order('created_at', { ascending: false }).limit(30);
-      const bList = (bData || []).filter(mine);
+      const dismissed = await fetchDismissedIds();
+      const bList = (bData || []).filter(mine).filter(r => !dismissed.has(r.id));
       // Hindi pa nababasang chat ng mga guest (RLS: sa listings lang niya)
       const { data: mData } = await supabase.from('booking_messages').select('id, booking_id').eq('sender', 'guest').is('read_at', null);
       const unread = {};
-      (mData || []).forEach(m => { unread[m.booking_id] = (unread[m.booking_id] || 0) + 1; });
+      (mData || []).filter(m => !dismissed.has(m.booking_id)).forEach(m => { unread[m.booking_id] = (unread[m.booking_id] || 0) + 1; });
       const ids = [...list, ...bList].map(r => r.id).concat((mData || []).map(m => m.id));
       if (seenInquiryIds.current && ids.some(id => !seenInquiryIds.current.has(id))) playNotifySound();
       seenInquiryIds.current = new Set(ids);
@@ -558,18 +603,17 @@ function App() {
     return () => { clearInterval(t); supabase.removeChannel(channel); };
   }, [session, isGuest]);
 
-  // Tenant (guest): hindi pa nababasang sagot ng owner
+  // Tenant: hindi pa nababasang sagot ng owner (RLS: sarili niyang bookings lang)
   useEffect(() => {
-    if (!isGuest) { setGuestUnread({}); reloadGuestRef.current = null; return undefined; }
+    if (!isGuest || !session?.user?.id) { setGuestUnread({}); reloadGuestRef.current = null; return undefined; }
     let first = true;
     let prevTotal = 0;
     const load = async () => {
-      const tokens = getGuestBookings().map(b => b.token);
-      if (tokens.length === 0) return;
-      const { data, error } = await supabase.rpc('get_guest_unread', { p_tokens: tokens });
+      const { data, error } = await supabase.from('booking_messages').select('booking_id').eq('sender', 'owner').is('read_at', null);
       if (error) return;
       const map = {};
-      (data || []).forEach(r => { map[r.booking_id] = Number(r.unread); });
+      const dismissed = await fetchDismissedIds();
+      (data || []).filter(r => !dismissed.has(r.booking_id)).forEach(r => { map[r.booking_id] = (map[r.booking_id] || 0) + 1; });
       const total = Object.values(map).reduce((a, b) => a + b, 0);
       if (!first && total > prevTotal) playNotifySound();
       first = false;
@@ -579,8 +623,12 @@ function App() {
     reloadGuestRef.current = load;
     load();
     const t = setInterval(load, 15000);
-    return () => clearInterval(t);
-  }, [isGuest]);
+    const channel = supabase.channel('tenant-inbox')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'booking_messages' }, () => load())
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'booking_requests' }, () => load())
+      .subscribe();
+    return () => { clearInterval(t); supabase.removeChannel(channel); };
+  }, [isGuest, session?.user?.id]);
 
   const timeAgo = (iso) => {
     const mins = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60000));
@@ -598,12 +646,12 @@ function App() {
     }));
     const items = [
       ...announcementItems,
-      { id: 'welcome', icon: '🎉', tone: 'gold', title: 'Welcome to BudgetRentPH', body: 'Maligayang pagdating! Simulan ang paghahanap ng affordable na rental.', time: 'Just now' },
-      { id: 'categories', icon: '🏠', tone: 'navy', title: 'Paupahan or Staycation', body: 'Piliin ang category para makita ang rentals na hinahanap mo.', time: 'Today' },
-      { id: 'wishlist', icon: '❤️', tone: 'red', title: 'Save your favorites', body: 'I-tap ang heart sa listing para mapunta sa iyong Wishlist.', time: 'Today' },
+      { id: 'welcome', icon: '🎉', tone: 'gold', title: 'Welcome to BudgetRentPH', body: 'Welcome! Start searching for an affordable rental.', time: 'Just now' },
+      { id: 'categories', icon: '🏠', tone: 'navy', title: 'Rentals or Staycation', body: 'Pick a category to see the rentals you are looking for.', time: 'Today' },
+      { id: 'wishlist', icon: '❤️', tone: 'red', title: 'Save your favorites', body: 'Tap the heart on a listing to add it to your Wishlist.', time: 'Today' },
     ];
     if (!isGuest) {
-      items.push({ id: 'verified', icon: '✅', tone: 'green', title: 'Get Verified', body: 'Mag-verify ng account para mas magtitiwala ang mga tenant sa listings mo.', time: 'Tip' });
+      items.push({ id: 'verified', icon: '✅', tone: 'green', title: 'Get Verified', body: 'Verify your account so tenants trust your listings more.', time: 'Tip' });
     }
     return items.filter(n => !deletedNotifs.includes(n.id));
   }, [isGuest, announcements, deletedNotifs]);
@@ -611,7 +659,7 @@ function App() {
   // Hiwalay na call requests (Phone icon sa header) para sa landlord
   const callNotifs = useMemo(() => inquiries.map(r => ({
     id: `inq-${r.id}`,
-    title: `${r.customer_name} gustong tumawag`,
+    title: `${r.customer_name} wants a call`,
     phone: r.customer_phone,
     time: timeAgo(r.created_at)
   })).filter(n => !deletedNotifs.includes(n.id)), [inquiries, deletedNotifs]);
@@ -621,8 +669,17 @@ function App() {
   const pendingBookings = bookings.filter(r => r.status === 'pending').length + ownerUnreadTotal;
   const setBookingStatus = async (bookingId, status) => {
     const { error } = await supabase.from('booking_requests').update({ status }).eq('id', bookingId);
-    if (error) { alert(error.message || 'Hindi na-update ang booking.'); return; }
+    if (error) { alert(error.message || 'Could not update the booking.'); return; }
     setBookings(list => list.map(b => (b.id === bookingId ? { ...b, status } : b)));
+  };
+  const removeBooking = async (bookingId) => {
+    try {
+      await dismissBooking(bookingId);
+      setBookings(list => list.filter(b => b.id !== bookingId));
+      reloadOwnerRef.current?.();
+    } catch {
+      alert('Could not delete the booking. Please try again.');
+    }
   };
   const callUnread = callNotifs.filter(n => !readNotifs.includes(n.id)).length;
   const [isCallNotifOpen, setIsCallNotifOpen] = useState(false);
@@ -658,10 +715,10 @@ function App() {
 
 
 
-  if (!session && !isGuest && !isAdminPath()) {
+  if (!session && !isAdminPath()) {
     return (
       <Suspense fallback={<div className="text-center py-10"><Loader2 className="animate-spin text-primary mx-auto" size={40} /></div>}>
-        <Auth onAuthSuccess={() => { setIsGuest(true); localStorage.setItem('budgetrent_guest', 'true'); }} />
+        <Auth />
       </Suspense>
     );
   }
@@ -729,7 +786,7 @@ function App() {
                         </div>
                       </div>
                       <div className="notif-list">
-                        {callNotifs.length === 0 && <p className="notif-empty">Wala pang gustong tumawag.</p>}
+                        {callNotifs.length === 0 && <p className="notif-empty">No call requests yet.</p>}
                         {callNotifs.map(n => (
                           <div key={n.id} className={`notif-item${readNotifs.includes(n.id) ? '' : ' unread'}`}
                             onClick={() => {
@@ -782,7 +839,7 @@ function App() {
                       </div>
                     </div>
                     <div className="notif-list">
-                      {notifications.length === 0 && <p className="notif-empty">Wala kang notifications.</p>}
+                      {notifications.length === 0 && <p className="notif-empty">You have no notifications.</p>}
                       {notifications.map(n => (
                         <div
                           key={n.id}
@@ -816,6 +873,12 @@ function App() {
               )}
             </div>
 
+            {isGuest && session?.user && (
+              <button className="menu-btn" onClick={() => setIsTenantAccountOpen(true)} aria-label="My Account" title="My Account">
+                <User size={22} />
+              </button>
+            )}
+
             <button className="menu-btn" onClick={() => setIsMenuOpen(true)}>
               <Menu size={28} />
             </button>
@@ -832,7 +895,7 @@ function App() {
                 <span className="menu-logo-chip"><img src="/logo.png" alt="Logo" className="logo-img" /></span>
                 <div className="menu-brand-text">
                   <h1 className="brand-name">Budget<span>Rent</span>PH</h1>
-                  <p>Mura. Malapit. Mapagkakatiwalaan.</p>
+                  <p>Affordable. Nearby. Trustworthy.</p>
                 </div>
               </div>
               <button className="close-menu" onClick={() => setIsMenuOpen(false)}><X size={24} /></button>
@@ -851,8 +914,17 @@ function App() {
                   <button className={`menu-link${activeTab === 'explore' ? ' active' : ''}`} onClick={() => { setIsMenuOpen(false); setActiveTab('explore'); }}>
                     <div className="icon-container-mini"><Navigation size={18} /></div> Phone Location
                   </button>
-                  <button className={`menu-link${activeTab === 'mybookings' ? ' active' : ''}`} onClick={() => { setIsMenuOpen(false); setActiveTab('mybookings'); }}>
-                    <div className="icon-container-mini secondary-icon"><CalendarCheck size={18} /></div> My Bookings{guestUnreadTotal > 0 ? ` (${guestUnreadTotal})` : ''}
+                  <button
+                    className="menu-link"
+                    onClick={() => { if (userLoc.status !== 'granted') { setIsMenuOpen(false); (locNeedsFix ? userLoc.openSettings : userLoc.request)(); } }}
+                  >
+                    <div className="icon-container-mini"><MapPin size={18} /></div> Location Settings
+                    <span className={`menu-loc-status${userLoc.status === 'granted' ? ' on' : ''}`}>
+                      {userLoc.status === 'granted' ? 'On' : userLoc.status === 'loading' ? '...' : userLoc.status === 'denied' ? 'Blocked' : 'Off'}
+                    </span>
+                  </button>
+                  <button className={`menu-link${activeTab === 'inbox' ? ' active' : ''}`} onClick={() => { setIsMenuOpen(false); setActiveTab('inbox'); }}>
+                    <div className="icon-container-mini secondary-icon"><Inbox size={18} /></div> Inbox{guestUnreadTotal > 0 ? ` (${guestUnreadTotal})` : ''}
                   </button>
                 </>
               )}
@@ -883,9 +955,9 @@ function App() {
 
               
               <div className="menu-divider"></div>
-              <p className="menu-section-label">Tungkol & Tulong</p>
+              <p className="menu-section-label">About & Help</p>
               <button className="menu-link" onClick={() => { setIsMenuOpen(false); setIsTourOpen(true); }}>
-                <div className="icon-container-mini secondary-icon"><Lightbulb size={18} /></div> App Tour (Paano gamitin)
+                <div className="icon-container-mini secondary-icon"><Lightbulb size={18} /></div> App Tour (How to use)
               </button>
               <button className={`menu-link${activeTab === 'about' ? ' active' : ''}`} onClick={() => { setIsMenuOpen(false); setActiveTab('about'); }}>
                 <div className="icon-container-mini"><Building2 size={18} /></div> About Us
@@ -917,10 +989,10 @@ function App() {
       {activeTab === 'home' && (
         <>
           <header className={`hero ${activeTab === 'saved' ? 'saved-hero' : ''}`}>
-            <HeroBudi message="Hello! 👋 Ako si Budi. Hanapin dito ang paupahan o staycation na pasok sa budget mo." />
+            <HeroBudi message="Hello! 👋 I'm Budi. Find a rental or staycation that fits your budget here." />
             <div className="hero-content">
               <h2>Welcome to <span>BudgetRentPH</span></h2>
-              <p>Mura. Malapit. Mapagkakatiwalaan.</p>
+              <p>Affordable. Nearby. Trustworthy.</p>
                 {selectedCategory === 'Staycation' ? (
                   <div className="staycation-search">
                     <div className="stay-seg stay-seg-where">
@@ -939,7 +1011,7 @@ function App() {
                           <button
                             type="button"
                             className="stay-clear"
-                            aria-label="Burahin ang search"
+                            aria-label="Clear search"
                             onClick={() => setSearchQuery('')}
                           >
                             <X size={13} />
@@ -997,7 +1069,7 @@ function App() {
                   <Search className="search-icon" size={20} />
                   <input
                     type="text"
-                    placeholder="Lalawigan, bayan, o barangay..."
+                    placeholder="Province, town/city, or barangay..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     onFocus={() => setSearchFocused(true)}
@@ -1008,7 +1080,7 @@ function App() {
                     <button
                       type="button"
                       className="budget-clear"
-                      aria-label="Burahin ang search"
+                      aria-label="Clear search"
                       onClick={() => setSearchQuery('')}
                     >
                       <X size={14} />
@@ -1048,16 +1120,16 @@ function App() {
                       inputMode="numeric"
                       autoComplete="off"
                       className="budget-input"
-                      placeholder={selectedCategory === 'Staycation' ? 'Budget mo kada gabi' : 'Budget mo kada buwan'}
+                      placeholder={selectedCategory === 'Staycation' ? 'Your budget per night' : 'Your budget per month'}
                       value={budgetMax === '' ? '' : Number(budgetMax).toLocaleString('en-US')}
                       onChange={(e) => setBudgetMax(e.target.value.replace(/\D/g, '').replace(/^0+/, '').slice(0, 7))}
                     />
-                    <span className="budget-suffix">{selectedCategory === 'Staycation' ? '/gabi' : '/mo'}</span>
+                    <span className="budget-suffix">{selectedCategory === 'Staycation' ? '/night' : '/mo'}</span>
                     {budgetMax !== '' && (
                       <button
                         type="button"
                         className="budget-clear"
-                        aria-label="Burahin ang budget"
+                        aria-label="Clear budget"
                         onClick={() => setBudgetMax('')}
                       >
                         <X size={14} />
@@ -1066,8 +1138,8 @@ function App() {
                   </div>
                   {maxBudget > 0 && (
                     <p className="budget-hint">
-                      Hanggang ₱{maxBudget.toLocaleString()}{selectedCategory === 'Staycation' ? ' kada gabi' : ' kada buwan'} • {filteredListings.length} resulta
-                      {selectedCategory !== 'Staycation' && ' • buwanang upa lang, hindi pa kasama ang advance at deposit'}
+                      Up to ₱{maxBudget.toLocaleString()}{selectedCategory === 'Staycation' ? ' per night' : ' per month'} • {filteredListings.length} results
+                      {selectedCategory !== 'Staycation' && ' • monthly rent only, advance and deposit not included'}
                     </p>
                   )}
                 </div>
@@ -1083,7 +1155,7 @@ function App() {
                   onClick={() => { if (cat !== selectedCategory) setBudgetMax(''); setSelectedCategory(cat); }}
                 >
                   <span className="chip-emoji">{React.createElement(CATEGORY_ICON[cat] || House, { size: 20, strokeWidth: 2.2 })}</span>
-                  {cat}
+                  {CATEGORY_LABEL[cat] || cat}
                 </button>
               ))}
             </div>
@@ -1110,33 +1182,39 @@ function App() {
               </div>
             ) : (
               <>
-              {userLoc.status !== 'granted' && (
-                <button
-                  type="button"
-                  className="distance-prompt"
-                  onClick={userLoc.request}
-                  disabled={userLoc.status === 'loading'}
-                >
-                  <Navigation size={15} />
-                  {userLoc.status === 'loading' ? 'Hinahanap ang lokasyon mo...'
-                    : userLoc.status === 'denied' ? 'Naka-block ang location — i-Allow sa browser/phone settings para makita ang layo'
-                    : userLoc.status === 'unavailable' ? 'Hindi makuha ang lokasyon — subukan ulit'
-                    : 'I-on ang location para makita kung gaano kalayo ang bawat bahay'}
-                </button>
+              {isGuest && userLoc.status !== 'granted' && !(locNeedsFix && locBannerHidden) && (
+                <div className="distance-prompt-wrap">
+                  <button
+                    type="button"
+                    className="distance-prompt"
+                    onClick={locNeedsFix ? userLoc.openSettings : userLoc.request}
+                    disabled={userLoc.status === 'loading'}
+                  >
+                    <Navigation size={15} />
+                    {userLoc.status === 'loading' ? 'Finding your location...'
+                      : userLoc.status === 'denied' ? 'Location is blocked — tap to open settings and allow it to see distances'
+                      : userLoc.status === 'off' ? 'Your phone’s Location is off — tap to turn it on and see distances'
+                      : userLoc.status === 'unavailable' ? 'Could not get your location — tap to try again'
+                      : 'Turn on location to see how far each place is'}
+                  </button>
+                  {locNeedsFix && (
+                    <button type="button" className="distance-prompt-dismiss" onClick={hideLocBanner}>Not now</button>
+                  )}
+                </div>
               )}
               {filteredListings.length === 0 && (
                 <div className="budget-empty">
                   {maxBudget > 0 && cheapestInCategory && cheapestInCategory > maxBudget ? (
                     <>
-                      <strong>Walang listing na hanggang ₱{maxBudget.toLocaleString()}</strong>
-                      <span>Ang pinakamura ngayon ay ₱{cheapestInCategory.toLocaleString()}{selectedCategory === 'Staycation' ? ' kada gabi' : ' kada buwan'}.</span>
-                      <button type="button" onClick={() => setBudgetMax(String(cheapestInCategory))}>Ipakita hanggang ₱{cheapestInCategory.toLocaleString()}</button>
+                      <strong>No listings up to ₱{maxBudget.toLocaleString()}</strong>
+                      <span>The cheapest right now is ₱{cheapestInCategory.toLocaleString()}{selectedCategory === 'Staycation' ? ' per night' : ' per month'}.</span>
+                      <button type="button" onClick={() => setBudgetMax(String(cheapestInCategory))}>Show up to ₱{cheapestInCategory.toLocaleString()}</button>
                     </>
                   ) : (
                     <>
-                      <strong>Walang nahanap na listing</strong>
-                      <span>Subukan ang ibang lugar, petsa, o budget.</span>
-                      {maxBudget > 0 && <button type="button" onClick={() => { setBudgetMax(''); if (priceQuery) setSearchQuery(''); }}>Burahin ang budget</button>}
+                      <strong>No listings found</strong>
+                      <span>Try a different place, date, or budget.</span>
+                      {maxBudget > 0 && <button type="button" onClick={() => { setBudgetMax(''); if (priceQuery) setSearchQuery(''); }}>Clear budget</button>}
                     </>
                   )}
                 </div>
@@ -1184,7 +1262,7 @@ function App() {
       {activeTab === 'wishlist' && (
         <>
           <header className="hero saved-hero">
-            <HeroBudi message="Dito makikita ang mga na-save mo. Pindutin ang ❤ sa kahit anong listing para i-save ito." />
+            <HeroBudi message="Your saved listings show up here. Tap the ❤ on any listing to save it." />
             <div className="hero-content">
               <h2>My <span>Wishlist</span></h2>
               <p>Properties you saved for later</p>
@@ -1232,7 +1310,7 @@ function App() {
       {activeTab === 'mylistings' && (
         <>
           <header className={`hero saved-hero`} style={{ position: 'relative' }}>
-            <HeroBudi message="Dito makikita ang lahat ng listing mo. Pindutin ang Edit para palitan ang detalye o status." />
+            <HeroBudi message="All your listings show up here. Tap Edit to change the details or status." />
             <div className="hero-content">
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: '8px' }}>
                 <h2>My Properties</h2>
@@ -1267,7 +1345,7 @@ function App() {
                 {filteredListings.map(item => (
                   <div key={item.id} className="mine-card animate-slide-up">
                     <div className="mine-img">
-                      <img src={item.image || '/placeholder.png'} alt={item.name || item.title} loading="lazy" />
+                      <img src={ikImage(item.image, 480) || '/placeholder.png'} alt={item.name || item.title} loading="lazy" />
                       <span className={`avail-badge ${isOccupied(item) ? 'occupied' : 'available'}`}>
                         {availabilityLabel(item)}
                       </span>
@@ -1275,11 +1353,11 @@ function App() {
                     <div className="mine-info">
                       <span className={`mine-cat ${isStaycation(item) ? 'stay' : 'rent'}`}>
                         {isStaycation(item) ? <TreePalm size={11} /> : <House size={11} />}
-                        {isStaycation(item) ? 'Staycation' : 'Paupahan'}
+                        {isStaycation(item) ? 'Staycation' : 'Rental'}
                       </span>
                       <h4 className="mine-name">{item.name || item.title}</h4>
                       <div className="mine-price">
-                        ₱{item.price?.toLocaleString() || 0}<span>{isStaycation(item) ? '/gabi' : '/month'}</span>
+                        ₱{item.price?.toLocaleString() || 0}<span>{isStaycation(item) ? '/night' : '/month'}</span>
                       </div>
                       <div className="mine-loc"><MapPin size={12} /> <span>{item.location}</span></div>
                       <button
@@ -1287,12 +1365,12 @@ function App() {
                         className={`mine-toggle ${isOccupied(item) ? 'occupied' : 'available'}`}
                         onClick={(e) => { e.stopPropagation(); handleToggleAvailability(item); }}
                         aria-pressed={isOccupied(item)}
-                        title={isStaycation(item) && isOccupied(item) ? 'Occupied — puwede pa ring mag-reserve ng slot ang guests' : 'I-toggle: Available / Occupied'}
+                        title={isStaycation(item) && isOccupied(item) ? 'Occupied — guests can still reserve a slot' : 'Toggle: Available / Occupied'}
                       >
                         <span className="mine-toggle-track"><span className="mine-toggle-knob" /></span>
                         <span className="mine-toggle-text">
                           {isOccupied(item) ? 'Occupied' : 'Available'}
-                          {isStaycation(item) && isOccupied(item) && <em> • reserve pa</em>}
+                          {isStaycation(item) && isOccupied(item) && <em> • can still reserve</em>}
                         </span>
                       </button>
                       <div className="mine-actions">
@@ -1425,6 +1503,20 @@ function App() {
               </div>
             </section>
             <section className="terms-card">
+              <div className="terms-icon-box"><User size={20} /></div>
+              <div className="terms-content">
+                <h3>Tenant Accounts</h3>
+                <p>Tenants sign up with their name, mobile number, birthday, and work status. No email is needed. One mobile number can have only one account. You must use your own number and give true information, and you are responsible for keeping your password safe. We do not verify mobile numbers by SMS, and a forgotten password cannot be recovered automatically, so contact Customer Support if you need help. Accounts with false information or that are shared or abused may be suspended.</p>
+              </div>
+            </section>
+            <section className="terms-card">
+              <div className="terms-icon-box"><MessageCircle size={20} /></div>
+              <div className="terms-content">
+                <h3>Inbox and Messages</h3>
+                <p>Your booking requests and the replies of landlords are kept in your Inbox. Tenants can send up to 3 messages per booking, so please make each one clear. Keep the chat about the booking only. Do not send passwords, bank details, or personal IDs, and do not harass or spam. Landlords can see the name and mobile number you used for the booking. We may review or remove messages that break these rules.</p>
+              </div>
+            </section>
+            <section className="terms-card">
               <div className="terms-icon-box"><Navigation size={20} /></div>
               <div className="terms-content">
                 <h3>Location</h3>
@@ -1435,7 +1527,7 @@ function App() {
               <div className="terms-icon-box"><Shield size={20} /></div>
               <div className="terms-content">
                 <h3>Privacy</h3>
-                <p>We collect only what the app needs: your email and name, phone number for inquiries, listing details, and verification and payment proofs. This is used to run the service, prevent fraud, and contact you. We never sell your personal information. Data is stored securely, and you may ask us through Customer Support to correct or delete your account data, in line with the Data Privacy Act of 2012 (RA 10173).</p>
+                <p>We collect only what the app needs. Tenants: name, mobile number, birthday, and work status (no email required; one mobile number can have only one account). Landlords: email, name, phone, listing details, and verification and payment proofs. This is used to run the service, prevent fraud, and contact you. We never sell your personal information. Data is stored securely, and you may ask us through Customer Support to correct or delete your account data, in line with the Data Privacy Act of 2012 (RA 10173).</p>
               </div>
             </section>
             <section className="terms-card">
@@ -1468,15 +1560,15 @@ function App() {
         </Suspense>
       )}
 
-      {activeTab === 'mybookings' && isGuest && (
+      {activeTab === 'inbox' && isGuest && (
         <Suspense fallback={<div className="text-center py-10"><Loader2 className="animate-spin text-primary mx-auto" size={40} /></div>}>
-          <MyBookingsPage properties={properties} unread={guestUnread} onChatChanged={() => reloadGuestRef.current?.()} />
+          <InboxPage properties={properties} unread={guestUnread} onChatChanged={() => reloadGuestRef.current?.()} />
         </Suspense>
       )}
 
       {activeTab === 'bookings' && (
         <Suspense fallback={<div className="text-center py-10"><Loader2 className="animate-spin text-primary mx-auto" size={40} /></div>}>
-          <BookingsPage bookings={bookings} properties={properties} onSetStatus={setBookingStatus} unread={ownerUnread} onChatChanged={() => reloadOwnerRef.current?.()} />
+          <BookingsPage bookings={bookings} properties={properties} onSetStatus={setBookingStatus} onDismiss={removeBooking} unread={ownerUnread} onChatChanged={() => reloadOwnerRef.current?.()} />
         </Suspense>
       )}
 
@@ -1502,7 +1594,7 @@ function App() {
           <div className="modal-content property-detail-modal animate-slide-up" onClick={e => e.stopPropagation()}>
             <button className="close-btn" onClick={() => setSelectedProperty(null)}><X size={24} /></button>
             <div className="modal-image">
-              <img src={selectedProperty.image} alt={selectedProperty.name || selectedProperty.title} />
+              <img src={ikImage(selectedProperty.image, 1080)} alt={selectedProperty.name || selectedProperty.title} />
             </div>
             <div className="modal-body">
               <div className="modal-badges">
@@ -1513,7 +1605,7 @@ function App() {
               </div>
               <h2>{selectedProperty.name || selectedProperty.title}</h2>
               {isStaycation(selectedProperty) && isOccupied(selectedProperty) && (
-                <p className="stay-reserve-note"><Info size={14} /> Occupied ngayon, pero puwede ka pa ring mag-reserve ng slot para sa ibang petsa.</p>
+                <p className="stay-reserve-note"><Info size={14} /> Occupied right now, but you can still reserve a slot for other dates.</p>
               )}
               {(() => {
                 const { price, advance, deposit, advanceMonths, depositMonths } = getMoveInBreakdown(selectedProperty);
@@ -1523,7 +1615,7 @@ function App() {
                   const down = Number(selectedProperty.down_payment) || 0;
                   return (
                     <div className="modal-movein-box">
-                      <div className="modal-movein-title">Bayarin</div>
+                      <div className="modal-movein-title">Fees</div>
                       <div className="modal-movein-grid">
                         <div className="modal-movein-cell rent">
                           <span>Per Night</span>
@@ -1531,7 +1623,7 @@ function App() {
                         </div>
                         <div className="modal-movein-cell">
                           <span>Down Payment</span>
-                          <strong>{down > 0 ? peso(down) : 'Wala'}</strong>
+                          <strong>{down > 0 ? peso(down) : 'None'}</strong>
                         </div>
                       </div>
                     </div>
@@ -1539,7 +1631,7 @@ function App() {
                 }
                 return (
                   <div className="modal-movein-box">
-                    <div className="modal-movein-title">Bayarin</div>
+                    <div className="modal-movein-title">Fees</div>
                     <div className="modal-movein-grid">
                       <div className="modal-movein-cell rent">
                         <span>Monthly Rent</span>
@@ -1547,12 +1639,12 @@ function App() {
                       </div>
                       <div className="modal-movein-cell">
                         <span>Advance</span>
-                        <strong>{advanceMonths > 0 ? peso(advance) : 'Wala'}</strong>
+                        <strong>{advanceMonths > 0 ? peso(advance) : 'None'}</strong>
                         <em>{mo(advanceMonths)}</em>
                       </div>
                       <div className="modal-movein-cell">
                         <span>Deposit</span>
-                        <strong>{depositMonths > 0 ? peso(deposit) : 'Wala'}</strong>
+                        <strong>{depositMonths > 0 ? peso(deposit) : 'None'}</strong>
                         <em>{mo(depositMonths)}</em>
                       </div>
                     </div>
@@ -1574,7 +1666,7 @@ function App() {
               <div className="owner-profile-card clickable property-owner-card" onClick={() => setViewingLandlord(selectedProperty)}>
                 <div style={{ position: 'relative' }}>
                   {shouldShowOwnerAvatar(selectedProperty) ? (
-                    <img src={selectedProperty.owner_avatar} alt="Owner" className="property-owner-avatar" />
+                    <img src={ikImage(selectedProperty.owner_avatar, 96)} alt="Owner" className="property-owner-avatar" />
                   ) : (
                     <div className="property-owner-avatar property-owner-placeholder">
                       {(selectedProperty.owner_name || 'L').charAt(0).toUpperCase()}
@@ -1661,13 +1753,41 @@ function App() {
                 <CallGateLink phone={selectedProperty.contact} propertyId={selectedProperty.id} ownerEmail={selectedProperty.email} className="contact-btn call">
                   <Phone size={20} /> Call Owner
                 </CallGateLink>
-                <a href={`mailto:${selectedProperty.email}?subject=Inquiry about ${selectedProperty.name}`} className="contact-btn email">
-                  <Mail size={20} /> Email Owner
-                </a>
+                {selectedProperty.user_id !== session?.user?.id && (
+                  <button type="button" className="contact-btn email" onClick={() => setBookSheet({ item: selectedProperty, kind: isStaycation(selectedProperty) ? 'book' : 'inquire' })}>
+                    <CalendarCheck size={20} /> Book Here
+                  </button>
+                )}
               </div>
             </div>
           </div>
         </div>
+      )}
+
+      {isTenantAccountOpen && isGuest && session?.user && (
+        <Suspense fallback={null}>
+          <TenantAccountModal
+            user={session.user}
+            onClose={() => setIsTenantAccountOpen(false)}
+            onLogout={() => { setIsTenantAccountOpen(false); handleLogout(); }}
+          />
+        </Suspense>
+      )}
+
+      {showWelcome && isGuest && (
+        <Suspense fallback={null}>
+          <WelcomeModal
+            name={session?.user?.user_metadata?.full_name}
+            phone={session?.user?.user_metadata?.phone ? `0${String(session.user.user_metadata.phone).slice(2)}` : ''}
+            onClose={() => setShowWelcome(false)}
+          />
+        </Suspense>
+      )}
+
+      {bookSheet && (
+        <Suspense fallback={null}>
+          <ListingActionSheet item={bookSheet.item} kind={bookSheet.kind} onClose={() => setBookSheet(null)} />
+        </Suspense>
       )}
 
       {isTourOpen && (
@@ -1730,14 +1850,6 @@ function App() {
                 <span className="nav-label">Nearby</span>
               </button>
               <button
-                className={`nav-item ico-home ${activeTab === 'home' ? 'active' : ''}`}
-                onClick={() => setActiveTab('home')}
-                aria-current={activeTab === 'home' ? 'page' : undefined}
-              >
-                <span className="nav-icon-box"><Home size={22} /></span>
-                <span className="nav-label">Home</span>
-              </button>
-              <button
                 className={`nav-item ico-updates ${activeTab === 'updates' ? 'active' : ''}`}
                 onClick={() => setActiveTab('updates')}
                 aria-current={activeTab === 'updates' ? 'page' : undefined}
@@ -1746,12 +1858,31 @@ function App() {
                 <span className="nav-label">Updates</span>
               </button>
               <button
+                className={`nav-item ico-home ${activeTab === 'home' ? 'active' : ''}`}
+                onClick={() => setActiveTab('home')}
+                aria-current={activeTab === 'home' ? 'page' : undefined}
+              >
+                <span className="nav-icon-box"><Home size={22} /></span>
+                <span className="nav-label">Home</span>
+              </button>
+              <button
                 className={`nav-item ico-wish ${activeTab === 'wishlist' ? 'active' : ''}`}
                 onClick={() => setActiveTab('wishlist')}
                 aria-current={activeTab === 'wishlist' ? 'page' : undefined}
               >
                 <span className="nav-icon-box"><Heart size={22} /></span>
                 <span className="nav-label">Wishlist</span>
+              </button>
+              <button
+                className={`nav-item ico-support ${activeTab === 'inbox' ? 'active' : ''}`}
+                onClick={() => setActiveTab('inbox')}
+                aria-current={activeTab === 'inbox' ? 'page' : undefined}
+              >
+                <span className="nav-icon-box" style={{ position: 'relative' }}>
+                  <Inbox size={22} />
+                  {guestUnreadTotal > 0 && <span className="notif-badge">{guestUnreadTotal}</span>}
+                </span>
+                <span className="nav-label">Inbox</span>
               </button>
             </>
           )}
@@ -1803,7 +1934,7 @@ function App() {
             <div className="profile-header">
               <div className="profile-avatar">
                 {shouldShowOwnerAvatar(viewingLandlord) ? (
-                  <img src={viewingLandlord.owner_avatar} alt="Avatar" className="avatar-img" />
+                  <img src={ikImage(viewingLandlord.owner_avatar, 160)} alt="Avatar" className="avatar-img" />
                 ) : (
                   <div className="avatar-placeholder">
                     {viewingLandlord.owner_name ? viewingLandlord.owner_name.charAt(0).toUpperCase() : <User />}
@@ -1813,7 +1944,7 @@ function App() {
                <span className={`role-badge ${viewingLandlord.is_verified ? 'verified' : 'landlord'}`}>
                  {viewingLandlord.is_verified ? (<><BadgeCheck size={12} fill="white" color="var(--primary)" /> VERIFIED OWNER</>) : 'LANDLORD'}
                </span>
-               <h2 style={{ marginBottom: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+               <h2 style={{ marginBottom: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', color: '#fff' }}>
                  {viewingLandlord.owner_name || 'Landlord'}
                  {viewingLandlord.is_verified && <BadgeCheck size={22} fill="#0066ff" color="white" />}
                </h2>
@@ -1860,27 +1991,6 @@ function App() {
                   </div>
                 </div>
               )}
-            </div>
-            
-            <div className="modal-actions" style={{ position: 'static', background: 'transparent', flexDirection: 'row', width: '100%', gap: '8px', padding: '16px 20px 20px', margin: 0, justifyContent: 'center' }}>
-               {viewingLandlord.contact ? (
-                 <CallGateLink phone={viewingLandlord.contact} ownerEmail={viewingLandlord.email} className="contact-btn call" style={{ flex: 1, padding: '12px', fontSize: '0.85rem', margin: 0 }}>
-                   <Phone size={18} /> Call
-                 </CallGateLink>
-               ) : (
-                 <span className="contact-btn call" style={{ flex: 1, padding: '12px', fontSize: '0.85rem', margin: 0, opacity: 0.6, pointerEvents: 'none' }}>
-                   <Phone size={18} /> No number
-                 </span>
-               )}
-               {viewingLandlord.email ? (
-                 <a href={`mailto:${viewingLandlord.email}`} className="contact-btn email" style={{ flex: 1, padding: '12px', fontSize: '0.85rem', margin: 0 }}>
-                   <Mail size={18} /> Message
-                 </a>
-               ) : (
-                 <span className="contact-btn email" style={{ flex: 1, padding: '12px', fontSize: '0.85rem', margin: 0, opacity: 0.6, pointerEvents: 'none' }}>
-                   <Mail size={18} /> No email
-                 </span>
-               )}
             </div>
           </div>
         </div>

@@ -2406,6 +2406,23 @@
   text-align: left;
 }
 
+.distance-prompt-wrap { margin: 0 0 14px; }
+.distance-prompt-wrap .distance-prompt { margin-bottom: 4px; }
+.distance-prompt-dismiss {
+  display: block;
+  margin: 0 0 0 auto;
+  padding: 2px 6px;
+  border: none;
+  background: none;
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.menu-loc-status { margin-left: auto; font-size: 0.7rem; font-weight: 800; padding: 2px 8px; border-radius: 999px; background: #fef3c7; color: #b45309; }
+.menu-loc-status.on { background: #d1fae5; color: #047857; }
+
 .distance-prompt:disabled {
   opacity: 0.7;
   cursor: default;
@@ -3103,3 +3120,194 @@
   font-weight: 700;
   color: #64748b;
 }
+
+/* Tenant nav: Home sa gitna, kulay dilaw (gold) */
+.nav-item.ico-home .nav-icon-box {
+  background: rgba(245, 158, 11, 0.2);
+  color: #b45309;
+  border-color: rgba(245, 158, 11, 0.4);
+}
+
+.nav-item.ico-home .nav-label { color: #b45309; }
+
+.nav-item.ico-home.active,
+.nav-item.ico-home:hover { color: #b45309; }
+
+.nav-item.ico-home.active .nav-icon-box {
+  background: linear-gradient(135deg, #fcd34d 0%, #f59e0b 100%);
+  color: #fff;
+  border-color: rgba(180, 83, 9, 0.45);
+  transform: scale(1.06);
+  box-shadow: 0 10px 20px -8px rgba(245, 158, 11, 0.8);
+}
+
+.nav-item.ico-home.active::after {
+  background: linear-gradient(135deg, #fcd34d 0%, #f59e0b 100%);
+  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.55);
+}
+
+/* ===== Property detail modal polish (brand: navy + gold) ===== */
+.property-detail-modal {
+  border-radius: 30px 30px 0 0;
+  background: #fff;
+}
+
+.property-detail-modal .modal-image {
+  height: 290px;
+  position: relative;
+}
+
+/* Gradient sa ilalim ng larawan para dumausdos papunta sa laman */
+.property-detail-modal .modal-image::after {
+  content: '';
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 45%;
+  background: linear-gradient(to top, rgba(0, 26, 58, 0.55), rgba(0, 26, 58, 0));
+  pointer-events: none;
+}
+
+.property-detail-modal .modal-body {
+  position: relative;
+  margin-top: -26px;
+  padding: 26px 22px 22px;
+  background: #fff;
+  border-radius: 28px 28px 0 0;
+}
+
+/* Maliit na "handle" sa taas ng sheet */
+.property-detail-modal .modal-body::before {
+  content: '';
+  position: absolute;
+  top: 9px;
+  left: 50%;
+  width: 40px;
+  height: 4px;
+  border-radius: 99px;
+  background: var(--border);
+  transform: translateX(-50%);
+}
+
+.property-detail-modal .close-btn {
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(6px);
+  border: none;
+  color: var(--primary);
+}
+
+.property-detail-modal .modal-badges { margin: 4px 0 10px; }
+
+.property-detail-modal h2 {
+  font-size: 1.55rem;
+  line-height: 1.2;
+  font-weight: 800;
+  color: var(--primary);
+  letter-spacing: -0.02em;
+  margin: 0 0 4px;
+}
+
+.property-detail-modal .modal-location {
+  align-items: flex-start;
+  gap: 6px;
+  margin: 10px 0 0;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: var(--primary-light);
+  color: var(--primary-dark);
+  font-size: 0.88rem;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.property-detail-modal .modal-location > svg { color: var(--secondary-dark); flex-shrink: 0; margin-top: 1px; }
+.property-detail-modal .modal-location .card-distance { color: var(--text-muted); font-weight: 600; }
+
+/* Mga heading ng seksyon: may gintong accent */
+.property-detail-modal .modal-body > h3,
+.property-detail-modal .reviews-title h3 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 1.02rem;
+  font-weight: 800;
+  color: var(--primary);
+  margin: 0 0 10px;
+}
+
+.property-detail-modal .modal-body > h3::before {
+  content: '';
+  width: 4px;
+  height: 16px;
+  border-radius: 99px;
+  background: var(--secondary-gradient);
+}
+
+.property-detail-modal .modal-body > p {
+  font-size: 0.92rem;
+  line-height: 1.65;
+  color: #334155;
+  white-space: pre-line;
+}
+
+.property-detail-modal .divider {
+  margin: 20px 0;
+  background: linear-gradient(to right, transparent, var(--border), transparent);
+}
+
+/* Fees box */
+.property-detail-modal .modal-movein-box {
+  margin: 14px 0 0;
+  border-color: rgba(0, 59, 122, 0.1);
+  box-shadow: var(--shadow-sm);
+}
+
+.property-detail-modal .modal-movein-title { color: var(--secondary-dark); }
+
+/* Owner card */
+.property-detail-modal .property-owner-card {
+  background: #fff;
+  border: 1.5px solid var(--border);
+  border-left: 4px solid var(--secondary-gold);
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 22px;
+}
+
+.property-detail-modal .property-owner-card:hover { border-color: var(--primary); border-left-color: var(--secondary-gold); }
+
+.property-detail-modal .property-owner-avatar { border-color: var(--secondary-gold); }
+
+/* Amenities */
+.property-detail-modal .amenities-list { gap: 10px; margin-bottom: 26px; }
+
+.property-detail-modal .amenity-item {
+  background: #fff;
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+  padding: 11px 12px;
+}
+
+.property-detail-modal .amenity-item .circle-icon {
+  background: linear-gradient(135deg, #FFF4D6, #FFE7A3);
+}
+
+.property-detail-modal .amenity-item .circle-icon svg { color: var(--secondary-dark); }
+
+/* Sticky action bar */
+.property-detail-modal .modal-actions {
+  margin: 8px -22px -22px;
+  padding: 14px 22px calc(14px + env(safe-area-inset-bottom, 0px));
+  background: rgba(255, 255, 255, 0.94);
+  backdrop-filter: blur(10px);
+  border-top: 1px solid var(--border);
+  box-shadow: 0 -8px 24px -12px rgba(0, 59, 122, 0.2);
+}
+
+.property-detail-modal .contact-btn { border-radius: 16px; padding: 15px 12px; }
+
+.property-detail-modal .contact-btn.email {
+  background: var(--secondary-gradient);
+  color: var(--primary-dark);
+  box-shadow: var(--shadow-gold);
+}
+
+.property-detail-modal .contact-btn.email:hover { box-shadow: 0 12px 28px -4px rgba(245, 158, 11, 0.55); }

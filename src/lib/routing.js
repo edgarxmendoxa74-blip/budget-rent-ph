@@ -20,10 +20,10 @@ export const fetchRoute = async (from, to) => {
 
 // Tantiyang oras ayon sa sasakyan. Hindi ito eksakto: nag-iiba ang trapiko, pila, at hintuan.
 export const TRANSPORT_MODES = [
-  { key: 'walk', label: 'Lakad', maxKm: 2, minutes: (km) => (km / 4.8) * 60 },
+  { key: 'walk', label: 'Walk', maxKm: 2, minutes: (km) => (km / 4.8) * 60 },
   { key: 'tricycle', label: 'Tricycle', maxKm: 15, minutes: (km) => (km / 22) * 60 },
-  { key: 'jeep', label: 'Jeep', maxKm: 60, minutes: (km) => (km / 18) * 60 },
-  { key: 'car', label: 'Kotse', maxKm: Infinity, minutes: (km, route) => route.carMin * 1.25 }
+  { key: 'jeep', label: 'Jeepney', maxKm: 60, minutes: (km) => (km / 18) * 60 },
+  { key: 'car', label: 'Car', maxKm: Infinity, minutes: (km, route) => route.carMin * 1.25 }
 ];
 
 export const getEstimates = (route) =>
@@ -41,9 +41,9 @@ export const formatDuration = (minutes) => {
   const mins = total % 60;
   if (hours >= 24) {
     const days = Math.floor(hours / 24);
-    return `${days} araw ${hours % 24} oras`;
+    return `${days} ${days === 1 ? 'day' : 'days'} ${hours % 24} hr`;
   }
-  return mins ? `${hours} oras ${mins} min` : `${hours} oras`;
+  return mins ? `${hours} hr ${mins} min` : `${hours} hr`;
 };
 
 export const formatStepDistance = (meters) =>
@@ -52,19 +52,19 @@ export const formatStepDistance = (meters) =>
 // Hakbang-hakbang na direksyon sa Tagalog, galing sa maneuver ng OSRM
 export const stepText = (step) => {
   const { type, modifier } = step.maneuver;
-  const road = step.name ? ` sa ${step.name}` : '';
-  if (type === 'depart') return `Simulan${road || ' sa kalsada'}`;
-  if (type === 'arrive') return 'Nakarating ka na sa destinasyon';
-  if (type === 'roundabout' || type === 'rotary' || type === 'roundabout turn') return `Pumasok sa rotonda${road}`;
-  if (modifier === 'uturn') return 'Mag-U-turn';
+  const road = step.name ? ` onto ${step.name}` : '';
+  if (type === 'depart') return `Start${road || ' on the road'}`;
+  if (type === 'arrive') return 'You have arrived at your destination';
+  if (type === 'roundabout' || type === 'rotary' || type === 'roundabout turn') return `Enter the roundabout${road}`;
+  if (modifier === 'uturn') return 'Make a U-turn';
   if (modifier && /left|right/.test(modifier)) {
-    const dir = modifier.includes('left') ? 'Kumaliwa' : 'Kumanan';
-    const how = modifier.startsWith('slight') ? ' nang bahagya' : modifier.startsWith('sharp') ? ' nang matalim' : '';
-    return `${dir}${how}${road}`;
+    const dir = modifier.includes('left') ? 'left' : 'right';
+    const how = modifier.startsWith('slight') ? 'slight ' : modifier.startsWith('sharp') ? 'sharp ' : '';
+    return `Turn ${how}${dir}${road}`;
   }
-  if (type === 'merge') return `Sumanib${road}`;
-  if (type === 'fork') return `Sa hati ng daan, ${modifier === 'left' ? 'kumaliwa' : 'kumanan'}${road}`;
-  return `Diretso${road}`;
+  if (type === 'merge') return `Merge${road}`;
+  if (type === 'fork') return `At the fork, keep ${modifier === 'left' ? 'left' : 'right'}${road}`;
+  return `Continue straight${road}`;
 };
 
 // Live na biyahe: gaano ka kalayo sa linya ng ruta at ilang km pa ang natitira (tantiya, equirectangular)

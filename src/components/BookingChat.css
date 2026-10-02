@@ -15,9 +15,25 @@
 .bchat-msg.mine { align-self: flex-end; background: var(--primary-gradient); color: #fff; border-bottom-right-radius: 4px; }
 .bchat-msg.theirs { align-self: flex-start; background: #fff; color: var(--primary-dark); border: 1px solid #dbe6f5; border-bottom-left-radius: 4px; }
 
+.bchat-msg.deleted p { font-style: italic; opacity: 0.7; }
+.bchat-del { margin-left: 8px; padding: 2px 4px; border: none; background: transparent; color: inherit; opacity: 0.8; cursor: pointer; vertical-align: middle; line-height: 0; }
+.bchat-del:hover { opacity: 1; }
+.bchat-del:disabled { cursor: default; opacity: 0.5; }
+
 .bchat-error { margin: 0; padding: 6px 14px 0; color: #dc2626; font-size: 0.78rem; font-weight: 700; }
 .bchat-form { display: flex; gap: 8px; padding: 10px 14px 4px; }
 .bchat-form input { flex: 1; padding: 11px 14px; border-radius: 999px; border: 1.5px solid #cfdcee; font-size: 0.9rem; font-family: inherit; }
 .bchat-form button { width: 44px; height: 44px; border: none; border-radius: 50%; background: var(--primary-gradient); color: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; }
 .bchat-form button:disabled { opacity: 0.5; cursor: default; }
 .bchat-note { margin: 0; padding: 4px 16px 12px; font-size: 0.68rem; color: var(--text-muted); text-align: center; }
+
+.bchat-limit-note {
+  margin: 0;
+  padding: 8px 14px;
+  background: #fff8e7;
+  border-bottom: 1px solid #ffe2a1;
+  color: #92400e;
+  font-size: 0.74rem;
+  font-weight: 700;
+  line-height: 1.4;
+}

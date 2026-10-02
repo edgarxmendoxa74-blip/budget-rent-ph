@@ -4,41 +4,64 @@
 .bookings-head p { margin: 2px 0 0; color: var(--text-muted); font-size: 0.82rem; }
 .bookings-icon { width: 44px; height: 44px; border-radius: 14px; display: flex; align-items: center; justify-content: center; background: var(--secondary-gradient); color: var(--primary); }
 
-.bookings-tabs { display: flex; gap: 6px; overflow-x: auto; margin-bottom: 14px; padding-bottom: 2px; }
-.bookings-tabs button { flex-shrink: 0; border: 1.5px solid #dbe6f5; background: #fff; color: var(--primary-dark); border-radius: 999px; padding: 7px 14px; font-weight: 700; font-size: 0.8rem; cursor: pointer; font-family: inherit; }
-.bookings-tabs button span { margin-left: 4px; opacity: 0.7; }
+.bookings-tabs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 14px; }
+.bookings-tabs button { min-width: 0; display: flex; align-items: center; justify-content: center; gap: 4px; border: 1.5px solid #dbe6f5; background: #fff; color: var(--primary-dark); border-radius: 999px; padding: 7px 4px; font-weight: 700; font-size: 0.74rem; cursor: pointer; font-family: inherit; white-space: nowrap; }
+.bookings-tabs button span { opacity: 0.7; }
+@media (max-width: 400px) {
+  .bookings-tabs button { flex-direction: column; gap: 0; border-radius: 14px; padding: 6px 2px; font-size: 0.7rem; line-height: 1.25; }
+}
 .bookings-tabs button.active { background: var(--primary-gradient); color: #fff; border-color: transparent; }
 
 .bookings-empty { text-align: center; color: var(--text-muted); padding: 40px 0; font-size: 0.9rem; }
-.bookings-list { display: flex; flex-direction: column; gap: 12px; }
+.bookings-list { display: flex; flex-direction: column; gap: 8px; }
 
-.booking-card { background: #fff; border: 1.5px solid #dbe6f5; border-radius: 18px; padding: 14px; box-shadow: 0 6px 18px -12px rgba(0, 34, 74, 0.35); }
+.booking-card { background: #fff; border: 1.5px solid #dbe6f5; border-radius: 14px; padding: 10px 12px; box-shadow: 0 4px 12px -10px rgba(0, 34, 74, 0.35); }
 .booking-card.pending { border-color: #ffd36b; }
-.booking-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
-.booking-top strong { display: block; color: var(--primary-dark); font-size: 1rem; }
-.booking-top span { color: var(--text-muted); font-size: 0.78rem; }
-.booking-status { font-style: normal; font-size: 0.68rem; font-weight: 800; text-transform: uppercase; padding: 3px 10px; border-radius: 999px; flex-shrink: 0; }
+.booking-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+.booking-top strong { display: block; color: var(--primary-dark); font-size: 0.9rem; line-height: 1.25; }
+.booking-top span { color: var(--text-muted); font-size: 0.72rem; }
+.booking-status { font-style: normal; font-size: 0.62rem; font-weight: 800; text-transform: uppercase; padding: 2px 8px; border-radius: 999px; flex-shrink: 0; }
 .booking-status.pending { background: #fff3cd; color: #92400e; }
 .booking-status.confirmed { background: #d1fae5; color: #047857; }
 .booking-status.declined { background: #fee2e2; color: #b91c1c; }
 
-.booking-dates { display: grid; grid-template-columns: 1fr 1fr 0.6fr; gap: 8px; margin: 12px 0 8px; }
-.booking-dates > div { background: #f1f5f9; border-radius: 12px; padding: 8px 10px; display: flex; flex-direction: column; gap: 2px; }
-.booking-dates span { font-size: 0.65rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; }
-.booking-dates strong { font-size: 0.8rem; color: var(--primary-dark); }
+.booking-dates { display: grid; grid-template-columns: 1fr 1fr 0.6fr; gap: 6px; margin: 8px 0 6px; }
+.booking-dates > div { background: #f1f5f9; border-radius: 9px; padding: 5px 8px; display: flex; flex-direction: column; gap: 1px; }
+.booking-dates span { font-size: 0.58rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; }
+.booking-dates strong { font-size: 0.74rem; color: var(--primary-dark); }
 
-.booking-meta { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 0.78rem; color: var(--primary-dark); font-weight: 600; }
+.booking-meta { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 0.72rem; color: var(--primary-dark); font-weight: 600; }
 .booking-meta span { display: inline-flex; align-items: center; gap: 5px; }
-.booking-price { margin: 8px 0 0; font-size: 0.82rem; font-weight: 800; color: var(--primary); }
-.booking-note { margin: 6px 0 0; font-size: 0.8rem; color: var(--text-muted); font-style: italic; }
-.booking-contact { display: flex; flex-wrap: wrap; gap: 8px 16px; margin-top: 10px; }
-.booking-contact a { display: inline-flex; align-items: center; gap: 5px; color: var(--primary); font-weight: 700; font-size: 0.82rem; text-decoration: none; }
+.booking-price { margin: 5px 0 0; font-size: 0.76rem; font-weight: 800; color: var(--primary); }
+.booking-note { margin: 4px 0 0; font-size: 0.74rem; color: var(--text-muted); font-style: italic; }
+.booking-contact { display: flex; flex-wrap: wrap; gap: 4px 14px; margin-top: 6px; }
+.booking-contact a { display: inline-flex; align-items: center; gap: 5px; color: var(--primary); font-weight: 700; font-size: 0.76rem; text-decoration: none; }
 
-.booking-actions { display: flex; gap: 8px; margin-top: 12px; }
-.booking-actions button { flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 6px; border: none; border-radius: 12px; padding: 10px; font-weight: 800; font-size: 0.85rem; cursor: pointer; font-family: inherit; }
+.booking-actions { display: flex; gap: 6px; margin-top: 8px; }
+.booking-actions button { flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 5px; border: none; border-radius: 10px; padding: 7px 8px; font-weight: 800; font-size: 0.76rem; cursor: pointer; font-family: inherit; }
 .booking-actions button:disabled { opacity: 0.5; cursor: default; }
 .booking-actions .confirm { background: #10b981; color: #fff; }
 .booking-actions .decline { background: #fee2e2; color: #b91c1c; }
 .booking-actions .chat { background: #e0f2fe; color: #0369a1; }
-.booking-actions + .booking-actions { margin-top: 8px; }
+.booking-actions + .booking-actions { margin-top: 6px; }
 .chat-unread { background: #dc2626; color: #fff; border-radius: 999px; min-width: 18px; height: 18px; padding: 0 5px; display: inline-flex; align-items: center; justify-content: center; font-size: 0.7rem; font-weight: 800; }
+
+/* Delete confirmation modal */
+.inbox-modal-backdrop { position: fixed; inset: 0; z-index: 3000; background: rgba(15, 23, 42, 0.55); display: flex; align-items: center; justify-content: center; padding: 16px; }
+.inbox-modal { width: 100%; max-width: 340px; background: #fff; border-radius: 18px; padding: 20px 18px 16px; text-align: center; box-shadow: 0 24px 50px -16px rgba(15, 23, 42, 0.5); }
+.inbox-modal-icon { width: 46px; height: 46px; margin: 0 auto 10px; border-radius: 50%; background: #fee2e2; color: #b91c1c; display: flex; align-items: center; justify-content: center; }
+.inbox-modal h3 { margin: 0 0 6px; font-size: 1.05rem; color: var(--primary-dark); }
+.inbox-modal p { margin: 0 0 14px; font-size: 0.82rem; color: var(--text-muted); line-height: 1.45; }
+.inbox-modal p b { color: var(--primary-dark); }
+.inbox-modal-actions { display: flex; gap: 8px; }
+.inbox-modal-actions button { flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 5px; border: none; border-radius: 12px; padding: 10px; font-weight: 800; font-size: 0.85rem; cursor: pointer; font-family: inherit; }
+.inbox-modal-actions button:disabled { opacity: 0.6; cursor: default; }
+.inbox-modal-actions .cancel { background: #f1f5f9; color: var(--primary-dark); }
+.inbox-modal-actions .danger { background: #dc2626; color: #fff; }
+
+/* Inbox ng tenant */
+.inbox-card.has-unread { border-color: #38bdf8; box-shadow: 0 8px 22px -12px rgba(2, 132, 199, 0.55); }
+.inbox-last { margin: 6px 0 0; font-size: 0.78rem; color: var(--primary-dark); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.inbox-last span { margin-left: 6px; color: var(--text-muted); font-size: 0.72rem; }
+.inbox-last i { color: var(--text-muted); }
+.inbox-limit { margin: 4px 0 0; font-size: 0.64rem; color: var(--text-muted); text-align: right; }

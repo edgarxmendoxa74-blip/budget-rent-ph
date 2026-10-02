@@ -714,6 +714,7 @@
 .kv-row b.expired { color: var(--admin-danger); }
 .admin-empty.small { padding: 10px; font-size: 0.76rem; }
 
+.tenant-row { grid-template-columns: minmax(150px, 1.6fr) 110px 120px minmax(110px, 1.2fr) 70px 90px 90px; }
 .listing-row { grid-template-columns: minmax(180px, 2.2fr) 90px 90px 90px minmax(140px, 1.4fr); }
 .review-row { grid-template-columns: minmax(140px, 1.4fr) 110px 50px 90px minmax(160px, 2fr); }
 .row-avatar.square { background: var(--primary-light); color: var(--admin-navy); }
@@ -722,8 +723,8 @@
 
 @media (max-width: 900px) {
   .analytics-panel.wide { grid-column: auto; }
-  .listing-row, .review-row { grid-template-columns: 1fr auto; row-gap: 6px; }
-  .listing-row > :first-child, .review-row > :first-child, .review-row > :last-child { grid-column: 1 / -1; }
+  .listing-row, .review-row, .tenant-row { grid-template-columns: 1fr auto; row-gap: 6px; }
+  .listing-row > :first-child, .review-row > :first-child, .review-row > :last-child, .tenant-row > :first-child { grid-column: 1 / -1; }
 }
 
 /* ----- Notifications / announcements ----- */

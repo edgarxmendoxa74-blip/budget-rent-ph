@@ -66,8 +66,8 @@ const LocationPicker = ({ value, onChange, addressHint }) => {
       placeMarker(pos.lat, pos.lng);
     } catch (err) {
       setMessage(err?.code === 1
-        ? 'Naka-block ang location. Sa phone: i-ON ang Location sa settings. Sa desktop: i-click ang 🔒 icon sa address bar at i-Allow ang Location.'
-        : 'Hindi makuha ang GPS location. Subukang i-search ang address.');
+        ? 'Location is blocked. On phone: turn on Location in settings. On desktop: click the 🔒 icon in the address bar and Allow Location.'
+        : 'Couldn\'t get your GPS location. Try searching for the address.');
     } finally {
       setBusy(null);
     }
@@ -75,7 +75,7 @@ const LocationPicker = ({ value, onChange, addressHint }) => {
 
   const findAddress = async () => {
     if (!addressHint?.trim()) {
-      setMessage('Ilagay muna ang Location/address sa itaas.');
+      setMessage('Enter the Location/address above first.');
       return;
     }
     setBusy('search');
@@ -83,13 +83,13 @@ const LocationPicker = ({ value, onChange, addressHint }) => {
     try {
       const result = await geocodeAddress(addressHint);
       if (!result) {
-        setMessage('Walang nahanap. I-tap na lang ang eksaktong lugar sa mapa.');
+        setMessage('Nothing found. Just tap the exact spot on the map.');
         return;
       }
       placeMarker(result.lat, result.lng);
-      setMessage('I-drag ang pin para eksakto sa bahay.');
+      setMessage('Drag the pin to the exact spot of the property.');
     } catch {
-      setMessage('Hindi ma-search ang address ngayon. I-tap na lang ang mapa.');
+      setMessage('Can\'t search the address right now. Just tap the map.');
     } finally {
       setBusy(null);
     }
@@ -100,19 +100,19 @@ const LocationPicker = ({ value, onChange, addressHint }) => {
       <div className="lp-actions">
         <button type="button" onClick={useMyLocation} disabled={!!busy}>
           {busy === 'gps' ? <Loader2 size={15} className="animate-spin" /> : <Crosshair size={15} />}
-          Nandito ako ngayon
+          I'm here now
         </button>
         <button type="button" onClick={findAddress} disabled={!!busy}>
           {busy === 'search' ? <Loader2 size={15} className="animate-spin" /> : <Search size={15} />}
-          Hanapin ang address
+          Find address
         </button>
       </div>
       <div ref={mapEl} className="lp-map" />
       <p className={`lp-status ${value?.lat != null ? 'set' : ''}`}>
         <MapPin size={13} />
         {message || (value?.lat != null
-          ? `Naka-pin: ${Number(value.lat).toFixed(5)}, ${Number(value.lng).toFixed(5)}`
-          : 'I-tap ang mapa kung nasaan ang property para makita ito ng tenants sa radar.')}
+          ? `Pinned: ${Number(value.lat).toFixed(5)}, ${Number(value.lng).toFixed(5)}`
+          : 'Tap the map where the property is so tenants can see it on the radar.')}
       </p>
     </div>
   );
