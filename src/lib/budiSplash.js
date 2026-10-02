@@ -18,3 +18,7 @@ export function takeBudiSplash() {
   } catch { /* ignore */ }
   return false;
 }
+
+// 3D Budi chunk (three.js) — i-preload habang idle para instant ang splash
+export const loadBudiScene = () => import('../components/BudiScene.jsx');
+export function preloadBudiScene() { loadBudiScene().catch(() => {}); }

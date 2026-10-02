@@ -175,8 +175,8 @@ h1, h2, h3, h4, h5, h6 {
 /* Glassmorphism */
 .glass {
   background: var(--surface-glass);
-  -webkit-backdrop-filter: blur(20px) saturate(190%);
-  backdrop-filter: blur(20px) saturate(190%);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
   border-bottom: 1px solid rgba(255, 255, 255, 0.6);
 }
 
@@ -219,3 +219,30 @@ h1, h2, h3, h4, h5, h6 {
 ::-webkit-scrollbar-thumb:hover {
   background: #94A3B8;
 }
+
+/* ---------- Loading skeletons (shimmer) ---------- */
+.skeleton-card { cursor: default; pointer-events: none; }
+.skeleton-img,
+.skeleton-title,
+.skeleton-subtitle,
+.skeleton-footer {
+  border-radius: 10px;
+  background: linear-gradient(100deg, #e8eef6 30%, #f6f9fd 50%, #e8eef6 70%);
+  background-size: 300% 100%;
+  animation: skeleton-shimmer 1.3s linear infinite;
+}
+.skeleton-img { width: 100%; aspect-ratio: 4 / 3; border-radius: 12px; }
+.skeleton-title { height: 14px; width: 80%; margin-bottom: 8px; }
+.skeleton-subtitle { height: 11px; width: 55%; margin-bottom: 12px; }
+.skeleton-footer { height: 16px; width: 40%; }
+@keyframes skeleton-shimmer { from { background-position: 100% 0; } to { background-position: -100% 0; } }
+
+/* ---------- Smoother feel ---------- */
+html { scroll-behavior: smooth; overscroll-behavior-y: none; -webkit-text-size-adjust: 100%; }
+button, [role="button"], a, input, select, textarea, label { touch-action: manipulation; }
+img { content-visibility: auto; }
+/* huwag i-repaint ang buong card kapag nag-hover; transform/opacity lang ang ina-animate */
+.listing-card { transition: transform .25s var(--ease-smooth), box-shadow .25s var(--ease-smooth), border-color .2s ease; contain: layout paint; }
+/* mabilis na loading-spinner (Loader2) sa Suspense */
+.animate-spin { animation: spin .8s linear infinite; will-change: transform; }
+@keyframes spin { to { transform: rotate(360deg); } }

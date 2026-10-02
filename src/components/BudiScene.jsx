@@ -48,9 +48,9 @@ function buildBudi() {
   const bear = new THREE.Group();
   root.add(bear);
 
-  const fur = new THREE.MeshPhysicalMaterial({ color: 0xc98545, roughness: 0.85, sheen: 1, sheenColor: new THREE.Color(0xffd9a8), sheenRoughness: 0.6 });
-  const furDark = new THREE.MeshPhysicalMaterial({ color: 0xa8642a, roughness: 0.9, sheen: 1, sheenColor: new THREE.Color(0xe9b07a), sheenRoughness: 0.7 });
-  const cream = new THREE.MeshPhysicalMaterial({ color: 0xf6d9b0, roughness: 0.85, sheen: 0.8, sheenColor: new THREE.Color(0xffffff), sheenRoughness: 0.6 });
+  const fur = new THREE.MeshStandardMaterial({ color: 0xc98545, roughness: 0.85 });
+  const furDark = new THREE.MeshStandardMaterial({ color: 0xa8642a, roughness: 0.9 });
+  const cream = new THREE.MeshStandardMaterial({ color: 0xf6d9b0, roughness: 0.85 });
   const earIn = new THREE.MeshStandardMaterial({ color: 0xe9a98a, roughness: 0.9 });
   const blue = new THREE.MeshStandardMaterial({ color: 0x0e4fa0, roughness: 0.75 });
   const yellow = new THREE.MeshStandardMaterial({ color: 0xffb800, roughness: 0.5, metalness: 0.1 });
@@ -60,7 +60,7 @@ function buildBudi() {
   const pink = new THREE.MeshStandardMaterial({ color: 0xff8fa3, roughness: 0.9, transparent: true, opacity: 0.55 });
   const mouthIn = new THREE.MeshStandardMaterial({ color: 0x7a2e2e, roughness: 0.6 });
 
-  const sphere = new THREE.SphereGeometry(1, 40, 28);
+  const sphere = new THREE.SphereGeometry(1, 28, 20);
   const mk = (geo, mat, pos, scale, parent) => {
     const m = new THREE.Mesh(geo, mat);
     if (pos) m.position.set(...pos);
@@ -218,7 +218,7 @@ function buildBudi() {
   return { root, bear, head, eyes, brows, starEyes, mouthSmile, mouthHmm, mouthOpen, armL, armR, shadow, thought, dots, bulb, rays, glow, bulbLight };
 }
 
-export default function BudiScene({ phase = 'hop', onReady, onFail }) {
+export default function BudiScene({ phase = 'hop', lite = false, onReady, onFail }) {
   const mountRef = useRef(null);
   const phaseRef = useRef(phase);
   phaseRef.current = phase;
@@ -227,12 +227,12 @@ export default function BudiScene({ phase = 'hop', onReady, onFail }) {
     const mount = mountRef.current;
     let renderer;
     try {
-      renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'low-power' });
+      renderer = new THREE.WebGLRenderer({ antialias: !lite, alpha: true, powerPreference: 'low-power' });
     } catch {
       onFail?.();
       return undefined;
     }
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, lite ? 1.25 : 1.5));
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.05;
@@ -269,11 +269,21 @@ export default function BudiScene({ phase = 'hop', onReady, onFail }) {
     let phaseStart = 0;
     let raf;
     let readyFired = false;
+    let visible = true;
+    let lastDraw = 0;
+    // Huwag mag-render kapag wala sa screen / nakatago ang tab — para hindi bumagal ang scroll at hindi maubos ang baterya
+    const io = new IntersectionObserver((entries) => { visible = entries[0]?.isIntersecting !== false; });
+    io.observe(mount);
     const clock = new THREE.Clock();
     const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 
     const tick = () => {
       raf = requestAnimationFrame(tick);
+      if (!visible || document.hidden) { clock.getDelta(); return; }
+      const t0 = performance.now();
+      // hero Budi: 30fps lang ay sapat na at mas magaan sa scroll
+      if (lite && t0 - lastDraw < 33) return;
+      lastDraw = t0;
       const dt = Math.min(clock.getDelta(), 0.05);
       const now = clock.elapsedTime;
       const ph = phaseRef.current;
@@ -403,6 +413,7 @@ export default function BudiScene({ phase = 'hop', onReady, onFail }) {
     return () => {
       cancelAnimationFrame(raf);
       ro.disconnect();
+      io.disconnect();
       scene.traverse((o) => {
         if (o.geometry) o.geometry.dispose();
         const mats = o.material ? (Array.isArray(o.material) ? o.material : [o.material]) : [];

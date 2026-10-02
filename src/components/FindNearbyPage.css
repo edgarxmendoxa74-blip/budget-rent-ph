@@ -390,7 +390,6 @@
   padding: 4px;
   border-radius: 100px;
   background: rgba(255, 255, 255, 0.92);
-  backdrop-filter: blur(8px);
   box-shadow: 0 6px 18px rgba(0, 34, 74, 0.18);
 }
 

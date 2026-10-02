@@ -1,10 +1,11 @@
 import React, { useEffect, useState, Suspense, lazy } from 'react';
 import './MascotSplash.css';
-import { takeBudiSplash, BUDI_SPLASH_EVENT } from '../lib/budiSplash';
+import { takeBudiSplash, loadBudiScene, BUDI_SPLASH_EVENT } from '../lib/budiSplash';
 
 // three.js is heavy — load it only when the splash actually shows
 // Kapag pumalya ang pag-load ng chunk, tawagin ang onFail (SVG fallback) imbes na mag-crash ang buong app
-const BudiScene = lazy(() => import('./BudiScene.jsx').catch((err) => {
+
+const BudiScene = lazy(() => loadBudiScene().catch((err) => {
   console.warn('[BudiScene] hindi na-load ang 3D chunk', err);
   return { default: function BudiSceneFailed({ onFail }) { useEffect(() => { onFail?.(); }, [onFail]); return null; } };
 }));
@@ -16,6 +17,7 @@ const TIMELINE = [
   { phase: 'exit', at: 6000 },
 ];
 const DONE_AT = 6500;
+const FADE_MS = 450;
 
 const CAPTIONS = {
   hop: 'Hi! I\'m Budi 🐻',
@@ -232,8 +234,9 @@ function SplashRun({ onDone, forceSvg = false }) {
   if (done) return null;
 
   const skip = () => {
+    if (phase === 'exit') return;
     setPhase('exit');
-    setTimeout(() => setDone(true), 350);
+    setTimeout(() => setDone(true), FADE_MS);
   };
 
   return (
@@ -242,7 +245,7 @@ function SplashRun({ onDone, forceSvg = false }) {
         {webglFailed ? (
           <Budi phase={phase} />
         ) : (
-          <Suspense fallback={null}>
+          <Suspense fallback={<SplashFallback phase={phase} onReady={() => setStarted(true)} />}>
             <BudiScene
               phase={phase}
               onReady={() => setStarted(true)}
@@ -260,6 +263,12 @@ function SplashRun({ onDone, forceSvg = false }) {
   );
 }
 
+// Habang hindi pa handa ang 3D: SVG Budi agad (hindi blangko), at umaandar na ang timeline
+function SplashFallback({ phase, onReady }) {
+  useEffect(() => { onReady(); }, [onReady]);
+  return <Budi phase={phase} />;
+}
+
 // Budi sa sulok ng hero: kumakaway pakaliwa at sinasabi kung ano ang gagawin sa section
 export function HeroBudi({ message }) {
   const [webglFailed, setWebglFailed] = useState(false);
@@ -270,7 +279,7 @@ export function HeroBudi({ message }) {
         <Budi phase="wave" />
       ) : (
         <Suspense fallback={<div className="budi-3d" />}>
-          <BudiScene phase="wave" onFail={() => setWebglFailed(true)} />
+          <BudiScene phase="wave" lite onFail={() => setWebglFailed(true)} />
         </Suspense>
       )}
     </div>

@@ -1,9 +1,7 @@
 .edit-listings-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(15, 23, 42, 0.65);
-  -webkit-backdrop-filter: blur(8px);
-  backdrop-filter: blur(8px);
+  background: rgba(15, 23, 42, 0.76);
   z-index: 1000;
   display: flex;
   align-items: center;
@@ -273,9 +271,7 @@
 .edit-form-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(15, 23, 42, 0.65);
-  -webkit-backdrop-filter: blur(8px);
-  backdrop-filter: blur(8px);
+  background: rgba(15, 23, 42, 0.76);
   z-index: 2000;
   display: flex;
   align-items: center;

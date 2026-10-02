@@ -1167,7 +1167,7 @@ function App() {
               <span>{filteredListings.length} results</span>
             </div>
             
-            {loading ? (
+            {loading && properties.length === 0 ? (
               <div className="listing-grid">
                 {[1, 2, 3, 4].map(n => (
                   <div key={n} className="listing-card skeleton-card">
@@ -1323,7 +1323,7 @@ function App() {
               <h3>Your Listings</h3>
               <span>{filteredListings.length} properties</span>
             </div>
-            {loading ? (
+            {loading && properties.length === 0 ? (
               <div className="listing-grid">
                 {[1, 2].map(n => (
                   <div key={n} className="listing-card skeleton-card">
