@@ -66,3 +66,31 @@ export const stepText = (step) => {
   if (type === 'fork') return `Sa hati ng daan, ${modifier === 'left' ? 'kumaliwa' : 'kumanan'}${road}`;
   return `Diretso${road}`;
 };
+
+// Live na biyahe: gaano ka kalayo sa linya ng ruta at ilang km pa ang natitira (tantiya, equirectangular)
+export const routeProgress = (coords, pos) => {
+  if (!coords || coords.length < 2) return { offKm: 0, remainingKm: 0 };
+  const ky = 111.32;
+  const kx = Math.cos((pos.lat * Math.PI) / 180) * 111.32;
+  const pts = coords.map(([lat, lng]) => [(lng - pos.lng) * kx, (lat - pos.lat) * ky]);
+  let best = Infinity;
+  let bi = 0;
+  let bx = 0;
+  let by = 0;
+  for (let i = 0; i < pts.length - 1; i += 1) {
+    const [ax, ay] = pts[i];
+    const dx = pts[i + 1][0] - ax;
+    const dy = pts[i + 1][1] - ay;
+    const len2 = dx * dx + dy * dy;
+    const t = len2 === 0 ? 0 : Math.max(0, Math.min(1, -(ax * dx + ay * dy) / len2));
+    const px = ax + t * dx;
+    const py = ay + t * dy;
+    const d = Math.hypot(px, py);
+    if (d < best) { best = d; bi = i; bx = px; by = py; }
+  }
+  let remaining = Math.hypot(pts[bi + 1][0] - bx, pts[bi + 1][1] - by);
+  for (let i = bi + 1; i < pts.length - 1; i += 1) {
+    remaining += Math.hypot(pts[i + 1][0] - pts[i][0], pts[i + 1][1] - pts[i][1]);
+  }
+  return { offKm: best, remainingKm: remaining };
+};

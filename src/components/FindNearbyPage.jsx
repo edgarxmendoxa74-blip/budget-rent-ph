@@ -1,13 +1,17 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, Suspense, lazy } from 'react';
+import { createRoot } from 'react-dom/client';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { Navigation, Loader2, MapPin, Star, X, ShieldCheck, Search, AlertCircle, Signal, LocateFixed, Radar, BadgeCheck, House, TreePalm, Route as RouteIcon, Car, Bus, Bike, Footprints, ChevronDown, ChevronUp, WifiOff, CalendarCheck, Send, Lightbulb } from 'lucide-react';
+import { Navigation, Loader2, MapPin, Star, X, Search, AlertCircle, Signal, LocateFixed, Radar, BadgeCheck, House, TreePalm, Route as RouteIcon, Car, Bus, Bike, Footprints, ChevronDown, ChevronUp, WifiOff, CalendarCheck, Send, Lightbulb } from 'lucide-react';
 import { TILE_URL, TILE_OPTIONS, MAP_OPTIONS, toCoords, distanceKm, formatDistance, geocodeAddress, inArea, getCurrentPosition } from '../lib/geo';
 import { useApproxCoords } from '../lib/useApproxCoords';
 import ListingActionSheet from './ListingActionSheet';
 import { HeroBudi } from './MascotSplash';
-import { fetchRoute, getEstimates, formatDuration, formatStepDistance, stepText } from '../lib/routing';
+import { fetchRoute, getEstimates, formatDuration, formatStepDistance, stepText, routeProgress } from '../lib/routing';
 import './FindNearbyPage.css';
+
+// three.js is heavy: i-load lang kapag may Directions na
+const BudiScene = lazy(() => import('./BudiScene.jsx'));
 
 const RADIUS_OPTIONS = [1, 3, 5, 10];
 
@@ -64,7 +68,7 @@ const MobileLocationTip = ({ isIOS }) => (
           ? <>Buksan ang <b>Settings</b> &gt; <b>Privacy &amp; Security</b> &gt; <b>Location Services</b> at i-<b>ON</b>.</>
           : <>I-swipe pababa ang notification bar at i-tap ang <b>Location</b> icon, o pumunta sa <b>Settings</b> &gt; <b>Location</b> at i-<b>ON</b>.</>}
       </li>
-      <li>Bumalik dito at pindutin ang <b>Allow Live GPS</b>.</li>
+      <li>Bumalik dito at hintayin ang pag-scan ng paligid mo.</li>
     </ol>
   </div>
 );
@@ -84,20 +88,28 @@ const DesktopLocationSteps = ({ os, browser }) => (
         Sa Mac: <b>System Settings</b> &gt; <b>Privacy &amp; Security</b> &gt; <b>Location Services</b> — i-ON ito at i-check ang <b>{browser}</b>.
       </li>
     )}
-    <li>I-reload ang page at pindutin ulit ang <b>Activate Location</b>.</li>
+    <li>I-reload ang page at hintayin ang pag-scan ng location.</li>
   </ol>
 );
 const SCAN_MS = 2400;
+const OFF_ROUTE_KM = 0.05; // lampas 50m sa linya = lumiko ka sa ibang daan, kumuha ng bagong ruta
+const ARRIVE_KM = 0.03; // 30m sa destinasyon = nakarating na
+const REROUTE_GAP_MS = 12000; // huwag mag-reroute nang mas madalas dito
+
+// Si Budi (teddy bear mascot) bilang icon ng "Ikaw" sa mapa
+const BUDI_FACE = '<svg xmlns="http://www.w3.org/2000/svg" width="34" height="34" viewBox="0 0 48 48" aria-hidden="true"><circle cx="10" cy="11" r="7" fill="#A8642A"/><circle cx="38" cy="11" r="7" fill="#A8642A"/><circle cx="10" cy="11" r="3.5" fill="#F7CFA5"/><circle cx="38" cy="11" r="3.5" fill="#F7CFA5"/><circle cx="24" cy="26" r="18" fill="#C98545" stroke="#8A501F" stroke-width="1.5"/><ellipse cx="24" cy="32" rx="9" ry="7" fill="#F6D9B0"/><ellipse cx="24" cy="29" rx="3.5" ry="2.6" fill="#1E1206"/><circle cx="17" cy="22" r="2.4" fill="#1E1206"/><circle cx="31" cy="22" r="2.4" fill="#1E1206"/><path d="M20 34q4 3.5 8 0" stroke="#1E1206" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg>';
 const MIN_MOVE_KM = 0.02; // huwag i-update ang radar sa GPS jitter na < 20m
 
+
+// Registered landlord = may account (user_id) sa app. May pin sa mapa.
+// Occupied na rent (hindi staycation, na puwede pa ring i-reserve): nasa mapa pa rin pero may "Occupied" badge
 const isOccupied = (item) => {
   const value = String(item?.availability || '').toLowerCase().trim();
-  return value === 'occupied' || value === 'accommodated' || value === 'rented' || value === 'unavailable';
+  return !isStay(item) && (value === 'occupied' || value === 'accommodated' || value === 'rented' || value === 'unavailable');
 };
 
-// Registered landlord = may account (user_id) sa app. Available lang at may pin sa mapa.
-// Ang occupied na staycation ay puwede pa ring i-reserve, kaya nasa radar pa rin
-const isRadarEligible = (item) => Boolean(item?.user_id) && (!isOccupied(item) || isStay(item)) && Boolean(toCoords(item));
+// Kahit occupied na, nasa mapa pa rin.
+const isRadarEligible = (item) => Boolean(item?.user_id) && Boolean(toCoords(item));
 
 const shortPrice = (price) => {
   const n = Number(price) || 0;
@@ -112,13 +124,17 @@ const radiusToPixels = (map, center, radiusKm) => {
   return Math.max(24, Math.abs(a.y - b.y));
 };
 
-const RadarMap = ({ center, radiusKm, results, scanning, selectedId, onSelect, isLive, recenterKey, areaBounds, route }) => {
+const RadarMap = ({ center, radiusKm, results, scanning, selectedId, onSelect, isLive, recenterKey, areaBounds, route, me }) => {
   const routeItemId = route?.status === 'ready' ? route.item.id : null;
   const mapEl = useRef(null);
   const mapRef = useRef(null);
   const layers = useRef({});
   const onSelectRef = useRef(onSelect);
   onSelectRef.current = onSelect;
+  const followRef = useRef(true);
+  const meMarker = useRef(null);
+  const meRef = useRef(me);
+  meRef.current = me;
 
   // Init map once
   useEffect(() => {
@@ -200,8 +216,9 @@ const RadarMap = ({ center, radiusKm, results, scanning, selectedId, onSelect, i
       map.fitBounds(areaBounds, { padding: [16, 16] });
       return;
     }
-    if (!layers.current.circle) return;
+    if (!layers.current.circle || routeItemId) return;
     map.fitBounds(layers.current.circle.getBounds(), { padding: [16, 16] });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [radiusKm, recenterKey, areaBounds]);
 
   // Listing markers
@@ -213,7 +230,7 @@ const RadarMap = ({ center, radiusKm, results, scanning, selectedId, onSelect, i
     results.filter((item) => item.coords && item.id !== routeItemId).forEach((item, i) => {
       const icon = L.divIcon({
         className: 'house-marker-wrap',
-        html: `<div class="house-marker ${item.id === selectedId ? 'selected' : ''} ${item.is_verified ? 'verified' : ''} ${item.approx ? 'approx' : ''} ${isStay(item) ? 'stay' : ''}" style="animation-delay:${Math.min(i * 90, 1200)}ms"><span class="hm-icon">${markerIcon(item)}</span><span class="hm-price">${escapeHtml(shortPrice(item.price))}</span></div>`,
+        html: `<div class="house-marker ${item.id === selectedId ? 'selected' : ''} ${item.is_verified ? 'verified' : ''} ${item.approx ? 'approx' : ''} ${isStay(item) ? 'stay' : ''} ${isOccupied(item) ? 'occupied' : ''}" style="animation-delay:${Math.min(i * 90, 1200)}ms"><span class="hm-icon">${markerIcon(item)}</span><span class="hm-price">${escapeHtml(shortPrice(item.price))}</span></div>`,
         iconSize: [78, 32],
         iconAnchor: [39, 32]
       });
@@ -231,19 +248,71 @@ const RadarMap = ({ center, radiusKm, results, scanning, selectedId, onSelect, i
     const group = L.layerGroup();
     L.polyline(route.data.coords, { color: '#ffffff', weight: 11, opacity: 0.95, lineCap: 'round', lineJoin: 'round', interactive: false }).addTo(group);
     L.polyline(route.data.coords, { color: '#0a63ff', weight: 6, opacity: 1, lineCap: 'round', lineJoin: 'round', interactive: false }).addTo(group);
-    L.marker([route.from.lat, route.from.lng], {
-      icon: L.divIcon({ className: 'route-marker-wrap', html: '<div class="route-start"><span class="rs-dot"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span><span class="rs-label">Ikaw</span></div>', iconSize: [96, 36], iconAnchor: [18, 18] }),
-      zIndexOffset: 1200, interactive: false
-    }).addTo(group);
     const endSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">${isStay(route.item) ? MARKER_ICONS.stay : MARKER_ICONS.rent}</svg>`;
     L.marker([route.to.lat, route.to.lng], {
       icon: L.divIcon({ className: 'route-marker-wrap', html: `<div class="route-end ${isStay(route.item) ? 'stay' : ''}"><span>${endSvg}</span></div>`, iconSize: [38, 46], iconAnchor: [19, 46] }),
       zIndexOffset: 1100, interactive: false
     }).addTo(group);
     group.addTo(map);
-    map.fitBounds(L.latLngBounds(route.data.coords), { padding: [44, 44] });
+    if (route.fit) {
+      followRef.current = true;
+      map.fitBounds(L.latLngBounds(route.data.coords), { padding: [44, 44] });
+    }
     return () => { group.remove(); };
-  }, [route]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [route?.status, route?.data, route?.to, route?.item]);
+
+  // "Ikaw" = si Budi: sumusunod sa live GPS habang bumibiyahe
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || route?.status !== 'ready') return undefined;
+    const pos = meRef.current || route.from;
+    meMarker.current = L.marker([pos.lat, pos.lng], {
+      icon: L.divIcon({
+        className: 'route-marker-wrap',
+        // 2D na mukha ang pansamantala/fallback; papalitan ng 3D Budi kapag handa na ang WebGL
+        html: `<div class="route-start"><span class="rs-dot"><span class="rs-face">${BUDI_FACE}</span><span class="rs-3d"></span></span><span class="rs-label">Ikaw</span></div>`,
+        iconSize: [130, 84],
+        iconAnchor: [36, 76]
+      }),
+      zIndexOffset: 1200,
+      interactive: false
+    }).addTo(map);
+    const dot = meMarker.current.getElement()?.querySelector('.rs-dot');
+    const mount = dot?.querySelector('.rs-3d');
+    const budiRoot = mount ? createRoot(mount) : null;
+    budiRoot?.render(
+      <Suspense fallback={null}>
+        <BudiScene phase="travel" onReady={() => dot.classList.add('has3d')} />
+      </Suspense>
+    );
+    const stopFollow = () => { followRef.current = false; };
+    map.on('dragstart', stopFollow);
+    return () => {
+      map.off('dragstart', stopFollow);
+      // i-unmount pagkatapos ng kasalukuyang render para iwas warning
+      setTimeout(() => budiRoot?.unmount(), 0);
+      meMarker.current?.remove();
+      meMarker.current = null;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [route?.status, route?.item]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !me || !meMarker.current) return;
+    meMarker.current.setLatLng([me.lat, me.lng]);
+    if (followRef.current) map.panTo([me.lat, me.lng], { animate: true });
+  }, [me]);
+
+  // Recenter habang may ruta: balik sa pagsunod kay Budi
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || route?.status !== 'ready' || !meRef.current) return;
+    followRef.current = true;
+    map.setView([meRef.current.lat, meRef.current.lng], Math.max(map.getZoom(), 16), { animate: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [recenterKey]);
 
   // Pan sa napiling listing
   useEffect(() => {
@@ -258,7 +327,7 @@ const RadarMap = ({ center, radiusKm, results, scanning, selectedId, onSelect, i
 
 const MODE_ICONS = { walk: Footprints, tricycle: Bike, jeep: Bus, car: Car };
 
-const RoutePanel = ({ route, activeMode, onMode, onClose, showSteps, onToggleSteps }) => {
+const RoutePanel = ({ route, activeMode, onMode, onClose, showSteps, onToggleSteps, progress }) => {
   const name = route.item.name || route.item.location?.split(',')[0] || 'bahay';
 
   if (route.status === 'loading') {
@@ -280,7 +349,12 @@ const RoutePanel = ({ route, activeMode, onMode, onClose, showSteps, onToggleSte
 
   const { data } = route;
   // Lakad: lalabas lang kung malapit (hanggang 2 km)
-  const estimates = getEstimates(data).filter((e) => e.key !== 'walk' || e.available);
+  // Habang bumibiyahe: natitirang distansya/oras na lang ang ipapakita
+  const ratio = progress && data.distanceKm > 0 ? Math.min(1, progress.remainingKm / data.distanceKm) : 1;
+  const remainingKm = progress ? progress.remainingKm : data.distanceKm;
+  const estimates = getEstimates(data)
+    .filter((e) => e.key !== 'walk' || e.available)
+    .map((e) => ({ ...e, minutes: e.minutes * ratio }));
   const active = estimates.find((e) => e.key === activeMode) || estimates[estimates.length - 1];
   const note = data.distanceKm > 150
     ? 'Malayong biyahe ito — maaaring may sasakyang pandagat o eroplano. Tantiya lang ang oras.'
@@ -294,8 +368,8 @@ const RoutePanel = ({ route, activeMode, onMode, onClose, showSteps, onToggleSte
     <div className="route-panel animate-slide-up">
       <div className="route-head">
         <div>
-          <strong>Papunta sa {name}</strong>
-          <span>{formatDistance(data.distanceKm)} • ≈ {formatDuration(active.minutes)} sa {active.label}</span>
+          <strong>{route.arrived ? `Nakarating ka na sa ${name}! 🎉` : `Papunta sa ${name}`}</strong>
+          {!route.arrived && <span>{progress ? 'Natitira: ' : ''}{formatDistance(remainingKm)} • ≈ {formatDuration(active.minutes)} sa {active.label}</span>}
         </div>
         <button type="button" className="route-close" aria-label="Isara ang ruta" onClick={onClose}><X size={16} /></button>
       </div>
@@ -352,7 +426,6 @@ const FindNearbyPage = ({ listings, reviewStats, onSelectProperty, isLandlord, u
   const [scanning, setScanning] = useState(false);
   const [selectedId, setSelectedId] = useState(null);
   const [recenterKey, setRecenterKey] = useState(0);
-  const [showConfirm, setShowConfirm] = useState(false);
   const [errorType, setErrorType] = useState(null);
   const [manualQuery, setManualQuery] = useState('');
   const [route, setRoute] = useState(null); // { status: loading|ready|error, item, from, to, data, message }
@@ -401,7 +474,7 @@ const FindNearbyPage = ({ listings, reviewStats, onSelectProperty, isLandlord, u
       if (seq !== routeSeq.current) return;
       const first = getEstimates(data).find((e) => e.available);
       setRouteMode(first ? first.key : 'car');
-      setRoute({ status: 'ready', item, from, to: item.coords, data });
+      setRoute({ status: 'ready', item, from, to: item.coords, data, fit: true });
     } catch (err) {
       if (seq !== routeSeq.current) return;
       const message = err?.code === 1
@@ -414,6 +487,28 @@ const FindNearbyPage = ({ listings, reviewStats, onSelectProperty, isLandlord, u
       setRoute({ status: 'error', item, message });
     }
   };
+
+  // Live na biyahe: natitirang layo, auto-reroute kapag lumihis, at pagdating
+  const progress = useMemo(
+    () => (route?.status === 'ready' && mode === 'live' && center ? routeProgress(route.data.coords, center) : null),
+    [route, mode, center]
+  );
+  const lastReroute = useRef(0);
+  useEffect(() => {
+    if (!progress || route.arrived) return;
+    if (distanceKm(center, route.to) <= ARRIVE_KM) {
+      setRoute((r) => (r && r.status === 'ready' ? { ...r, arrived: true } : r));
+      return;
+    }
+    if (progress.offKm <= OFF_ROUTE_KM || Date.now() - lastReroute.current < REROUTE_GAP_MS) return;
+    lastReroute.current = Date.now();
+    const seq = routeSeq.current;
+    fetchRoute(center, route.to).then((data) => {
+      if (seq !== routeSeq.current) return;
+      setRoute((r) => (r && r.status === 'ready' ? { ...r, from: center, data, fit: false } : r));
+    }).catch(() => {}); // kung pumalya, susubukan ulit sa susunod na GPS update
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [progress]);
 
   const runScan = () => {
     clearRoute();
@@ -429,7 +524,6 @@ const FindNearbyPage = ({ listings, reviewStats, onSelectProperty, isLandlord, u
   };
 
   const startLiveTracking = () => {
-    setShowConfirm(false);
     setLocating(true);
     setErrorType(null);
     stopWatch();
@@ -488,10 +582,10 @@ const FindNearbyPage = ({ listings, reviewStats, onSelectProperty, isLandlord, u
   // Auto-track on mount kung may permission na (Grab-like)
   useEffect(() => {
     let permStatus;
+    startLiveTracking();
     if ('permissions' in navigator) {
       navigator.permissions.query({ name: 'geolocation' }).then((result) => {
         permStatus = result;
-        if (result.state === 'granted') startLiveTracking();
         result.onchange = () => {
           if (result.state === 'granted') startLiveTracking();
         };
@@ -568,7 +662,7 @@ const FindNearbyPage = ({ listings, reviewStats, onSelectProperty, isLandlord, u
     if (mode === 'search' && area) {
       const place = area.query.split(',')[0].toLowerCase().replace(/\b(city|province|of)\b/g, '').trim();
       return mapListings
-        .filter((item) => Boolean(item?.user_id) && (!isOccupied(item) || isStay(item)))
+        .filter((item) => Boolean(item?.user_id))
         .map((item) => {
           const coords = toCoords(item);
           // Layo mula sa mismong lokasyon ng tenant (hindi mula sa gitna ng hinanap na lugar)
@@ -616,22 +710,6 @@ const FindNearbyPage = ({ listings, reviewStats, onSelectProperty, isLandlord, u
     </div>
   );
 
-  const confirmModal = showConfirm && (
-    <div className="modal-overlay" style={{ zIndex: 9999, backgroundColor: 'rgba(0,0,0,0.6)' }} onClick={() => setShowConfirm(false)}>
-      <div className="modal-content animate-slide-up" onClick={e => e.stopPropagation()} style={{ maxWidth: '400px', borderRadius: '24px', padding: '32px 24px', textAlign: 'center', position: 'relative' }}>
-        <button onClick={() => setShowConfirm(false)} style={{ position: 'absolute', top: '16px', right: '16px', background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}><X size={24} /></button>
-        <div className="near-confirm-icon"><Signal size={34} className="pulse" /></div>
-        <h2 style={{ fontSize: '1.4rem', color: 'var(--primary)', marginBottom: '10px', fontWeight: 800 }}>{device.isDesktop ? 'Allow Location Access?' : 'Enable Real-time Tracking?'}</h2>
-        <p style={{ color: 'var(--text-muted)', fontSize: '0.92rem', lineHeight: '1.6', marginBottom: '24px' }}>Gagamitin ng BudgetRentPH ang location mo para ipakita sa mapa ang pinakamalapit na available na bahay. Hindi ito sine-save o ibinabahagi.{device.isDesktop && <> Pagkatapos, i-click din ang <b>Allow</b> sa popup ng {device.browser}.</>}</p>
-        {!device.isDesktop && <MobileLocationTip isIOS={device.isIOS} />}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          <button onClick={startLiveTracking} className="near-confirm-allow"><ShieldCheck size={20} /> {device.isDesktop ? 'Allow Location' : 'Allow Live GPS'}</button>
-          <button onClick={() => setShowConfirm(false)} className="near-confirm-cancel">Cancel</button>
-        </div>
-      </div>
-    </div>
-  );
-
   if (!isLandlord && !intent) {
     return (
       <div className="page-section animate-fade-in" style={{ paddingBottom: '80px', backgroundColor: 'white' }}>
@@ -669,8 +747,8 @@ const FindNearbyPage = ({ listings, reviewStats, onSelectProperty, isLandlord, u
         <HeroBudi message={locationFound
             ? 'Ito ang mga bahay na malapit sa iyo! Pindutin ang isang pin sa mapa para makita ang detalye.'
             : device.isDesktop
-              ? 'Pindutin ang Activate Location, o i-type ang lugar sa search para makita ang mga malapit na bahay.'
-              : 'I-ON muna ang Location ng phone, tapos pindutin ang Activate Live GPS para makita ang mga bahay malapit sa iyo.'} />
+              ? 'Payagan ang location sa browser, o i-type ang lugar sa search para makita ang mga malapit na bahay.'
+              : 'I-ON ang Location ng phone para makita ang mga bahay malapit sa iyo.'} />
         <div className="hero-content">
           {!isLandlord && (
             <>
@@ -725,12 +803,13 @@ const FindNearbyPage = ({ listings, reviewStats, onSelectProperty, isLandlord, u
                 <div className="near-pin"><Radar size={42} /></div>
                 <h3>I-scan ang paligid mo</h3>
 
-                <button onClick={() => setShowConfirm(true)} disabled={locating} className="near-cta">
-                  {locating ? <><Loader2 size={22} className="animate-spin" /> Hinahanap ka...</> : <><MapPin size={20} /> {device.isDesktop ? 'Activate Location' : 'Activate Live GPS'}</>}
-                </button>
+                {locating && <p className="near-inline-error"><Loader2 size={15} className="animate-spin" /> Hinahanap ka...</p>}
 
                 {errorType === 'unavailable' && (
-                  <p className="near-inline-error"><AlertCircle size={15} /> {device.isDesktop ? 'Hindi makuha ang location. Siguraduhing naka-ON ang Wi-Fi at Location services, o gamitin ang search.' : 'Hindi makuha ang GPS signal. Siguraduhing naka-ON ang Location ng phone mo, tapos subukan ulit o gamitin ang search.'}</p>
+                  <>
+                    <p className="near-inline-error"><AlertCircle size={15} /> {device.isDesktop ? 'Hindi makuha ang location. Siguraduhing naka-ON ang Wi-Fi at Location services, o gamitin ang search.' : 'Hindi makuha ang GPS signal. Siguraduhing naka-ON ang Location ng phone mo, tapos subukan ulit o gamitin ang search.'}</p>
+                    <button type="button" className="near-cta" onClick={startLiveTracking}><MapPin size={20} /> Subukan ulit</button>
+                  </>
                 )}
 
                 {device.isDesktop ? (
@@ -761,7 +840,7 @@ const FindNearbyPage = ({ listings, reviewStats, onSelectProperty, isLandlord, u
               </div>
               <div className="nearby-head-actions">
                 {isSearch && (
-                  <button className="stop-gps-btn near-me-btn" onClick={() => setShowConfirm(true)} disabled={locating}>
+                  <button className="stop-gps-btn near-me-btn" onClick={startLiveTracking} disabled={locating}>
                     {locating ? <Loader2 size={14} className="animate-spin" /> : <Navigation size={14} />} Malapit sa akin
                   </button>
                 )}
@@ -781,6 +860,7 @@ const FindNearbyPage = ({ listings, reviewStats, onSelectProperty, isLandlord, u
                 recenterKey={recenterKey}
                 areaBounds={isSearch ? area?.bounds : null}
                 route={route}
+                me={mode === 'live' ? center : null}
               />
 
               {!isSearch && (
@@ -809,6 +889,7 @@ const FindNearbyPage = ({ listings, reviewStats, onSelectProperty, isLandlord, u
                       {selected.name || selected.location?.split(',')[0]}
                       {selected.is_verified && <BadgeCheck size={14} fill="#0066ff" color="white" />}
                     </strong>
+                    {isOccupied(selected) && <span className="occupied-badge">Occupied</span>}
                     <span>{selected.location}</span>
                     {selected.approx && <span className="map-peek-approx">≈ Tinatayang lokasyon (hindi pa naka-pin ng landlord)</span>}
                     <span className="map-peek-meta">₱{Number(selected.price || 0).toLocaleString()}{isStay(selected) ? '/gabi' : '/mo'}{selected.distance != null && <> • {selected.approx ? '≈ ' : ''}{formatDistance(selected.distance)}{isSearch ? ' mula sa iyo' : ''}</>}</span>
@@ -848,6 +929,7 @@ const FindNearbyPage = ({ listings, reviewStats, onSelectProperty, isLandlord, u
                 onClose={clearRoute}
                 showSteps={showSteps}
                 onToggleSteps={() => setShowSteps((v) => !v)}
+                progress={progress}
               />
             )}
 
@@ -861,6 +943,7 @@ const FindNearbyPage = ({ listings, reviewStats, onSelectProperty, isLandlord, u
                   >
                     <div className="image-container">
                       <img src={item.image || '/placeholder.png'} alt={item.name || item.title} loading="lazy" />
+                      {isOccupied(item) && <span className="occupied-badge on-image">Occupied</span>}
                       {item.distance != null && (
                         <span className="near-distance">
                           <MapPin size={11} /> {item.approx ? '≈ ' : ''}{formatDistance(item.distance)}
@@ -918,7 +1001,6 @@ const FindNearbyPage = ({ listings, reviewStats, onSelectProperty, isLandlord, u
         <button type="button" aria-label="Scroll pababa" onClick={() => window.scrollBy({ top: window.innerHeight * 0.7, behavior: 'smooth' })}><ChevronDown size={22} /></button>
       </div>
 
-      {confirmModal}
       {offlineModal}
     </div>
   );

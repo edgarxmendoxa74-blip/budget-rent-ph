@@ -328,6 +328,19 @@ export default function BudiScene({ phase = 'hop', onReady, onFail }) {
           tgt.headZ = 0.07 + Math.sin(w * 9) * 0.035;
           posY = Math.abs(Math.sin(tp * 2.2)) * 0.03;
         }
+      } else if (ph === 'travel') {
+        // naglalakad: tatalbog nang bahagya, nagwawagayway ang mga braso, nakatagilid na tanaw
+        const s = tp * 7;
+        const step = Math.abs(Math.sin(s));
+        posY = reduced ? 0 : step * 0.28;
+        sx = 1 + 0.04 * (1 - step); sy = 1 - 0.05 * (1 - step);
+        lerp('rotY', -0.4);
+        tgt.aLz = -0.12; tgt.aRz = 0.12;
+        if (!reduced) {
+          tgt.aLx = Math.sin(s) * 0.75;
+          tgt.aRx = -Math.sin(s) * 0.75;
+          tgt.headZ = Math.sin(s) * 0.06;
+        }
       } else {
         // idea + exit
         const T = 0.15;
@@ -372,7 +385,7 @@ export default function BudiScene({ phase = 'hop', onReady, onFail }) {
       b.dots.forEach((d, i) => { d.position.y = -0.02 + Math.max(0, Math.sin(now * 6 - i * 0.6)) * 0.14; });
 
       // bulb
-      const bp = ph === 'hop' || ph === 'think' || ph === 'wave' ? 0 : ph === 'exit' ? 1 : clamp01((tp - 0.05) / 0.55);
+      const bp = ph === 'hop' || ph === 'think' || ph === 'wave' || ph === 'travel' ? 0 : ph === 'exit' ? 1 : clamp01((tp - 0.05) / 0.55);
       const bs = bp === 0 ? 0.0001 : Math.max(0.0001, easeOutBack(bp));
       b.bulb.scale.setScalar(bs);
       b.bulb.rotation.z = Math.sin(now * 8) * 0.05;
