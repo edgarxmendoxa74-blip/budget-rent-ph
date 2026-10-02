@@ -329,3 +329,40 @@
   background: linear-gradient(135deg, #10b981, #059669);
   color: #fff;
 }
+
+button.act-option:disabled { opacity: 0.5; cursor: not-allowed !important; }
+
+/* Staycation: Book Here (Airbnb-style) */
+.act-breakdown {
+  margin-top: 10px;
+  padding: 12px;
+  border-radius: 14px;
+  background: #fff8e7;
+  border: 1.5px solid #ffe2a1;
+  font-size: 0.82rem;
+  color: var(--primary-dark);
+}
+.act-breakdown > div { display: flex; justify-content: space-between; gap: 10px; padding: 3px 0; }
+.act-breakdown .total { margin-top: 6px; padding-top: 8px; border-top: 1px solid #ffe2a1; font-size: 0.95rem; }
+.act-breakdown .total strong { color: var(--primary); }
+
+.act-trip { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 4px; }
+.act-trip > div { padding: 8px 10px; border-radius: 12px; background: #f1f5f9; display: flex; flex-direction: column; gap: 2px; }
+.act-trip > div:last-child { grid-column: 1 / -1; }
+.act-trip span { font-size: 0.68rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; }
+.act-trip strong { font-size: 0.85rem; color: var(--primary-dark); }
+
+.act-section-title { margin: 16px 0 8px; font-size: 0.95rem; font-weight: 800; color: var(--primary-dark); }
+
+.act-back { display: inline-flex; align-items: center; gap: 6px; margin-bottom: 10px; border: none; background: none; color: var(--primary); font-weight: 700; font-size: 0.8rem; cursor: pointer; padding: 0; }
+
+.act-form label.act-check,
+label.act-check { flex-direction: row; align-items: center; gap: 8px; font-weight: 600; }
+.act-form label.act-check input,
+label.act-check input { width: 18px; height: 18px; padding: 0; flex-shrink: 0; }
+label.act-check span { display: inline-flex; align-items: center; gap: 6px; }
+label.act-check.agree { display: flex; align-items: flex-start; font-size: 0.78rem; color: var(--text-muted); }
+
+.act-success { text-align: center; padding: 8px 0 4px; }
+.act-success h4 { margin: 8px 0 6px; color: var(--primary-dark); font-size: 1.05rem; }
+.act-success p { margin: 4px 0; font-size: 0.82rem; color: var(--text-muted); line-height: 1.5; }

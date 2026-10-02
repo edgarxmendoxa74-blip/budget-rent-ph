@@ -1,13 +1,15 @@
 import React, { useState, useEffect, useMemo, useRef, Suspense, lazy } from 'react';
 import { HeroBudi } from './components/MascotSplash';
-import { Search, MapPin, Bed, Bath, Wifi, Shield, Star, Menu, X, Heart, MessageCircle, Phone, LogOut, Building2, User, Users, Loader2, ClipboardList, Mail, BadgeCheck, Headset, ArrowLeft, Home, Navigation, Globe, Trash2, ChevronLeft, ChevronRight, Bell, FileText, HousePlus, LocateFixed, PawPrint, ScrollText, FileSignature, Info, House, TreePalm, Plus, Lightbulb, Megaphone } from 'lucide-react';
+import { Search, MapPin, Bed, Bath, Wifi, Shield, Star, Menu, X, Heart, MessageCircle, Phone, LogOut, Building2, User, Users, Loader2, ClipboardList, Mail, BadgeCheck, Headset, ArrowLeft, Home, Navigation, Globe, Trash2, ChevronLeft, ChevronRight, Bell, FileText, HousePlus, LocateFixed, PawPrint, ScrollText, FileSignature, Info, House, TreePalm, Plus, Lightbulb, Megaphone, CalendarCheck } from 'lucide-react';
 import { clearSupabaseSessionStorage, recoverFromJwtError, supabase, validateCurrentSession } from './lib/supabase';
 import { isAdminEmail, isAdminPath } from './lib/admin';
 import { playNotifySound, unlockNotifySound } from './lib/notifySound';
 import { useUserLocation } from './lib/useUserLocation';
+import { getGuestBookings } from './lib/guestBookings';
 import { isInstalledApp, hasSeenTour, forceTourFromUrl } from './lib/tour';
 import { useApproxCoords } from './lib/useApproxCoords';
 import { useAreaSearch } from './lib/useAreaSearch';
+import { matchesPlaceQuery, buildPlaceIndex, suggestPlaces, PLACE_LEVELS } from './lib/placeSearch';
 import CallGateLink from './components/CallGate';
 import { toCoords, distanceKm, formatDistance, inArea } from './lib/geo';
 import './App.css';
@@ -21,6 +23,8 @@ const ProfileModal = lazy(() => import('./components/ProfileModal'));
 const EditListings = lazy(() => import('./components/EditListings'));
 const VerificationPage = lazy(() => import('./components/VerificationPage'));
 const CustomerSupportPage = lazy(() => import('./components/CustomerSupportPage'));
+const BookingsPage = lazy(() => import('./components/BookingsPage'));
+const MyBookingsPage = lazy(() => import('./components/MyBookingsPage'));
 const FindNearbyPage = lazy(() => import('./components/FindNearbyPage'));
 const AdminPanel = lazy(() => import('./components/AdminPanel'));
 const AdminLogin = lazy(() => import('./components/AdminLogin'));
@@ -246,7 +250,9 @@ function App() {
   }, [session, isGuest]);
   // Staycation 'Where': hanapin ang buong lugar sa mapa, hindi lang text sa address
   const priceQuery = parseNumericQuery(debouncedSearchQuery);
-  const stayArea = useAreaSearch(debouncedSearchQuery, selectedCategory === 'Staycation' && !priceQuery);
+  // Hanapin ang buong lugar (lalawigan/bayan/barangay) sa mapa para sa Paupahan at Staycation
+  const stayArea = useAreaSearch(debouncedSearchQuery, (selectedCategory === 'Staycation' || selectedCategory === 'Paupahan') && !priceQuery);
+  const [searchFocused, setSearchFocused] = useState(false);
   const approxCoords = useApproxCoords(properties, Boolean(userLoc.coords) || Boolean(stayArea));
   const getDistanceLabel = (item) => {
     if (!userLoc.coords || !item) return null;
@@ -414,9 +420,7 @@ function App() {
           : selectedCategory === "Paupahan"
             ? !isStaycation(item)
             : (item.type || "") === selectedCategory || (item.category || "") === selectedCategory;
-      const q = debouncedSearchQuery.toLowerCase();
-      const matchesText = (item.name || item.title || "").toLowerCase().includes(q) || 
-                          (item.location || "").toLowerCase().includes(q);
+      const matchesText = matchesPlaceQuery(item, debouncedSearchQuery);
       const matchesArea = Boolean(stayArea) && inArea(toCoords(item) || approxCoords[item.id], stayArea);
       const matchesSearch = priceQuery > 0 || matchesText || matchesArea;
       // Staycation 'Who': ayon sa kasya ang guests. Kasama pa rin ang occupied dahil puwede pang mag-reserve
@@ -434,6 +438,16 @@ function App() {
       ? [...matches].sort((a, b) => (Number(b.price) || 0) - (Number(a.price) || 0))
       : matches;
   }, [properties, selectedCategory, debouncedSearchQuery, activeTab, session?.user?.id, maxBudget, stayArea, approxCoords, stayDate, stayGuests]);
+
+  // Mungkahing lalawigan / bayan / barangay habang nagta-type (mula sa mga listing sa napiling category)
+  const placeIndex = useMemo(
+    () => buildPlaceIndex(properties.filter(item => (selectedCategory === 'Staycation' ? isStaycation(item) : !isStaycation(item)))),
+    [properties, selectedCategory]
+  );
+  const placeSuggestions = useMemo(
+    () => (searchFocused && !parseNumericQuery(searchQuery) ? suggestPlaces(placeIndex, searchQuery) : []),
+    [placeIndex, searchQuery, searchFocused]
+  );
 
   // Pinakamurang listing sa napiling category (para sa mungkahi kapag walang pasok sa budget)
   const cheapestInCategory = useMemo(() => {
@@ -504,23 +518,69 @@ function App() {
 
   // Customer info requests (gustong magpa-tawag) para sa landlord; RLS ang naglilimita sa listings niya
   const [inquiries, setInquiries] = useState([]);
+  const [bookings, setBookings] = useState([]);
+  const [ownerUnread, setOwnerUnread] = useState({}); // booking_id -> bilang ng hindi pa nababasang chat ng guest
+  const [guestUnread, setGuestUnread] = useState({}); // booking_id -> bilang ng hindi pa nababasang chat ng owner
+  const reloadOwnerRef = useRef(null);
+  const reloadGuestRef = useRef(null);
   const seenInquiryIds = useRef(null);
   useEffect(() => {
-    if (!session?.user || isGuest) { setInquiries([]); seenInquiryIds.current = null; return; }
+    if (!session?.user || isGuest) { setInquiries([]); setBookings([]); setOwnerUnread({}); seenInquiryIds.current = null; reloadOwnerRef.current = null; return; }
     const myId = session.user.id;
     const myEmail = String(session.user.email || '').toLowerCase();
     const load = async () => {
       const { data, error } = await supabase.from('customer_inquiries').select('*').order('created_at', { ascending: false }).limit(30);
       if (error) return;
-      const list = (data || []).filter(r => r.user_id !== myId && (!isAdminEmail(myEmail) || String(r.owner_email || '').toLowerCase() === myEmail));
-      if (seenInquiryIds.current && list.some(r => !seenInquiryIds.current.has(r.id))) playNotifySound();
-      seenInquiryIds.current = new Set(list.map(r => r.id));
+      const mine = (r) => r.user_id !== myId && (!isAdminEmail(myEmail) || String(r.owner_email || '').toLowerCase() === myEmail);
+      const list = (data || []).filter(mine);
+      // Staycation booking requests (kung wala pa ang table, tahimik na lalaktawan)
+      const { data: bData } = await supabase.from('booking_requests').select('*').order('created_at', { ascending: false }).limit(30);
+      const bList = (bData || []).filter(mine);
+      // Hindi pa nababasang chat ng mga guest (RLS: sa listings lang niya)
+      const { data: mData } = await supabase.from('booking_messages').select('id, booking_id').eq('sender', 'guest').is('read_at', null);
+      const unread = {};
+      (mData || []).forEach(m => { unread[m.booking_id] = (unread[m.booking_id] || 0) + 1; });
+      const ids = [...list, ...bList].map(r => r.id).concat((mData || []).map(m => m.id));
+      if (seenInquiryIds.current && ids.some(id => !seenInquiryIds.current.has(id))) playNotifySound();
+      seenInquiryIds.current = new Set(ids);
       setInquiries(list);
+      setBookings(bList);
+      setOwnerUnread(unread);
     };
+    reloadOwnerRef.current = load;
     load();
     const t = setInterval(load, 30000);
-    return () => clearInterval(t);
+    // Realtime: bagong chat o booking = agad na lalabas (sumusunod sa RLS)
+    const channel = supabase.channel('owner-bookings')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'booking_messages' }, () => load())
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'booking_requests' }, () => load())
+      .subscribe();
+    return () => { clearInterval(t); supabase.removeChannel(channel); };
   }, [session, isGuest]);
+
+  // Tenant (guest): hindi pa nababasang sagot ng owner
+  useEffect(() => {
+    if (!isGuest) { setGuestUnread({}); reloadGuestRef.current = null; return undefined; }
+    let first = true;
+    let prevTotal = 0;
+    const load = async () => {
+      const tokens = getGuestBookings().map(b => b.token);
+      if (tokens.length === 0) return;
+      const { data, error } = await supabase.rpc('get_guest_unread', { p_tokens: tokens });
+      if (error) return;
+      const map = {};
+      (data || []).forEach(r => { map[r.booking_id] = Number(r.unread); });
+      const total = Object.values(map).reduce((a, b) => a + b, 0);
+      if (!first && total > prevTotal) playNotifySound();
+      first = false;
+      prevTotal = total;
+      setGuestUnread(map);
+    };
+    reloadGuestRef.current = load;
+    load();
+    const t = setInterval(load, 15000);
+    return () => clearInterval(t);
+  }, [isGuest]);
 
   const timeAgo = (iso) => {
     const mins = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60000));
@@ -555,6 +615,15 @@ function App() {
     phone: r.customer_phone,
     time: timeAgo(r.created_at)
   })).filter(n => !deletedNotifs.includes(n.id)), [inquiries, deletedNotifs]);
+
+  const ownerUnreadTotal = Object.values(ownerUnread).reduce((a, b) => a + b, 0);
+  const guestUnreadTotal = Object.values(guestUnread).reduce((a, b) => a + b, 0);
+  const pendingBookings = bookings.filter(r => r.status === 'pending').length + ownerUnreadTotal;
+  const setBookingStatus = async (bookingId, status) => {
+    const { error } = await supabase.from('booking_requests').update({ status }).eq('id', bookingId);
+    if (error) { alert(error.message || 'Hindi na-update ang booking.'); return; }
+    setBookings(list => list.map(b => (b.id === bookingId ? { ...b, status } : b)));
+  };
   const callUnread = callNotifs.filter(n => !readNotifs.includes(n.id)).length;
   const [isCallNotifOpen, setIsCallNotifOpen] = useState(false);
   const markCallsRead = () => {
@@ -782,6 +851,9 @@ function App() {
                   <button className={`menu-link${activeTab === 'explore' ? ' active' : ''}`} onClick={() => { setIsMenuOpen(false); setActiveTab('explore'); }}>
                     <div className="icon-container-mini"><Navigation size={18} /></div> Phone Location
                   </button>
+                  <button className={`menu-link${activeTab === 'mybookings' ? ' active' : ''}`} onClick={() => { setIsMenuOpen(false); setActiveTab('mybookings'); }}>
+                    <div className="icon-container-mini secondary-icon"><CalendarCheck size={18} /></div> My Bookings{guestUnreadTotal > 0 ? ` (${guestUnreadTotal})` : ''}
+                  </button>
                 </>
               )}
               {!isGuest && (
@@ -792,6 +864,9 @@ function App() {
                   </button>
                   <button className={`menu-link${activeTab === 'mylistings' ? ' active' : ''}`} onClick={() => { setIsMenuOpen(false); setActiveTab('mylistings'); }}>
                     <div className="icon-container-mini"><ClipboardList size={18} /></div> My Listings
+                  </button>
+                  <button className={`menu-link${activeTab === 'bookings' ? ' active' : ''}`} onClick={() => { setIsMenuOpen(false); setActiveTab('bookings'); }}>
+                    <div className="icon-container-mini"><CalendarCheck size={18} /></div> Bookings{pendingBookings > 0 ? ` (${pendingBookings})` : ''}
                   </button>
                   <button className={`menu-link${activeTab === 'agreement' ? ' active' : ''}`} onClick={() => { setIsMenuOpen(false); setActiveTab('agreement'); }}>
                     <div className="icon-container-mini secondary-icon"><FileSignature size={18} /></div> Create Agreement Draft
@@ -917,13 +992,17 @@ function App() {
                     </button>
                   </div>
                 ) : (
+                <div className="search-wrap">
                 <div className="search-bar">
                   <Search className="search-icon" size={20} />
-                  <input 
-                    type="text" 
-                    placeholder="Search by city or area..." 
+                  <input
+                    type="text"
+                    placeholder="Lalawigan, bayan, o barangay..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
+                    onFocus={() => setSearchFocused(true)}
+                    onBlur={() => setTimeout(() => setSearchFocused(false), 150)}
+                    autoComplete="off"
                   />
                   {searchQuery !== '' && (
                     <button
@@ -935,6 +1014,29 @@ function App() {
                       <X size={14} />
                     </button>
                   )}
+                </div>
+                {placeSuggestions.length > 0 && (
+                  <ul className="search-suggest" role="listbox">
+                    {placeSuggestions.map((s) => (
+                      <li key={`${s.level}-${s.label}-${s.context}`}>
+                        <button
+                          type="button"
+                          role="option"
+                          onMouseDown={(e) => e.preventDefault()}
+                          onClick={() => { setSearchQuery(s.query); setSearchFocused(false); }}
+                        >
+                          <MapPin size={15} />
+                          <span className="ss-text">
+                            <strong>{s.label}</strong>
+                            {s.context && <em>{s.context}</em>}
+                          </span>
+                          <span className={`ss-level ${s.level}`}>{PLACE_LEVELS[s.level]}</span>
+                          <span className="ss-count">{s.count}</span>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
                 </div>
                 )}
 
@@ -1233,20 +1335,34 @@ function App() {
           </header>
           <main className="info-page-container">
             <div className="info-section">
-              <p><strong>BudgetRentPH</strong> is the Philippines' premier platform for finding affordable, safe, and convenient housing solutions.</p>
-              <p>Our mission is to bridge the gap between property owners and house-seekers, making the search for boarding houses, bedspaces, and apartments as seamless as possible for every Filipino student and professional.</p>
+              <p><strong>BudgetRentPH</strong> is a Philippine rental marketplace that connects tenants with landlords of boarding houses, bedspaces, studios, apartments, and staycations.</p>
+              <p>Our mission is to make the search for an affordable place simple and honest. Tenants can browse listings, check what is available near them on the map, get directions, and call the owner directly. Landlords can post their listings, build trust through verification, and reach more people.</p>
+              <p>We are a listing platform. We are not a landlord, agent, or party to any rental or booking, and we do not hold deposits or rent payments.</p>
             </div>
             <div className="info-grid">
               <div className="info-card">
                 <Shield size={32} />
                 <h4>Verified Owners</h4>
-                <p>We work with trusted landlords to ensure your safety and peace of mind.</p>
+                <p>Landlords can request verification. Look for the verified badge, and still check the place before you pay.</p>
+              </div>
+              <div className="info-card">
+                <Navigation size={32} />
+                <h4>Find Nearby</h4>
+                <p>See available rentals and staycations around you, with live directions to the property.</p>
               </div>
               <div className="info-card">
                 <Star size={32} />
-                <h4>Quality Picks</h4>
-                <p>Curated listings that meet our standards for comfort and accessibility.</p>
+                <h4>Real Reviews</h4>
+                <p>Read ratings and comments from other tenants to help you decide.</p>
               </div>
+              <div className="info-card">
+                <Phone size={32} />
+                <h4>Direct Contact</h4>
+                <p>Talk to the owner directly. No middleman and no hidden booking fees from us.</p>
+              </div>
+            </div>
+            <div className="info-section">
+              <p>Questions, feedback, or a problem with a listing? Open <strong>Customer Support</strong> from the menu and we will get back to you.</p>
             </div>
           </main>
         </div>
@@ -1269,28 +1385,71 @@ function App() {
             <section className="terms-card">
               <div className="terms-icon-box"><ClipboardList size={20} /></div>
               <div className="terms-content">
-                <p>By using <strong>BudgetRentPH</strong>, you agree to these basic rules:</p>
+                <h3>Acceptance</h3>
+                <p>By creating an account or using <strong>BudgetRentPH</strong>, you agree to these Terms and Policies. If you do not agree, please do not use the app.</p>
               </div>
             </section>
             <section className="terms-card">
               <div className="terms-icon-box"><Users size={20} /></div>
               <div className="terms-content">
-                <h3>Direct Deals</h3>
-                <p>We are a listing site. All inquiries and payments are made directly between tenants and landlords.</p>
+                <h3>We Are a Listing Platform</h3>
+                <p>BudgetRentPH only connects tenants and landlords. We are not a party to any lease, booking, or payment. Inquiries, viewings, contracts, deposits, and rent or staycation payments are arranged directly between tenant and landlord, at their own risk. We do not guarantee any listing, price, or availability.</p>
               </div>
             </section>
             <section className="terms-card">
               <div className="terms-icon-box"><Shield size={20} /></div>
               <div className="terms-content">
-                <h3>Honesty</h3>
-                <p>Landlords must provide real photos and prices. Misleading listings will be removed.</p>
+                <h3>Landlord Responsibilities</h3>
+                <p>Landlords must post accurate information, real photos, current prices, and availability, and must have the right to rent out the property. Misleading, duplicate, or fraudulent listings will be removed and the account may be suspended. For staycations, down payment and house rules must be stated clearly in the listing.</p>
               </div>
             </section>
             <section className="terms-card">
               <div className="terms-icon-box"><BadgeCheck size={20} /></div>
               <div className="terms-content">
+                <h3>Verification and Subscription</h3>
+                <p>The verified badge means we reviewed the landlord's request. It is not a guarantee of the property or the person. Landlords may be required to pay a subscription to keep listings active. Payment proofs are stored privately and only used to confirm your subscription. Subscription fees are non-refundable once activated, unless required by law.</p>
+              </div>
+            </section>
+            <section className="terms-card">
+              <div className="terms-icon-box"><Star size={20} /></div>
+              <div className="terms-content">
+                <h3>Reviews and Conduct</h3>
+                <p>Reviews must be honest and based on real experience. No harassment, hate speech, spam, fake reviews, or scams. We may remove content or suspend accounts that break these rules.</p>
+              </div>
+            </section>
+            <section className="terms-card">
+              <div className="terms-icon-box"><Phone size={20} /></div>
+              <div className="terms-content">
+                <h3>Calls and Inquiries</h3>
+                <p>Before calling an owner, you give your name and phone number. The owner can see this so they know who is calling. Use it only for genuine rental inquiries. Owners must not misuse tenant contact details.</p>
+              </div>
+            </section>
+            <section className="terms-card">
+              <div className="terms-icon-box"><Navigation size={20} /></div>
+              <div className="terms-content">
+                <h3>Location</h3>
+                <p>With your permission, your device location is used to show nearby listings and directions while you use the app. We do not track you in the background. You can turn off location anytime in your phone settings. Route times are estimates only.</p>
+              </div>
+            </section>
+            <section className="terms-card">
+              <div className="terms-icon-box"><Shield size={20} /></div>
+              <div className="terms-content">
                 <h3>Privacy</h3>
-                <p>Your data is only used for inquiries. We never sell your personal information.</p>
+                <p>We collect only what the app needs: your email and name, phone number for inquiries, listing details, and verification and payment proofs. This is used to run the service, prevent fraud, and contact you. We never sell your personal information. Data is stored securely, and you may ask us through Customer Support to correct or delete your account data, in line with the Data Privacy Act of 2012 (RA 10173).</p>
+              </div>
+            </section>
+            <section className="terms-card">
+              <div className="terms-icon-box"><FileText size={20} /></div>
+              <div className="terms-content">
+                <h3>Agreement Drafts</h3>
+                <p>The Agreement Draft tool creates a simple template only. It is not legal advice and is not binding until both parties sign. Consider having a lawyer review any contract.</p>
+              </div>
+            </section>
+            <section className="terms-card">
+              <div className="terms-icon-box"><Info size={20} /></div>
+              <div className="terms-content">
+                <h3>Liability and Changes</h3>
+                <p>To the extent allowed by law, BudgetRentPH is not liable for disputes, losses, or damages arising from dealings between users. Always visit the property and avoid paying before you are sure. We may update these Terms from time to time; continuing to use the app means you accept the changes.</p>
               </div>
             </section>
           </main>
@@ -1306,6 +1465,18 @@ function App() {
       {activeTab === 'verified' && (
         <Suspense fallback={<div className="text-center py-10"><Loader2 className="animate-spin text-primary mx-auto" size={40} /></div>}>
           <VerificationPage session={session} onDone={() => setActiveTab('mylistings')} />
+        </Suspense>
+      )}
+
+      {activeTab === 'mybookings' && isGuest && (
+        <Suspense fallback={<div className="text-center py-10"><Loader2 className="animate-spin text-primary mx-auto" size={40} /></div>}>
+          <MyBookingsPage properties={properties} unread={guestUnread} onChatChanged={() => reloadGuestRef.current?.()} />
+        </Suspense>
+      )}
+
+      {activeTab === 'bookings' && (
+        <Suspense fallback={<div className="text-center py-10"><Loader2 className="animate-spin text-primary mx-auto" size={40} /></div>}>
+          <BookingsPage bookings={bookings} properties={properties} onSetStatus={setBookingStatus} unread={ownerUnread} onChatChanged={() => reloadOwnerRef.current?.()} />
         </Suspense>
       )}
 
@@ -1536,12 +1707,15 @@ function App() {
                 <span className="nav-label">Account</span>
               </button>
               <button
-                className={`nav-item ico-support ${activeTab === 'support' ? 'active' : ''}`}
-                onClick={() => setActiveTab('support')}
-                aria-current={activeTab === 'support' ? 'page' : undefined}
+                className={`nav-item ico-support ${activeTab === 'bookings' ? 'active' : ''}`}
+                onClick={() => setActiveTab('bookings')}
+                aria-current={activeTab === 'bookings' ? 'page' : undefined}
               >
-                <span className="nav-icon-box"><Headset size={22} /></span>
-                <span className="nav-label">Support</span>
+                <span className="nav-icon-box" style={{ position: 'relative' }}>
+                  <CalendarCheck size={22} />
+                  {pendingBookings > 0 && <span className="notif-badge">{pendingBookings}</span>}
+                </span>
+                <span className="nav-label">Bookings</span>
               </button>
             </>
           ) : (
