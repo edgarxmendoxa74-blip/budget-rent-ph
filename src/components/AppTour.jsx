@@ -8,7 +8,7 @@ const TENANT_STEPS = [
   { Icon: House, tone: 'navy', title: 'Welcome sa BudgetRentPH!', text: 'Mura. Malapit. Mapagkakatiwalaan. Sandali lang ito — ituturo namin kung paano gamitin ang app.' },
   { Icon: TreePalm, tone: 'gold', title: 'Paupahan o Staycation', text: 'Sa Home, piliin ang category sa itaas: Paupahan para sa buwan-buwan na upa, o Staycation para sa bakasyon at overnight stay.' },
   { Icon: Search, tone: 'navy', title: 'Hanapin ang bagay sa budget mo', text: 'I-type ang lugar o budget (hal. 4000) sa search. Sa Staycation, piliin din ang petsa (When) at bilang ng bisita (Who).' },
-  { Icon: Navigation, tone: 'gold', title: 'Nearby: mga bahay malapit sa iyo', text: 'Pindutin ang Nearby sa ibaba, i-ON ang Location ng phone, tapos pindutin ang Activate Live GPS. Lalabas sa mapa ang mga bahay at makikita ang layo at ruta.' },
+  { Icon: Navigation, tone: 'gold', title: 'Nearby: mga bahay malapit sa iyo', text: 'Pindutin ang Nearby sa ibaba, i-ON ang Location ng phone. Awtomatikong ii-scan ang paligid mo at lalabas sa mapa ang mga bahay at makikita ang layo at ruta.' },
   { Icon: Heart, tone: 'red', title: 'I-save ang paborito', text: 'Pindutin ang ❤ sa listing para mapunta sa Wishlist mo. Doon mo ulit makikita ang mga na-save.' },
   { Icon: CalendarCheck, tone: 'green', title: 'Mag-inquire o mag-book', text: 'Buksan ang listing at pindutin ang Inquire (paupahan) o Book (staycation). Puwede kang mag-email, tumawag, o mag-Reserve Slot sa owner.' },
   { Icon: Bell, tone: 'gold', title: 'Notifications', text: 'Pindutin ang bell sa itaas para sa mga update mula sa BudgetRentPH. Puwede mong i-delete ang mga notification na hindi mo na kailangan.' },

@@ -149,7 +149,7 @@ const Auth = ({ onAuthSuccess }) => {
     ],
   };
 
-  // Sinisilip kung naka-on ang location bago pumasok bilang tenant; kung hindi, magsu-suggest lang (puwedeng laktawan).
+  // Sinisilip kung naka-on ang location bago pumasok bilang tenant; kung hindi, hindi makakapasok hangga't hindi na-on.
   const handleEnterAsTenant = async () => {
     setCheckingLocation(true);
     // Native app: tingnan muna kung naka-on ang Location ng phone (hiwalay sa app permission)
@@ -226,9 +226,6 @@ const Auth = ({ onAuthSuccess }) => {
                   )}
                   <button className={`auth-submit-btn${locationPrompt === 'off' ? ' secondary' : ''}`} onClick={handleEnterAsTenant} disabled={checkingLocation}>
                     {checkingLocation ? 'Chine-check...' : 'Na-on ko na, magpatuloy'}
-                  </button>
-                  <button className="auth-submit-btn secondary" onClick={() => { setLocationPrompt(null); onAuthSuccess(); }}>
-                    Magpatuloy nang walang location
                   </button>
                 </div>
               </div>
