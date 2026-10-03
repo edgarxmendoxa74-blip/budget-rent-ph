@@ -164,6 +164,11 @@ const BookingChat = ({ bookingId, title, role, token, other, meName, onClose, on
             <strong>{title}</strong>
             <span>{role === 'owner' ? 'Chat with guest' : 'Chat with owner'} · tap the photo for details</span>
           </div>
+          {role !== 'owner' && (
+            <button type="button" className="bchat-pay-btn" onClick={showPayments} aria-label="Show payment method" title="Show payment method">
+              <Wallet size={16} /> <span>Payment</span>
+            </button>
+          )}
           <button type="button" aria-label="Close" onClick={onClose}><X size={18} /></button>
         </div>
 
@@ -188,8 +193,6 @@ const BookingChat = ({ bookingId, title, role, token, other, meName, onClose, on
             )}
           </div>
         )}
-
-        <p className="bchat-limit-note">Note: The tenant and the landlord can each send a maximum of {MESSAGE_LIMIT} replies in this chat.</p>
 
         <div className="bchat-body">
           {loading && <p className="bchat-empty"><Loader2 size={16} className="animate-spin" /></p>}
@@ -224,11 +227,6 @@ const BookingChat = ({ bookingId, title, role, token, other, meName, onClose, on
           <button type="submit" disabled={sending || limitReached || !text.trim()} aria-label="Send">
             {sending ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
           </button>
-          {role !== 'owner' && (
-            <button type="button" className="bchat-pay-btn" onClick={showPayments} aria-label="Show payment method" title="Show payment method">
-              <Wallet size={16} /> <span>Payment</span>
-            </button>
-          )}
         </form>
         <p className="bchat-note">Never share passwords or bank details. This chat updates automatically.</p>
       </div>

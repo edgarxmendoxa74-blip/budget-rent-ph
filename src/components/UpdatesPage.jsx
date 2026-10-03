@@ -1,15 +1,30 @@
 import React, { useEffect, useState } from 'react';
-import { Play, Loader2 } from 'lucide-react';
+import { Play, Loader2, Trash2 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { updateThumbnail } from '../lib/updates';
 import { fmtDate } from '../lib/csv';
 import { HeroBudi } from './MascotSplash';
 import './UpdatesPage.css';
 import { ikImage } from '../lib/imagekit';
+import { isAdminEmail } from '../lib/admin';
 
 const UpdatesPage = () => {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => setIsAdmin(isAdminEmail(data?.user?.email)));
+  }, []);
+
+  const removeUpdate = async (e, u) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!window.confirm(`I-delete ang "${u.title}"? Mawawala ito sa Updates tab ng lahat ng users.`)) return;
+    const { error } = await supabase.from('app_updates').delete().eq('id', u.id);
+    if (error) return alert('Hindi na-delete: ' + error.message);
+    setItems((list) => list.filter((x) => x.id !== u.id));
+  };
 
   useEffect(() => {
     let alive = true;
@@ -48,6 +63,12 @@ const UpdatesPage = () => {
                 <h4>{u.title}</h4>
                 {u.description && <p>{u.description}</p>}
                 <small>{fmtDate(u.created_at)}</small>
+                <div className="update-actions">
+                  {isAdmin && (
+                    <button type="button" className="update-del-btn" aria-label="Delete update" title="Delete update" onClick={(e) => removeUpdate(e, u)}><Trash2 size={14} /></button>
+                  )}
+                  <span className="update-watch-btn"><Play size={13} fill="currentColor" /> Watch</span>
+                </div>
               </div>
             </a>
           );

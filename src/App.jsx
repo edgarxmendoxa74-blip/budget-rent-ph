@@ -725,6 +725,28 @@ function App() {
 
   const unreadCount = notifications.filter(n => !readNotifs.includes(n.id)).length;
 
+  // Bagong videos sa Updates: bilang ng updates na mas bago sa huling pagbukas ng tab (per device)
+  const [newUpdates, setNewUpdates] = useState(0);
+  useEffect(() => {
+    let alive = true;
+    const seenKey = 'budgetrent_updates_seen';
+    const readSeen = () => { try { return localStorage.getItem(seenKey) || ''; } catch { return ''; } };
+    if (activeTab === 'updates') {
+      try { localStorage.setItem(seenKey, new Date().toISOString()); } catch { /* ignore */ }
+      setNewUpdates(0);
+      return undefined;
+    }
+    const seen = readSeen();
+    if (!seen) {
+      // Unang beses sa device: huwag i-badge ang lumang updates
+      try { localStorage.setItem(seenKey, new Date().toISOString()); } catch { /* ignore */ }
+      return undefined;
+    }
+    supabase.from('app_updates').select('id', { count: 'exact', head: true }).gt('created_at', seen)
+      .then(({ count, error }) => { if (alive && !error) setNewUpdates(count || 0); });
+    return () => { alive = false; };
+  }, [activeTab]);
+
   // Delete ay sa device na ito lang (hindi nabubura ang announcement ng iba)
   const deleteNotifs = (ids) => {
     const next = [...new Set([...deletedNotifs, ...ids])];
@@ -1964,7 +1986,7 @@ function App() {
                 onClick={() => setActiveTab('updates')}
                 aria-current={activeTab === 'updates' ? 'page' : undefined}
               >
-                <span className="nav-icon-box"><Megaphone size={22} /></span>
+                <span className="nav-icon-box" style={{ position: 'relative' }}><Megaphone size={22} />{newUpdates > 0 && <span className="notif-badge">{newUpdates}</span>}</span>
                 <span className="nav-label">Updates</span>
               </button>
               <button className="nav-item circle-plus" onClick={() => setIsPropertyFormOpen(true)} aria-label="List your property" title="List your property"><Plus size={34} strokeWidth={3.2} /></button>
@@ -2012,7 +2034,7 @@ function App() {
                 onClick={() => setActiveTab('updates')}
                 aria-current={activeTab === 'updates' ? 'page' : undefined}
               >
-                <span className="nav-icon-box"><Megaphone size={22} /></span>
+                <span className="nav-icon-box" style={{ position: 'relative' }}><Megaphone size={22} />{newUpdates > 0 && <span className="notif-badge">{newUpdates}</span>}</span>
                 <span className="nav-label">Updates</span>
               </button>
               <button

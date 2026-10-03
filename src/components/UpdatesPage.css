@@ -14,9 +14,9 @@
 .updates-list {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
   width: 100%;
-  max-width: 600px;
+  max-width: 400px;
   margin: 0 auto;
   padding: 20px var(--container-padding);
   box-sizing: border-box;
@@ -29,13 +29,13 @@
   color: inherit;
   background: #fff;
   border: 1px solid var(--border);
-  border-radius: 18px;
+  border-radius: 16px;
   box-shadow: 0 4px 16px rgba(0, 38, 82, 0.07);
 }
 
 .update-thumb {
   position: relative;
-  aspect-ratio: 16 / 9;
+  aspect-ratio: 16 / 7;
   background: var(--primary-dark, #00264f);
 }
 
@@ -51,8 +51,8 @@
   position: absolute;
   inset: 0;
   margin: auto;
-  width: 56px;
-  height: 56px;
+  width: 38px;
+  height: 38px;
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -63,14 +63,14 @@
 }
 
 .update-body {
-  padding: 12px 14px 14px;
+  padding: 10px 12px 12px;
   display: flex;
   flex-direction: column;
   gap: 4px;
 }
 
-.update-body h4 { margin: 0; font-size: 1rem; font-weight: 800; color: var(--primary); }
-.update-body p { margin: 0; font-size: 0.85rem; line-height: 1.5; color: var(--text-muted); }
+.update-body h4 { margin: 0; font-size: 0.92rem; font-weight: 800; color: var(--primary); }
+.update-body p { margin: 0; font-size: 0.8rem; line-height: 1.5; color: var(--text-muted); }
 .update-body small { font-size: 0.72rem; color: var(--text-muted); }
 
 .updates-empty {
@@ -78,5 +78,9 @@
   padding: 40px 16px;
   color: var(--text-muted);
   border: 1px dashed var(--border);
-  border-radius: 18px;
+  border-radius: 16px;
 }
+
+.update-actions { align-self: flex-end; margin-top: 6px; display: flex; align-items: center; gap: 6px; }
+.update-del-btn { width: 28px; height: 28px; border: none; border-radius: 50%; background: #fee2e2; color: #dc2626; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; padding: 0; }
+.update-watch-btn { display: inline-flex; align-items: center; gap: 5px; padding: 5px 12px; border-radius: 999px; background: #fbbf24; color: #78350f; font-size: 0.78rem; font-weight: 800; }
