@@ -1,17 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { X, User, Save, Loader2, CheckCircle, Camera, Phone, MessageCircle, Building2, Globe, BadgeCheck } from 'lucide-react';
+import { X, User, Save, Loader2, CheckCircle, Camera, Phone, MessageCircle, Building2, Globe, BadgeCheck, Check } from 'lucide-react';
 import './ProfileModal.css';
 
-const ProfileModal = ({ session, onClose, isEditingInitial = false, onProfileUpdated }) => {
+const ProfileModal = ({ session, onClose, isEditingInitial = false, onProfileUpdated, onGetVerified }) => {
   const [isEditing, setIsEditing] = useState(isEditingInitial);
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [isVerified, setIsVerified] = useState(false);
+  const [verifyChecked, setVerifyChecked] = useState(false); // iwas kislap ng "Get verified" habang hindi pa alam ang status
 
   useEffect(() => {
     checkVerification();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session]);
 
   const getVerificationRow = async () => {
@@ -53,6 +55,8 @@ const ProfileModal = ({ session, onClose, isEditingInitial = false, onProfileUpd
       setIsVerified(Boolean(latestProperty.is_verified));
     } catch (err) {
       console.error('Error checking verification:', err);
+    } finally {
+      setVerifyChecked(true);
     }
   };
   const [formData, setFormData] = useState({
@@ -229,6 +233,16 @@ const ProfileModal = ({ session, onClose, isEditingInitial = false, onProfileUpd
           </form>
         ) : (
           <div className="profile-details">
+            {verifyChecked && !isVerified && userRole === 'landlord' && onGetVerified && (
+              <button type="button" className="get-verified-card" onClick={onGetVerified}>
+                <span className="gv-icon"><BadgeCheck size={26} /></span>
+                <span className="gv-text">
+                  <strong>Tap to get verified</strong>
+                  <span>Verified landlords earn tenants' trust faster. You get a verified badge on your listings and profile, so more people feel safe to inquire and book with you.</span>
+                </span>
+                <span className="gv-check"><Check size={16} strokeWidth={3.5} /></span>
+              </button>
+            )}
             <div className="info-group">
               <User size={18} />
               <div className="info-content">

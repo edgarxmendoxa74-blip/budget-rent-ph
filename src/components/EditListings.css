@@ -216,9 +216,9 @@
 }
 
 .avail-toggle.occupied {
-  background: rgba(239, 68, 68, 0.12);
-  color: #dc2626;
-  border-color: rgba(239, 68, 68, 0.3);
+  background: rgba(124, 58, 237, 0.12);
+  color: #6d28d9;
+  border-color: rgba(124, 58, 237, 0.3);
 }
 
 .avail-toggle:hover {

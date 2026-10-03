@@ -2,10 +2,9 @@ import { isAdminEmail } from '../lib/admin';
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { supabase } from '../lib/supabase';
-import { getCurrentPosition, isDeviceLocationOn, openDeviceLocationSettings } from '../lib/geo';
 import { showBudiSplash } from '../lib/budiSplash';
 import { signUpTenant, signInTenant, validateTenantSignup, WORK_STATUSES, workStatusLabel, NEW_TENANT_KEY } from '../lib/tenantAuth';
-import { Mail, Lock, Cake, Briefcase, User, ArrowRight, Loader2, Building2, MapPinOff, Phone, MessageCircle, Globe, X, Heart, Eye, EyeOff, BadgeCheck, Lightbulb, Search, MapPin, PlusCircle, UserPlus, Pencil, CheckCircle2 } from 'lucide-react';
+import { Mail, Lock, Cake, Briefcase, User, ArrowRight, Loader2, Building2, Phone, MessageCircle, Globe, X, Heart, Eye, EyeOff, BadgeCheck, Lightbulb, Search, MapPin, PlusCircle, UserPlus, Pencil, CheckCircle2 } from 'lucide-react';
 import './Auth.css';
 
 // Facebook page shown below the auth card (text only, not a link)
@@ -44,8 +43,6 @@ const readRememberedEmail = () => {
 const Auth = ({ onAuthSuccess }) => {
   const [view, setView] = useState('tenant'); // 'tenant' or 'landlord'
   // Suggestion bago pumasok bilang tenant: null | 'denied' | 'off'
-  const [locationPrompt, setLocationPrompt] = useState(null);
-  const [checkingLocation, setCheckingLocation] = useState(false);
   const [isLogin, setIsLogin] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -175,28 +172,7 @@ const Auth = ({ onAuthSuccess }) => {
     ],
   };
 
-  // Sinisilip kung naka-on ang location bago pumasok bilang tenant; kung hindi, hindi makakapasok hangga't hindi na-on.
-  const ensureLocation = async () => {
-    setCheckingLocation(true);
-    // Native app: tingnan muna kung naka-on ang Location ng phone (hiwalay sa app permission)
-    if ((await isDeviceLocationOn()) === false) {
-      setCheckingLocation(false);
-      setLocationPrompt('off');
-      return false;
-    }
-    try {
-      await getCurrentPosition({ enableHighAccuracy: false, timeout: 8000, maximumAge: 0 });
-    } catch (err) {
-      setCheckingLocation(false);
-      if (err?.code === 1) { setLocationPrompt('denied'); return false; }
-      if (err?.code === 2) { setLocationPrompt('off'); return false; }
-    }
-    setCheckingLocation(false);
-    setLocationPrompt(null);
-    return true;
-  };
-
-  // Mag-sign up / mag-login ang tenant (pagkatapos ng location check). Kapag nag-login na, kusang papasok ang App.
+  // Mag-sign up / mag-login ang tenant. Kapag nag-login na, kusang papasok ang App.
   const handleTenantSubmit = async (e) => {
     e?.preventDefault();
     setTenantError(null);
@@ -207,20 +183,10 @@ const Auth = ({ onAuthSuccess }) => {
     } else if (!tenantForm.phone || !tenantForm.password) {
       return setTenantError('Please enter your mobile number and password.');
     }
-    // Login: location check at sign-in sabay para hindi magsunod ang paghihintay. Signup: location muna.
-    const locationCheck = ensureLocation();
-    if (!tenantLogin && !(await locationCheck)) return;
     setTenantLoading(true);
     try {
       if (tenantLogin) {
-        const [locationOk] = await Promise.all([
-          locationCheck,
-          signInTenant(tenantForm.phone, tenantForm.password)
-        ]);
-        if (!locationOk) {
-          await supabase.auth.signOut({ scope: 'local' });
-          return;
-        }
+        await signInTenant(tenantForm.phone, tenantForm.password);
         showBudiSplash();
       } else {
         try { sessionStorage.setItem(NEW_TENANT_KEY, '1'); } catch { /* private mode: okay lang */ }
@@ -337,8 +303,8 @@ const Auth = ({ onAuthSuccess }) => {
 
             {tenantError && <div className="auth-error">{tenantError}</div>}
 
-            <button type="submit" className="auth-submit-btn" disabled={tenantLoading || checkingLocation}>
-              {tenantLoading || checkingLocation ? <Loader2 size={19} className="animate-spin" /> : <User size={19} strokeWidth={2.4} />}
+            <button type="submit" className="auth-submit-btn" disabled={tenantLoading}>
+              {tenantLoading ? <Loader2 size={19} className="animate-spin" /> : <User size={19} strokeWidth={2.4} />}
               {tenantLogin ? ' Log in as Tenant' : ' Create Tenant Account'}
             </button>
             <button type="button" className="auth-back-btn auth-back-btn-yellow" onClick={() => { setTenantFormOpen(false); setTenantError(null); }}>
@@ -366,37 +332,6 @@ const Auth = ({ onAuthSuccess }) => {
               <Lightbulb size={17} /> How to Use
             </button>
           </div>
-
-          {locationPrompt && createPortal(
-            <div className="modal-overlay centered" onClick={() => setLocationPrompt(null)}>
-              <div
-                role="dialog"
-                aria-modal="true"
-                className="animate-slide-up"
-                onClick={(e) => e.stopPropagation()}
-                style={{ background: '#fff', borderRadius: 20, padding: '28px 22px', width: 'min(92vw, 360px)', textAlign: 'center', color: '#1f2937' }}
-              >
-                <MapPinOff size={52} color="#f59e0b" />
-                <h3 style={{ margin: '14px 0 8px' }}>Turn On Location First</h3>
-                <p style={{ margin: 0, color: '#6b7280', lineHeight: 1.5, fontSize: '0.95rem' }}>
-                  {locationPrompt === 'denied'
-                    ? 'Location is blocked for this app. Allow it in Settings > Apps > Budget Rent PH > Permissions > Location to see rentals near you.'
-                    : 'Your phone\'s Location (GPS) is off. Turn it on to see rentals near you and how far each one is.'}
-                </p>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 20 }}>
-                  {locationPrompt === 'off' && (
-                    <button className="auth-submit-btn" onClick={openDeviceLocationSettings}>
-                      <MapPin size={19} strokeWidth={2.4} /> Open Location Settings
-                    </button>
-                  )}
-                  <button className={`auth-submit-btn${locationPrompt === 'off' ? ' secondary' : ''}`} onClick={handleTenantSubmit} disabled={checkingLocation}>
-                    {checkingLocation ? 'Checking...' : 'It\'s on, continue'}
-                  </button>
-                </div>
-              </div>
-            </div>,
-            document.body
-          )}
 
           {/* Portal to body: .auth-card's backdrop-filter would otherwise trap the fixed overlay inside the card */}
           {isHowToUseOpen && createPortal(

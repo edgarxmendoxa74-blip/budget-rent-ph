@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { X, Phone, CalendarCheck, Send, Info, Loader2, CheckCircle2, ArrowLeft, PawPrint, MessageCircle } from 'lucide-react';
 import { CallGateModal } from './CallGate';
 import BookingChat from './BookingChat';
+import { landlordFromProperty } from '../lib/chatProfiles';
 import { newId, rememberGuestBooking } from '../lib/guestBookings';
 import { supabase } from '../lib/supabase';
 import { validatePhone } from '../lib/validation';
@@ -289,7 +290,7 @@ const ListingActionSheet = ({ item, kind, onClose, onViewDetails }) => {
           {onViewDetails && <button type="button" className="act-details" onClick={() => { onClose(); onViewDetails(item); }}>View full details</button>}
         </div>
         {callGateOpen && <CallGateModal phone={phone} propertyId={item?.id} ownerEmail={email} onClose={() => setCallGateOpen(false)} />}
-        {chatOpen && placed && <BookingChat bookingId={placed.id} token={placed.token} role="guest" title={name} onClose={() => setChatOpen(false)} />}
+        {chatOpen && placed && <BookingChat bookingId={placed.id} token={placed.token} role="guest" title={name} other={landlordFromProperty(item)} meName={custName} onClose={() => setChatOpen(false)} />}
       </div>,
       document.body
     );
@@ -357,7 +358,7 @@ const ListingActionSheet = ({ item, kind, onClose, onViewDetails }) => {
         {onViewDetails && <button type="button" className="act-details" onClick={() => { onClose(); onViewDetails(item); }}>View full details</button>}
       </div>
       {callGateOpen && <CallGateModal phone={phone} propertyId={item?.id} ownerEmail={email} onClose={() => setCallGateOpen(false)} />}
-      {chatOpen && placed && <BookingChat bookingId={placed.id} token={placed.token} role="guest" title={name} onClose={() => setChatOpen(false)} />}
+      {chatOpen && placed && <BookingChat bookingId={placed.id} token={placed.token} role="guest" title={name} other={landlordFromProperty(item)} meName={custName} onClose={() => setChatOpen(false)} />}
     </div>,
     document.body
   );

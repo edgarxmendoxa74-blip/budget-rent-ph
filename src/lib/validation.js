@@ -7,7 +7,7 @@ const sanitizeString = (str) => {
   if (!str) return '';
   return str
     .trim()
-    .replace(/[<>\"'`]/g, '') // Remove HTML/script characters
+    .replace(/[<>"'`]/g, '') // Remove HTML/script characters
     .substring(0, 500); // Limit length
 };
 

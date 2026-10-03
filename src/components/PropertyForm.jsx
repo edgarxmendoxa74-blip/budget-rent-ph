@@ -2,9 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { X, Send, CheckCircle, Home, MapPin, Tag, Info, Shield, Zap, TrendingUp, Camera, Loader2, Image as ImageIcon } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import LocationPicker from './LocationPicker';
+import { countMyListings, fetchMyPlan, listingLimitFor, isProActive, isLimitError, PRO_PLAN, PRO_LISTING_LIMIT, FREE_LISTING_LIMIT } from '../lib/listingPlan';
 import './PropertyForm.css';
 
-const PropertyForm = ({ onClose, session, onListingAdded }) => {
+const PropertyForm = ({ onClose, session, onListingAdded, onUpgrade }) => {
   const [submitted, setSubmitted] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -34,6 +35,18 @@ const PropertyForm = ({ onClose, session, onListingAdded }) => {
   const [image, setImage] = useState(null);
   const [coords, setCoords] = useState(null);
   const [isVerified, setIsVerified] = useState(false);
+  // Libre ang 5 listings; 6-10 ay para sa Pro Listings plan. { count, limit, pro } o null habang nilo-load
+  const [limitInfo, setLimitInfo] = useState(null);
+
+  useEffect(() => {
+    const uid = session?.user?.id;
+    if (!uid) return undefined;
+    let alive = true;
+    Promise.all([countMyListings(uid), fetchMyPlan(uid)]).then(([count, plan]) => {
+      if (alive) setLimitInfo({ count, limit: listingLimitFor(plan), pro: isProActive(plan) });
+    });
+    return () => { alive = false; };
+  }, [session?.user?.id]);
 
   const getVerificationRow = async () => {
     // Standard query for landlord verification status
@@ -82,6 +95,7 @@ const PropertyForm = ({ onClose, session, onListingAdded }) => {
         ownerWhatsapp: prev.ownerWhatsapp || session.user.user_metadata.whatsapp || ''
       }));
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session]);
 
   const handleChange = (e) => {
@@ -183,7 +197,9 @@ const PropertyForm = ({ onClose, session, onListingAdded }) => {
       if (onListingAdded) onListingAdded();
     } catch (error) {
       console.error('Save error:', error);
-      if (error.message?.includes('column')) {
+      if (isLimitError(error)) {
+        setLimitInfo((info) => ({ count: info?.limit ?? FREE_LISTING_LIMIT, limit: info?.limit ?? FREE_LISTING_LIMIT, pro: Boolean(info?.pro) }));
+      } else if (error.message?.includes('column')) {
         alert('Database Error: Some columns are missing in the Supabase "properties" table. Please run the migration SQL provided in the fix plan.');
       } else {
         alert('Error saving listing: ' + error.message);
@@ -192,6 +208,30 @@ const PropertyForm = ({ onClose, session, onListingAdded }) => {
       setLoading(false);
     }
   };
+
+  // Naabot na ang limit: ipakita ang upgrade (o ang max) sa halip na ang form
+  if (limitInfo && limitInfo.count >= limitInfo.limit) {
+    const atMax = limitInfo.limit >= PRO_LISTING_LIMIT;
+    return (
+      <div className="modal-overlay centered" onClick={onClose}>
+        <div className="modal-content property-modal success-modal animate-fade-in" onClick={e => e.stopPropagation()}>
+          <div className="success-view">
+            <Info size={56} className="success-icon" />
+            <h2>{atMax ? 'You’ve reached 10 listings' : `You’ve used your ${FREE_LISTING_LIMIT} free listings`}</h2>
+            <p>
+              {atMax
+                ? 'Pro Listings allows up to 10 properties. Need more? Contact us through Customer Support and we’ll help you.'
+                : `Get ${PRO_PLAN.label} for ₱${PRO_PLAN.price} per ${PRO_PLAN.note} to list up to ${PRO_LISTING_LIMIT} properties. Your first ${FREE_LISTING_LIMIT} listings stay free.`}
+            </p>
+            {!atMax && onUpgrade && (
+              <button className="done-btn" onClick={onUpgrade}>Get Pro Listings — ₱{PRO_PLAN.price} / {PRO_PLAN.note}</button>
+            )}
+            <button className="done-btn" style={{ marginTop: 10, background: '#eef2f7', color: '#334155' }} onClick={onClose}>Close</button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (submitted) {
     return (

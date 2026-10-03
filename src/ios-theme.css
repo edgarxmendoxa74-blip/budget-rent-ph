@@ -1,0 +1,352 @@
+/* ==========================================================================
+   iOS-style design layer — SF-like fonts, flat tinted controls, soft shapes.
+   Brand colors (navy #003B7A + gold #F59E0B) are unchanged; only look & feel.
+   Naka-import last sa main.jsx at gumagamit ng `html body` para manaig sa ibang CSS.
+   ========================================================================== */
+
+:root {
+  --ios-fill: rgba(118, 118, 128, 0.12);          /* iOS tertiary fill (search, chips) */
+  --ios-fill-strong: rgba(118, 118, 128, 0.18);
+  --ios-hairline: rgba(60, 60, 67, 0.16);
+  --ios-placeholder: #8e8e93;
+  --ios-radius-sm: 10px;
+  --ios-radius: 14px;
+  --ios-radius-lg: 20px;
+  --ios-shadow: 0 1px 2px rgba(0, 0, 0, 0.05), 0 6px 18px rgba(0, 20, 50, 0.06);
+  --ios-ease: cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+/* ---------- Typography ---------- */
+html body {
+  font-family: var(--font-main);
+  font-weight: 400;
+  letter-spacing: -0.011em;
+  -webkit-font-smoothing: antialiased;
+}
+html body h1, html body h2, html body h3, html body h4 {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  letter-spacing: -0.022em;
+}
+
+/* ---------- Buttons: no hover-grow, press = dim + slight shrink (like iOS) ---------- */
+html body button:hover:not(:disabled),
+html body [role="button"]:hover { scale: 1; }
+html body button:active:not(:disabled),
+html body [role="button"]:active,
+html body a:active { scale: 0.97; opacity: 0.72; }
+html body button { transition: opacity 0.15s var(--ios-ease), scale 0.15s var(--ios-ease), background-color 0.2s ease, color 0.2s ease; }
+html body button:focus-visible { box-shadow: 0 0 0 3px rgba(0, 59, 122, 0.28); }
+
+/* Primary / action buttons */
+html body .inquire-btn,
+html body .contact-btn,
+html body .near-cta,
+html body .near-confirm-allow,
+html body .card-inquire-btn,
+html body .action-btn-outline,
+html body .wishlist-browse-btn,
+html body .list-property-btn,
+html body .tour-actions button {
+  border-radius: var(--ios-radius);
+  font-weight: 600;
+  letter-spacing: -0.011em;
+  box-shadow: none;
+}
+html body .inquire-btn,
+html body .contact-btn,
+html body .near-cta,
+html body .near-confirm-allow,
+html body .tour-next { min-height: 48px; }
+html body .action-btn-outline { background: var(--ios-fill); border-color: transparent; color: var(--primary); }
+html body .tour-back { background: var(--ios-fill); }
+
+/* Header icon buttons: flat tinted circles */
+html body .menu-btn {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: rgba(0, 59, 122, 0.08);
+  border: none;
+  color: var(--primary);
+  box-shadow: none;
+}
+html body .menu-btn::before { display: none; }
+html body .menu-btn:hover { transform: none; box-shadow: none; border: none; }
+html body .menu-btn:hover svg { transform: none; }
+html body .menu-btn svg { width: 21px; height: 21px; }
+html body .notif-btn.call-btn { background: #10B981; color: #fff; box-shadow: none; }
+html body .notif-badge { box-shadow: none; }
+
+/* ---------- Navbar & tab bar: translucent blur + hairline ---------- */
+html body .navbar,
+html body .navbar.glass {
+  background: rgba(255, 255, 255, 0.72);
+  -webkit-backdrop-filter: saturate(180%) blur(22px);
+  backdrop-filter: saturate(180%) blur(22px);
+  border-bottom: 0.5px solid var(--ios-hairline);
+  box-shadow: none;
+}
+
+html body .bottom-nav {
+  height: calc(64px + env(safe-area-inset-bottom, 0px));
+  padding: 6px 6px calc(6px + env(safe-area-inset-bottom, 0px));
+  border-radius: 0;
+  border-top: 0.5px solid var(--ios-hairline);
+  background: rgba(255, 255, 255, 0.78);
+  -webkit-backdrop-filter: saturate(180%) blur(22px);
+  backdrop-filter: saturate(180%) blur(22px);
+  box-shadow: none;
+}
+html body .nav-item { gap: 2px; margin: 0; padding: 2px 4px; font-size: 0.66rem; font-weight: 500; letter-spacing: 0; color: #8e8e93; border-radius: 10px; }
+html body .nav-item:hover { transform: none; }
+html body .nav-item::after { display: none !important; }
+html body .nav-item .nav-label { font-weight: 500; color: inherit; }
+html body .nav-item .nav-icon-box,
+html body .nav-item[class*="ico-"] .nav-icon-box,
+html body .nav-item[class*="ico-"].active .nav-icon-box,
+html body .bottom-nav.landlord-nav .nav-item .nav-icon-box {
+  width: auto;
+  height: 28px;
+  background: none;
+  border: none;
+  box-shadow: none;
+  transform: none;
+  color: inherit;
+}
+html body .nav-item .nav-icon-box svg { width: 25px; height: 25px; }
+html body .nav-item.active,
+html body .nav-item[class*="ico-"].active,
+html body .nav-item[class*="ico-"]:hover { color: var(--primary); font-weight: 600; }
+html body .nav-item.active .nav-label { font-weight: 600; color: var(--primary); }
+html body .bottom-nav.landlord-nav .nav-label { font-size: 0.66rem; }
+
+/* ---------- Search bars: iOS UISearchBar (gray fill, no border, no shadow) ---------- */
+html body .search-bar,
+html body .hero .search-bar,
+html body .budget-input-wrap {
+  background: var(--ios-fill);
+  border: none;
+  border-radius: 12px;
+  padding: 0 10px 0 12px;
+  min-height: 42px;
+  gap: 8px;
+  box-shadow: none;
+  transform: none;
+  transition: background-color 0.2s ease, box-shadow 0.2s ease;
+}
+html body .search-bar:focus-within,
+html body .hero .search-bar:focus-within,
+html body .budget-input-wrap:focus-within {
+  background: var(--ios-fill-strong);
+  border: none;
+  box-shadow: 0 0 0 2px rgba(0, 59, 122, 0.35);
+  transform: none;
+}
+html body .search-bar input,
+html body .hero .search-bar input {
+  font-size: 1rem;              /* 16px: hindi nagza-zoom ang iOS Safari */
+  font-weight: 400;
+  letter-spacing: -0.011em;
+  color: var(--text-main);
+}
+html body .search-bar input::placeholder,
+html body .hero .search-bar input::placeholder {
+  font-size: 1rem;
+  font-weight: 400;
+  color: var(--ios-placeholder);
+  opacity: 1;
+}
+html body .search-icon { color: var(--ios-placeholder); opacity: 1; }
+html body .nearby-search-btn,
+html body .stay-search-btn {
+  border-radius: 9px;
+  font-weight: 600;
+  box-shadow: none;
+}
+
+/* Staycation Where / When / Who */
+html body .staycation-search {
+  background: var(--ios-fill);
+  border: none;
+  border-radius: var(--ios-radius);
+  box-shadow: none;
+  padding: 4px;
+}
+html body .staycation-search:focus-within { border: none; box-shadow: 0 0 0 2px rgba(0, 59, 122, 0.35); }
+html body .stay-seg { border-radius: var(--ios-radius-sm); }
+html body .stay-seg:hover { background: rgba(255, 255, 255, 0.55); }
+html body .stay-seg:focus-within { background: #fff; }
+
+/* ---------- Category chips: flat gray capsules, brand-gold when selected ---------- */
+html body .category-chip {
+  background: var(--ios-fill);
+  border: none;
+  box-shadow: none;
+  color: #3c3c43;
+  font-weight: 600;
+  padding: 10px 22px;
+}
+html body .category-chip:hover { background: var(--ios-fill-strong); color: var(--primary); transform: none; border: none; }
+html body .category-chip.active {
+  background: var(--secondary-gradient);
+  color: var(--primary-dark);
+  box-shadow: none;
+  border: none;
+}
+
+/* ---------- Cards, sheets, shapes ---------- */
+html body .listing-card {
+  border-radius: var(--ios-radius-lg);
+  border: none;
+  box-shadow: var(--ios-shadow);
+  padding: 8px;
+}
+html body .listing-card:hover { transform: none; border: none; box-shadow: var(--ios-shadow); }
+html body .listing-card:active { transform: scale(0.985); }
+html body .image-container { border-radius: 14px; }
+html body .listing-card:hover .image-container img { transform: none; }
+
+html body .modal-content,
+html body .property-detail-modal { border-radius: 28px 28px 0 0; box-shadow: 0 -8px 40px rgba(0, 0, 0, 0.18); }
+html body .modal-overlay { -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
+html body .tour-card { border-radius: 28px 28px 0 0; }
+@media (min-width: 601px) { html body .tour-card { border-radius: 28px; } }
+html body .tour-overlay { -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
+html body .close-btn { background: var(--ios-fill); color: #3c3c43; box-shadow: none; }
+html body .hero { border-bottom: 0.5px solid var(--ios-hairline); }
+html body .menu-link { border-radius: var(--ios-radius); }
+html body .notif-panel { border-radius: var(--ios-radius-lg); }
+
+/* Map price markers + badges */
+html body .house-marker { box-shadow: 0 2px 8px rgba(0, 20, 50, 0.25); font-weight: 700; }
+html body .occupied-badge { font-weight: 600; letter-spacing: 0; text-transform: none; }
+
+/* Walang bounce para sa reduced-motion users */
+@media (prefers-reduced-motion: reduce) {
+  html body button:active:not(:disabled), html body [role="button"]:active, html body a:active { scale: 1; }
+}
+
+/* ==========================================================================
+   Form fields (PropertyForm, Login/Signup, Booking/Inquiry, Profile, Verification…)
+   iOS: gray-filled rounded fields, 16px text, brand-navy focus ring.
+   !important para pati ang mga inline style sa ibang components ay sumunod.
+   Hindi kasama ang mga nasa loob ng search bars (may sarili silang style).
+   ========================================================================== */
+html body input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=file]):not([type=hidden]):not([type=submit]):not([type=button]):not([type=color]):not(.budget-input):not(.search-bar input):not(.stay-seg input),
+html body select:not(.stay-seg select),
+html body textarea {
+  background-color: var(--ios-fill) !important;
+  border: 1.5px solid transparent !important;
+  border-radius: 12px !important;
+  font-family: var(--font-main);
+  font-size: 1rem !important;            /* 16px: walang auto-zoom sa iOS */
+  font-weight: 400 !important;
+  letter-spacing: -0.011em;
+  color: var(--text-main);
+  box-shadow: none;
+  transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+html body input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=file]):not([type=hidden]):not([type=submit]):not([type=button]):not([type=color]):not(.budget-input):not(.search-bar input):not(.stay-seg input):not(textarea),
+html body select:not(.stay-seg select) { min-height: 46px; }
+html body textarea { padding: 12px 14px; line-height: 1.45; }
+
+html body .form-group input,
+html body .form-group select,
+html body .form-group textarea { padding: 12px 14px; }
+
+html body input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=file]):not([type=hidden]):not([type=submit]):not([type=button]):not([type=color]):not(.budget-input):not(.search-bar input):not(.stay-seg input):hover,
+html body select:not(.stay-seg select):hover,
+html body textarea:hover { background-color: var(--ios-fill-strong) !important; }
+
+html body input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=file]):not([type=hidden]):not([type=submit]):not([type=button]):not([type=color]):not(.budget-input):not(.search-bar input):not(.stay-seg input):focus,
+html body select:not(.stay-seg select):focus,
+html body textarea:focus {
+  outline: none;
+  background-color: #fff !important;
+  border-color: var(--primary) !important;
+  box-shadow: 0 0 0 3px rgba(0, 59, 122, 0.16) !important;
+}
+
+html body input::placeholder,
+html body textarea::placeholder { color: var(--ios-placeholder); opacity: 1; font-weight: 400; }
+html body input:disabled,
+html body select:disabled,
+html body textarea:disabled { opacity: 0.55; cursor: not-allowed; }
+
+/* Select: iOS-style chevron */
+html body select:not(.stay-seg select) {
+  -webkit-appearance: none;
+  appearance: none;
+  padding-right: 38px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none'%3E%3Cpath d='M1 1.5l5 5 5-5' stroke='%238e8e93' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  background-size: 12px 8px;
+}
+html body select:not(.stay-seg select):focus { background-color: #fff !important; }
+
+/* Checkbox / radio / range: brand tint */
+html body input[type=checkbox],
+html body input[type=radio],
+html body input[type=range] { accent-color: var(--primary); }
+
+/* Field labels: maliit, banayad (iOS caption) */
+html body .form-group label,
+html body .auth-field-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0;
+  color: var(--text-muted);
+}
+
+/* ---------- Fixes mula sa visual check ---------- */
+/* Home tab: dating gold ang label; iisang tint na (gray → navy kapag active) */
+html body .nav-item.ico-home .nav-label,
+html body .nav-item.ico-nearby .nav-label,
+html body .nav-item.ico-wish .nav-label,
+html body .nav-item.ico-account .nav-label,
+html body .nav-item.ico-list .nav-label,
+html body .nav-item.ico-updates .nav-label,
+html body .nav-item.ico-support .nav-label { color: inherit; }
+html body .nav-item.ico-home,
+html body .nav-item.ico-nearby,
+html body .nav-item.ico-wish,
+html body .nav-item.ico-account,
+html body .nav-item.ico-list,
+html body .nav-item.ico-updates,
+html body .nav-item.ico-support { color: #8e8e93; }
+html body .nav-item.ico-home.active, html body .nav-item.ico-home:hover,
+html body .nav-item.ico-nearby.active, html body .nav-item.ico-nearby:hover,
+html body .nav-item.ico-wish.active, html body .nav-item.ico-wish:hover,
+html body .nav-item.ico-account.active, html body .nav-item.ico-account:hover,
+html body .nav-item.ico-list.active, html body .nav-item.ico-list:hover,
+html body .nav-item.ico-updates.active, html body .nav-item.ico-updates:hover,
+html body .nav-item.ico-support.active, html body .nav-item.ico-support:hover { color: var(--primary); }
+
+/* Search bar sa madilim (navy) na hero: puting fill para mabasa */
+html body .nearby-hero .search-bar,
+html body .nearby-search {
+  background: rgba(255, 255, 255, 0.96);
+  border: none;
+  box-shadow: 0 8px 24px -10px rgba(0, 24, 53, 0.55);
+}
+html body .nearby-hero .search-bar:focus-within { background: #fff; box-shadow: 0 0 0 3px rgba(255, 184, 0, 0.7); }
+html body .nearby-search-btn { min-width: 84px; padding: 0 16px; margin: 4px 0; align-self: stretch; }
+
+/* "+" ng landlord: .nav-item din ito, kaya ibalik ang kulay/hugis (hindi gray) */
+html body .nav-item.circle-plus { color: var(--primary-dark); border-radius: 50%; padding: 0; }
+
+/* Home ng tenant: kasing-laki ng "+" ng landlord (34px) */
+html body .nav-item.ico-home .nav-icon-box { height: 36px; }
+html body .nav-item.ico-home .nav-icon-box svg { width: 40px; height: 40px; }
+html body .nav-item.ico-home .nav-icon-box,
+html body .nav-item.ico-home.active .nav-icon-box {
+  background: #FFC107;
+  color: var(--primary);
+  border: 2px solid #FFC107;
+  border-radius: 14px;
+  padding: 0 10px;
+  height: 48px;
+  box-sizing: border-box;
+}

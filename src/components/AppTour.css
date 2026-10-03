@@ -92,3 +92,18 @@
 @media (prefers-reduced-motion: reduce) {
   .tour-body { animation: none; }
 }
+
+/* Bottom sheet sa phone: kita pa rin ang app sa likod, abot ng hinlalaki ang mga button */
+@media (max-width: 600px) {
+  .tour-overlay { align-items: flex-end; padding: 0; background: rgba(0, 20, 45, 0.45); }
+  .tour-card {
+    max-width: none;
+    border-radius: 26px 26px 0 0;
+    padding: 24px 20px calc(16px + env(safe-area-inset-bottom, 0px));
+  }
+  .tour-body { min-height: 0; }
+  .tour-icon { width: 64px; height: 64px; margin-bottom: 12px; }
+  .tour-icon svg { width: 30px; height: 30px; }
+  .tour-body h3 { font-size: 1.1rem; }
+  .tour-dots { margin: 12px 0; }
+}

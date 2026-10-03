@@ -4,10 +4,11 @@ import { HeroBudi } from './MascotSplash';
 import { fetchDismissedIds, dismissBooking } from '../lib/bookingDismissals';
 import { supabase } from '../lib/supabase';
 import BookingChat, { MESSAGE_LIMIT } from './BookingChat';
+import { landlordFromProperty } from '../lib/chatProfiles';
 import './BookingsPage.css';
 
 const pretty = (s) => (s ? new Date(`${s}T00:00:00`).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' }) : '—');
-const STATUS = { pending: 'Pending', confirmed: 'Confirmed', declined: 'Declined' };
+const STATUS = { pending: 'Pending', confirmed: 'Confirmed', declined: 'Cancelled' };
 
 const timeAgo = (iso) => {
   const mins = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60000));
@@ -112,7 +113,7 @@ const InboxPage = ({ properties, unread = {}, onChatChanged }) => {
             </p>
 
             <div className="booking-actions">
-              <button type="button" className="chat" onClick={() => setChat({ id: b.id, title: titleOf(b) })}>
+              <button type="button" className="chat" onClick={() => setChat({ id: b.id, title: titleOf(b), other: landlordFromProperty(properties.find((x) => x.id === b.property_id)) })}>
                 <MessageCircle size={14} /> {info ? 'Open conversation' : 'Message the owner'}
                 {unread[b.id] > 0 && <span className="chat-unread">{unread[b.id]}</span>}
               </button>
@@ -144,6 +145,7 @@ const InboxPage = ({ properties, unread = {}, onChatChanged }) => {
           bookingId={chat.id}
           role="guest"
           title={chat.title}
+          other={chat.other}
           onRead={() => { onChatChanged?.(); load(); }}
           onClose={() => { setChat(null); onChatChanged?.(); load(); }}
         />

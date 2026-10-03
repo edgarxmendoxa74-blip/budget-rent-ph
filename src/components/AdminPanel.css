@@ -719,7 +719,7 @@
 .review-row { grid-template-columns: minmax(140px, 1.4fr) 110px 50px 90px minmax(160px, 2fr); }
 .row-avatar.square { background: var(--primary-light); color: var(--admin-navy); }
 .row-comment { font-size: 0.78rem; color: var(--admin-text-dark); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-.status-pill.occupied { background: #FEF2F2; color: var(--admin-danger); }
+.status-pill.occupied { background: #F3E8FF; color: #6d28d9; }
 
 @media (max-width: 900px) {
   .analytics-panel.wide { grid-column: auto; }
@@ -860,3 +860,19 @@
 .proof-viewer input { flex: 1 1 240px; padding: 8px 12px; border: 1px solid var(--border-subtle, #e2e8f0); border-radius: 10px; font-family: inherit; font-size: 0.8rem; }
 .proof-viewer img { max-width: 260px; max-height: 340px; border-radius: 10px; border: 1px solid var(--border-subtle, #e2e8f0); }
 .proof-error { color: #ef4444; font-weight: 700; }
+
+/* Mga bayad na hinihintay ang approval */
+.pay-requests { margin: 0 0 16px; padding: 14px; border-radius: 16px; background: #fffbeb; border: 1px solid #fde68a; display: flex; flex-direction: column; gap: 10px; }
+.pay-requests h4 { margin: 0; font-size: 0.95rem; color: #92400e; }
+.pay-request { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 12px; border-radius: 12px; background: #fff; border: 1px solid #fde68a; }
+.pay-request small { display: block; color: #64748b; }
+.pay-request-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.pay-request img { width: 100%; max-width: 280px; border-radius: 10px; border: 1px solid #e2e8f0; margin-top: 6px; }
+
+/* Resibong ipinadala ng user (Get Verified / Pro Listings) */
+.pay-receipt { margin: 8px 0 0; padding: 10px 12px; border-radius: 10px; background: #fffdf5; border: 1px dashed #94a3b8; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.74rem; line-height: 1.5; color: #334155; white-space: pre-wrap; word-break: break-word; }
+
+/* Delete ng verification request: pula */
+.manage-btn.pay-delete, .manage-btn.pay-delete:hover { background: #dc2626; border-color: #dc2626; color: #fff; }
+.manage-btn.pay-delete:hover { background: #b91c1c; border-color: #b91c1c; }
+.pay-receipt-date { display: block; margin-top: 8px; font-size: 0.72rem; color: #64748b; }

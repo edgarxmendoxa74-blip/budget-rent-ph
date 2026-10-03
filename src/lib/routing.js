@@ -69,7 +69,7 @@ export const stepText = (step) => {
 
 // Live na biyahe: gaano ka kalayo sa linya ng ruta at ilang km pa ang natitira (tantiya, equirectangular)
 export const routeProgress = (coords, pos) => {
-  if (!coords || coords.length < 2) return { offKm: 0, remainingKm: 0 };
+  if (!coords || coords.length < 2) return { offKm: 0, remainingKm: 0, splitIndex: 0, splitPoint: null };
   const ky = 111.32;
   const kx = Math.cos((pos.lat * Math.PI) / 180) * 111.32;
   const pts = coords.map(([lat, lng]) => [(lng - pos.lng) * kx, (lat - pos.lat) * ky]);
@@ -92,5 +92,6 @@ export const routeProgress = (coords, pos) => {
   for (let i = bi + 1; i < pts.length - 1; i += 1) {
     remaining += Math.hypot(pts[i + 1][0] - pts[i][0], pts[i + 1][1] - pts[i][1]);
   }
-  return { offKm: best, remainingKm: remaining };
+  // splitIndex/splitPoint: kung saan na nakatayo sa linya, para i-fade ang nalakad na
+  return { offKm: best, remainingKm: remaining, splitIndex: bi, splitPoint: [pos.lat + by / ky, pos.lng + bx / kx] };
 };

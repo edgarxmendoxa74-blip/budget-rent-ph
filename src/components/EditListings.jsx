@@ -28,6 +28,7 @@ const EditListings = ({ session, onClose, onListingUpdated, initialEditingItem =
 
   useEffect(() => {
     fetchMyListings();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session, initialEditingItem]);
 
   const fetchMyListings = async () => {

@@ -5,9 +5,9 @@ export const PAYMENT_METHODS = [
   { method: 'Bank', name: 'EDGAR M.', number: '1234-5678-90', color: '#1e293b', qr: '' }
 ];
 
+// Yearly lang ang Get Verified (walang monthly)
 export const SUBSCRIPTION_PLANS = [
-  { id: 'monthly', label: 'Monthly', price: 20, note: '30 days' },
-  { id: 'yearly', label: 'Yearly', price: 100, note: '12 months' }
+  { id: 'yearly', label: 'Yearly', price: 299, note: '12 months' }
 ];
 
 // Facebook page na tumatanggap ng payment proofs (Messenger)

@@ -10,7 +10,7 @@ const labelStyle = { display: 'block', fontSize: '0.68rem', fontWeight: 800, col
 const SubscriptionLock = ({ session, expiry, onLogout, onRefresh }) => {
   const meta = session?.user?.user_metadata || {};
   const [plans, setPlans] = useState([]);
-  const [plan, setPlan] = useState('monthly');
+  const [plan, setPlan] = useState('yearly');
   useEffect(() => { fetchPlans().then(setPlans); }, []);
   const [form, setForm] = useState({ fullName: meta.full_name || '', phone: meta.phone || '', reference: '' });
   const [method, setMethod] = useState('GCash');

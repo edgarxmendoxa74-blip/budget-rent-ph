@@ -1371,8 +1371,8 @@
 /* Occupied na rent: nasa mapa pa rin pero may badge */
 .occupied-badge {
   align-self: flex-start;
-  background: #fee2e2;
-  color: #b91c1c;
+  background: #ede9fe;
+  color: #6d28d9;
   font-size: 0.68rem;
   font-weight: 800;
   letter-spacing: 0.03em;
@@ -1382,10 +1382,15 @@
 }
 .occupied-badge.on-image {
   position: absolute;
-  top: 8px;
-  left: 8px;
-  background: #dc2626;
+  top: 10px;
+  left: auto;
+  right: 10px;
+  background: #7c3aed;
   color: #fff;
-  z-index: 2;
+  z-index: 5;
 }
-.house-marker.occupied { filter: grayscale(0.85); opacity: 0.85; }
+/* Occupied: purple na marker (kita pa rin sa mapa) */
+.house-marker.occupied { background: #f3e8ff; border-color: #7c3aed; color: #6d28d9; }
+.house-marker.occupied .hm-icon { color: #7c3aed; }
+.house-marker.occupied.selected { background: #7c3aed; border-color: #7c3aed; color: #fff; }
+.house-marker.occupied.selected .hm-icon { color: #fff; }

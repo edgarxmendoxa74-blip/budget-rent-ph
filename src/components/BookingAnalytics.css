@@ -1,0 +1,31 @@
+.analytics-page .an-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 0 16px; }
+.an-card { display: flex; flex-direction: column; gap: 2px; padding: 14px; border-radius: 16px; background: #fff; border: 1px solid #e2e8f0; color: var(--primary); }
+.an-card strong { font-size: 1.7rem; line-height: 1.1; }
+.an-card span { font-size: 0.75rem; font-weight: 700; color: #64748b; }
+.an-card.ok { background: #f0fdf4; border-color: #bbf7d0; color: #15803d; }
+.an-card.no { background: #fef2f2; border-color: #fecaca; color: #b91c1c; }
+
+.an-value { margin: 12px 16px 0; font-size: 0.82rem; color: #475569; }
+.an-value strong { color: var(--primary); }
+
+.an-section { margin: 16px 16px 0; padding: 14px; border-radius: 16px; background: #fff; border: 1px solid #e2e8f0; }
+.an-section h3 { margin: 0 0 8px; font-size: 0.95rem; color: var(--primary); }
+.an-legend { display: flex; gap: 14px; margin-bottom: 8px; font-size: 0.72rem; font-weight: 700; color: #64748b; }
+.an-legend span::before { content: ''; display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
+.an-legend .ok::before { background: #16a34a; }
+.an-legend .no::before { background: #ef4444; }
+
+.an-chart { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; }
+.an-col { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.an-bars { display: flex; align-items: flex-end; gap: 3px; width: 100%; height: 90px; justify-content: center; }
+.an-bars i { display: block; width: 40%; min-height: 3px; border-radius: 4px 4px 0 0; }
+.an-bars i.ok { background: #16a34a; }
+.an-bars i.no { background: #ef4444; }
+.an-col small { font-size: 0.72rem; font-weight: 700; color: #475569; }
+.an-col em { font-style: normal; font-size: 0.66rem; color: #94a3b8; }
+
+.an-row { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-top: 1px solid #f1f5f9; font-size: 0.85rem; }
+.an-row span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 700; color: var(--primary); }
+.an-row b.ok { color: #15803d; }
+.an-row b.no { color: #b91c1c; }
+.an-empty { margin: 0; font-size: 0.8rem; color: #64748b; }

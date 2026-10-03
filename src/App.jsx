@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef, Suspense, lazy } from 'react';
 import { HeroBudi } from './components/MascotSplash';
-import { Search, MapPin, Bed, Bath, Wifi, Shield, Star, Menu, X, Heart, MessageCircle, Phone, LogOut, Building2, User, Users, Loader2, ClipboardList, Mail, BadgeCheck, Headset, ArrowLeft, Home, Navigation, Globe, Trash2, ChevronLeft, ChevronRight, Bell, FileText, HousePlus, LocateFixed, PawPrint, ScrollText, FileSignature, Info, House, TreePalm, Plus, Lightbulb, Megaphone, CalendarCheck, Inbox } from 'lucide-react';
+import { Search, MapPin, Bed, Bath, Wifi, Shield, Star, Menu, X, Heart, MessageCircle, Phone, LogOut, Building2, User, Users, Loader2, ClipboardList, Mail, BadgeCheck, Headset, ArrowLeft, Home, Navigation, Globe, Trash2, ChevronLeft, ChevronRight, Bell, FileText, HousePlus, LocateFixed, PawPrint, ScrollText, FileSignature, Info, House, TreePalm, Plus, Lightbulb, Megaphone, CalendarCheck, Inbox, BarChart3 } from 'lucide-react';
 import { clearSupabaseSessionStorage, recoverFromJwtError, supabase, validateCurrentSession } from './lib/supabase';
 import { isAdminEmail, isAdminPath } from './lib/admin';
 import { playNotifySound, unlockNotifySound } from './lib/notifySound';
@@ -10,12 +10,13 @@ import { useApproxCoords } from './lib/useApproxCoords';
 import { useAreaSearch } from './lib/useAreaSearch';
 import { NEW_TENANT_KEY } from './lib/tenantAuth';
 import { fetchDismissedIds, dismissBooking } from './lib/bookingDismissals';
-import { matchesPlaceQuery, buildPlaceIndex, suggestPlaces, PLACE_LEVELS } from './lib/placeSearch';
+import { matchesPlaceQuery, buildPlaceIndex, normalizePlace, PLACE_LEVELS } from './lib/placeSearch';
 import CallGateLink from './components/CallGate';
 import { toCoords, distanceKm, formatDistance, inArea } from './lib/geo';
 import './App.css';
 import './components/ProfileModal.css';
 import { ikImage } from './lib/imagekit';
+import { fetchMyPlan, fetchTenantVerifiedUntil, isProActive, listingLimitFor, PRO_PLAN, PRO_LISTING_LIMIT, FREE_LISTING_LIMIT } from './lib/listingPlan';
 
 // Lazy loaded components
 const Auth = lazy(() => import('./components/Auth'));
@@ -30,11 +31,11 @@ const InboxPage = lazy(() => import('./components/InboxPage'));
 const WelcomeModal = lazy(() => import('./components/WelcomeModal'));
 const TenantAccountModal = lazy(() => import('./components/TenantAccountModal'));
 const ListingActionSheet = lazy(() => import('./components/ListingActionSheet'));
+const BookingAnalytics = lazy(() => import('./components/BookingAnalytics'));
 const FindNearbyPage = lazy(() => import('./components/FindNearbyPage'));
 const AdminPanel = lazy(() => import('./components/AdminPanel'));
 const AdminLogin = lazy(() => import('./components/AdminLogin'));
 const EmailVerificationHandler = lazy(() => import('./components/EmailVerificationHandler'));
-const SubscriptionLock = lazy(() => import('./components/SubscriptionLock'));
 const AgreementDraft = lazy(() => import('./components/AgreementDraft'));
 const ReviewsSection = lazy(() => import('./components/ReviewsSection'));
 const UpdatesPage = lazy(() => import('./components/UpdatesPage'));
@@ -61,8 +62,8 @@ const CATEGORY_LABEL = { Paupahan: 'Rentals', Staycation: 'Staycation' };
 const parseBudget = (value) => Math.max(0, Number(value) || 0);
 // Numero lang ang tinype sa search bar (hal. 4000) = presyo, hindi pangalan ng lugar
 const parseNumericQuery = (value) => {
-  const q = String(value || '').trim().replace(/[₱,s]/g, '');
-  return /^d{3,7}$/.test(q) ? Number(q) : 0;
+  const q = String(value || '').trim().replace(/[₱,\s]/g, '');
+  return /^\d{3,7}$/.test(q) ? Number(q) : 0;
 };
 const isStaycation = (item) => String(item?.type || item?.category || '').toLowerCase().includes('staycation');
 
@@ -114,7 +115,7 @@ const normalizePropertyOwnerProfiles = (items) => {
   });
 };
 
-export const applySubscriptionExpiry = (properties) => {
+const applySubscriptionExpiry = (properties) => {
   return properties.map(item => {
     if (item.is_verified && item.subscription_expiry && new Date(item.subscription_expiry) < new Date()) {
       console.log(`[Auto-Expiry] ${item.name} has expired (locally).`);
@@ -124,7 +125,7 @@ export const applySubscriptionExpiry = (properties) => {
   });
 };
 
-export const getMoveInBreakdown = (item) => {
+const getMoveInBreakdown = (item) => {
   const price = Number(item?.price) || 0;
   // 0 ay valid (walang advance/deposit); default lang kapag walang naka-set
   const toMonths = (v, fallback) => (v === null || v === undefined || v === '' || Number.isNaN(Number(v)) ? fallback : Math.max(0, Number(v)));
@@ -211,9 +212,17 @@ function App() {
   const [loading, setLoading] = useState(true);
   // Tenant = account na may mobile number (walang email). Landlord = may email at verification.
   const isGuest = session?.user?.user_metadata?.user_role === 'tenant';
+  // Verified ang landlord kung may listing nilang naka-verify (expired ay na-false na sa itaas)
+  const myVerified = properties.some((p) => p.user_id === session?.user?.id && p.is_verified);
   // Welcome message pagkatapos mag-sign up ng tenant (nakaflag sa sessionStorage ng Auth)
   const [showWelcome, setShowWelcome] = useState(false);
   const [isTenantAccountOpen, setIsTenantAccountOpen] = useState(false);
+  // Verified Tenant (₱50 / taon): kinukuha tuwing bubuksan ang My Account para sariwa
+  const [tenantVerifiedUntil, setTenantVerifiedUntil] = useState(null);
+  useEffect(() => {
+    if (!isGuest || !session?.user?.id) { setTenantVerifiedUntil(null); return; }
+    fetchTenantVerifiedUntil(session.user.id).then(setTenantVerifiedUntil);
+  }, [isGuest, session?.user?.id, isTenantAccountOpen]);
   useEffect(() => {
     if (!isGuest) return;
     try {
@@ -234,6 +243,7 @@ function App() {
     }
   });
   const [isPropertyFormOpen, setIsPropertyFormOpen] = useState(false);
+  const [myPlan, setMyPlan] = useState(null); // Pro Listings plan ng landlord (6-10 listings)
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [isProfileEditing, setIsProfileEditing] = useState(false);
   const [isEditListingsOpen, setIsEditListingsOpen] = useState(false);
@@ -280,7 +290,15 @@ function App() {
   const priceQuery = parseNumericQuery(debouncedSearchQuery);
   // Hanapin ang buong lugar (lalawigan/bayan/barangay) sa mapa para sa Paupahan at Staycation
   const stayArea = useAreaSearch(debouncedSearchQuery, (selectedCategory === 'Staycation' || selectedCategory === 'Paupahan') && !priceQuery);
-  const [searchFocused, setSearchFocused] = useState(false);
+  // Rentals search: hiwa-hiwalay na Province / Town-City / Barangay; pinagsasama sa isang searchQuery para gumana ang filters
+  const [rentPlace, setRentPlace] = useState({ province: '', town: '', brgy: '' });
+  const [activeField, setActiveField] = useState(null); // 'province' | 'town' | 'brgy' | null
+  const updateRentPlace = (patch) => {
+    const next = { ...rentPlace, ...patch };
+    setRentPlace(next);
+    setSearchQuery([next.brgy, next.town, next.province].map((v) => v.trim()).filter(Boolean).join(', '));
+  };
+  const resetRentPlace = () => { setRentPlace({ province: '', town: '', brgy: '' }); setSearchQuery(''); };
   const [bookSheet, setBookSheet] = useState(null); // { item, kind } para sa Book Here sa property modal
   const approxCoords = useApproxCoords(properties, Boolean(userLoc.coords) || Boolean(stayArea));
   const getDistanceLabel = (item) => {
@@ -443,14 +461,13 @@ function App() {
     }
   };
 
-  // Landlord na dating naka-subscribe at expired na ang plan = naka-lock ang app hanggang makapag-renew
-  const lockedExpiry = useMemo(() => {
-    if (isGuest || !session?.user?.id || session.user.user_metadata?.user_role !== 'landlord') return null;
-    const mine = properties.filter(p => p.user_id === session.user.id && p.subscription_date && p.subscription_expiry);
-    if (!mine.length) return null;
-    const latest = Math.max(...mine.map(p => new Date(p.subscription_expiry).getTime()));
-    return latest < Date.now() ? new Date(latest).toISOString() : null;
-  }, [properties, session, isGuest]);
+  useEffect(() => {
+    const uid = session?.user?.id;
+    if (!uid || isGuest || activeTab !== 'mylistings') return;
+    let alive = true;
+    fetchMyPlan(uid).then((plan) => { if (alive) setMyPlan(plan); });
+    return () => { alive = false; };
+  }, [session?.user?.id, isGuest, activeTab]);
 
   const maxBudget = parseBudget(budgetMax) || priceQuery;
 
@@ -481,17 +498,33 @@ function App() {
     return maxBudget > 0 && !skipBudget
       ? [...matches].sort((a, b) => (Number(b.price) || 0) - (Number(a.price) || 0))
       : matches;
-  }, [properties, selectedCategory, debouncedSearchQuery, activeTab, session?.user?.id, maxBudget, stayArea, approxCoords, stayDate, stayGuests]);
+  }, [properties, selectedCategory, debouncedSearchQuery, activeTab, session?.user?.id, maxBudget, stayArea, approxCoords, stayGuests, priceQuery]);
 
   // Mungkahing lalawigan / bayan / barangay habang nagta-type (mula sa mga listing sa napiling category)
   const placeIndex = useMemo(
     () => buildPlaceIndex(properties.filter(item => (selectedCategory === 'Staycation' ? isStaycation(item) : !isStaycation(item)))),
     [properties, selectedCategory]
   );
-  const placeSuggestions = useMemo(
-    () => (searchFocused && !parseNumericQuery(searchQuery) ? suggestPlaces(placeIndex, searchQuery) : []),
-    [placeIndex, searchQuery, searchFocused]
-  );
+  const rentSuggestions = useMemo(() => {
+    if (!activeField) return [];
+    const level = { province: 'lalawigan', town: 'bayan', brgy: 'barangay' }[activeField];
+    const text = normalizePlace(rentPlace[activeField]);
+    const inContext = (entry, value) => !value.trim() || normalizePlace(entry.context).includes(normalizePlace(value));
+    return placeIndex
+      .filter((e) => e.level === level
+        && (!text || e.norm.includes(text))
+        && (activeField === 'province' || inContext(e, rentPlace.province))
+        && (activeField !== 'brgy' || inContext(e, rentPlace.town)))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 7);
+  }, [placeIndex, activeField, rentPlace]);
+  const pickRentSuggestion = (entry) => {
+    const [ctxA, ctxB] = String(entry.context || '').split(',').map((p) => p.trim());
+    if (activeField === 'province') updateRentPlace({ province: entry.label });
+    else if (activeField === 'town') updateRentPlace({ town: entry.label, province: rentPlace.province || entry.context || '' });
+    else updateRentPlace({ brgy: entry.label, town: rentPlace.town || ctxA || '', province: rentPlace.province || ctxB || '' });
+    setActiveField(null);
+  };
 
   // Pinakamurang listing sa napiling category (para sa mungkahi kapag walang pasok sa budget)
   const cheapestInCategory = useMemo(() => {
@@ -880,7 +913,7 @@ function App() {
             )}
 
             <button className="menu-btn" onClick={() => setIsMenuOpen(true)}>
-              <Menu size={28} />
+              <Menu size={22} />
             </button>
           </div>
         </div>
@@ -902,6 +935,10 @@ function App() {
             </div>
             
             <div className="menu-items">
+              <button className="menu-link highlight" onClick={() => { setIsMenuOpen(false); setIsTourOpen(true); }}>
+                <div className="icon-container-mini secondary-icon"><Lightbulb size={18} /></div> How to use the app
+              </button>
+
               {isGuest && (
                 <>
                   <p className="menu-section-label">Explore</p>
@@ -912,7 +949,7 @@ function App() {
                     <div className="icon-container-mini secondary-icon"><Heart size={18} /></div> My Wishlist
                   </button>
                   <button className={`menu-link${activeTab === 'explore' ? ' active' : ''}`} onClick={() => { setIsMenuOpen(false); setActiveTab('explore'); }}>
-                    <div className="icon-container-mini"><Navigation size={18} /></div> Phone Location
+                    <div className="icon-container-mini"><Navigation size={18} /></div> Nearby Map
                   </button>
                   <button
                     className="menu-link"
@@ -940,6 +977,9 @@ function App() {
                   <button className={`menu-link${activeTab === 'bookings' ? ' active' : ''}`} onClick={() => { setIsMenuOpen(false); setActiveTab('bookings'); }}>
                     <div className="icon-container-mini"><CalendarCheck size={18} /></div> Bookings{pendingBookings > 0 ? ` (${pendingBookings})` : ''}
                   </button>
+                  <button className={`menu-link${activeTab === 'analytics' ? ' active' : ''}`} onClick={() => { setIsMenuOpen(false); setActiveTab('analytics'); }}>
+                    <div className="icon-container-mini"><BarChart3 size={18} /></div> Analytics
+                  </button>
                   <button className={`menu-link${activeTab === 'agreement' ? ' active' : ''}`} onClick={() => { setIsMenuOpen(false); setActiveTab('agreement'); }}>
                     <div className="icon-container-mini secondary-icon"><FileSignature size={18} /></div> Create Agreement Draft
                   </button>
@@ -956,9 +996,6 @@ function App() {
               
               <div className="menu-divider"></div>
               <p className="menu-section-label">About & Help</p>
-              <button className="menu-link" onClick={() => { setIsMenuOpen(false); setIsTourOpen(true); }}>
-                <div className="icon-container-mini secondary-icon"><Lightbulb size={18} /></div> App Tour (How to use)
-              </button>
               <button className={`menu-link${activeTab === 'about' ? ' active' : ''}`} onClick={() => { setIsMenuOpen(false); setActiveTab('about'); }}>
                 <div className="icon-container-mini"><Building2 size={18} /></div> About Us
               </button>
@@ -1054,6 +1091,26 @@ function App() {
                         <option value="8">8+ guests</option>
                       </select>
                     </div>
+                    <span className="stay-sep" />
+                    <div className="stay-seg stay-seg-budget">
+                      <label htmlFor="stay-budget">Budget</label>
+                      <div className="stay-input-row">
+                        <input
+                          id="stay-budget"
+                          type="text"
+                          inputMode="numeric"
+                          autoComplete="off"
+                          placeholder="₱ per night"
+                          value={budgetMax === '' ? '' : '₱' + Number(budgetMax).toLocaleString('en-US')}
+                          onChange={(e) => setBudgetMax(e.target.value.replace(/\D/g, '').replace(/^0+/, '').slice(0, 7))}
+                        />
+                        {budgetMax !== '' && (
+                          <button type="button" className="stay-clear" aria-label="Clear budget" onClick={() => setBudgetMax('')}>
+                            <X size={13} />
+                          </button>
+                        )}
+                      </div>
+                    </div>
                     <button
                       type="button"
                       className="stay-search-btn"
@@ -1065,45 +1122,115 @@ function App() {
                   </div>
                 ) : (
                 <div className="search-wrap">
-                <div className="search-bar">
-                  <Search className="search-icon" size={20} />
-                  <input
-                    type="text"
-                    placeholder="Province, town/city, or barangay..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    onFocus={() => setSearchFocused(true)}
-                    onBlur={() => setTimeout(() => setSearchFocused(false), 150)}
-                    autoComplete="off"
-                  />
-                  {searchQuery !== '' && (
-                    <button
-                      type="button"
-                      className="budget-clear"
-                      aria-label="Clear search"
-                      onClick={() => setSearchQuery('')}
-                    >
-                      <X size={14} />
-                    </button>
-                  )}
+                <div className="staycation-search rent-search">
+                  <div className="stay-seg rent-seg-province">
+                    <label htmlFor="rent-province">Province</label>
+                    <div className="stay-input-row">
+                      <input
+                        id="rent-province"
+                        type="text"
+                        placeholder="e.g. Pangasinan"
+                        value={rentPlace.province}
+                        onChange={(e) => updateRentPlace({ province: e.target.value })}
+                        onFocus={() => setActiveField('province')}
+                        onBlur={() => setTimeout(() => setActiveField((f) => (f === 'province' ? null : f)), 150)}
+                        onKeyDown={(e) => { if (e.key === 'Enter') e.target.blur(); }}
+                        autoComplete="off"
+                      />
+                      {rentPlace.province !== '' && (
+                        <button type="button" className="stay-clear" aria-label="Clear Province" onMouseDown={(e) => e.preventDefault()} onClick={() => updateRentPlace({ province: '' })}>
+                          <X size={13} />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                  <div className="stay-seg rent-seg-town">
+                    <label htmlFor="rent-town">Town / City</label>
+                    <div className="stay-input-row">
+                      <input
+                        id="rent-town"
+                        type="text"
+                        placeholder="e.g. Dagupan City"
+                        value={rentPlace.town}
+                        onChange={(e) => updateRentPlace({ town: e.target.value })}
+                        onFocus={() => setActiveField('town')}
+                        onBlur={() => setTimeout(() => setActiveField((f) => (f === 'town' ? null : f)), 150)}
+                        onKeyDown={(e) => { if (e.key === 'Enter') e.target.blur(); }}
+                        autoComplete="off"
+                      />
+                      {rentPlace.town !== '' && (
+                        <button type="button" className="stay-clear" aria-label="Clear Town / City" onMouseDown={(e) => e.preventDefault()} onClick={() => updateRentPlace({ town: '' })}>
+                          <X size={13} />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                  <div className="stay-seg rent-seg-brgy">
+                    <label htmlFor="rent-brgy">Barangay</label>
+                    <div className="stay-input-row">
+                      <input
+                        id="rent-brgy"
+                        type="text"
+                        placeholder="e.g. Bonuan"
+                        value={rentPlace.brgy}
+                        onChange={(e) => updateRentPlace({ brgy: e.target.value })}
+                        onFocus={() => setActiveField('brgy')}
+                        onBlur={() => setTimeout(() => setActiveField((f) => (f === 'brgy' ? null : f)), 150)}
+                        onKeyDown={(e) => { if (e.key === 'Enter') e.target.blur(); }}
+                        autoComplete="off"
+                      />
+                      {rentPlace.brgy !== '' && (
+                        <button type="button" className="stay-clear" aria-label="Clear Barangay" onMouseDown={(e) => e.preventDefault()} onClick={() => updateRentPlace({ brgy: '' })}>
+                          <X size={13} />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                  <div className="stay-seg rent-seg-budget">
+                    <label htmlFor="rent-budget">Budget</label>
+                    <div className="stay-input-row">
+                      <input
+                        id="rent-budget"
+                        type="text"
+                        inputMode="numeric"
+                        autoComplete="off"
+                        placeholder="₱ per month"
+                        value={budgetMax === '' ? '' : '₱' + Number(budgetMax).toLocaleString('en-US')}
+                        onChange={(e) => setBudgetMax(e.target.value.replace(/\D/g, '').replace(/^0+/, '').slice(0, 7))}
+                      />
+                      {budgetMax !== '' && (
+                        <button type="button" className="stay-clear" aria-label="Clear budget" onClick={() => setBudgetMax('')}>
+                          <X size={13} />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    className="stay-search-btn"
+                    aria-label="Search places"
+                    onClick={() => document.getElementById('rent-province')?.focus()}
+                  >
+                    <Search size={18} />
+                  </button>
                 </div>
-                {placeSuggestions.length > 0 && (
+                {rentSuggestions.length > 0 && (
                   <ul className="search-suggest" role="listbox">
-                    {placeSuggestions.map((s) => (
-                      <li key={`${s.level}-${s.label}-${s.context}`}>
+                    {rentSuggestions.map((sg) => (
+                      <li key={`${sg.level}-${sg.label}-${sg.context}`}>
                         <button
                           type="button"
                           role="option"
                           onMouseDown={(e) => e.preventDefault()}
-                          onClick={() => { setSearchQuery(s.query); setSearchFocused(false); }}
+                          onClick={() => pickRentSuggestion(sg)}
                         >
                           <MapPin size={15} />
                           <span className="ss-text">
-                            <strong>{s.label}</strong>
-                            {s.context && <em>{s.context}</em>}
+                            <strong>{sg.label}</strong>
+                            {sg.context && <em>{sg.context}</em>}
                           </span>
-                          <span className={`ss-level ${s.level}`}>{PLACE_LEVELS[s.level]}</span>
-                          <span className="ss-count">{s.count}</span>
+                          <span className={`ss-level ${sg.level}`}>{PLACE_LEVELS[sg.level]}</span>
+                          <span className="ss-count">{sg.count}</span>
                         </button>
                       </li>
                     ))}
@@ -1113,29 +1240,6 @@ function App() {
                 )}
 
                 <div className="budget-search">
-                  <div className="budget-input-wrap">
-                    <span className="budget-peso">₱</span>
-                    <input
-                      type="text"
-                      inputMode="numeric"
-                      autoComplete="off"
-                      className="budget-input"
-                      placeholder={selectedCategory === 'Staycation' ? 'Your budget per night' : 'Your budget per month'}
-                      value={budgetMax === '' ? '' : Number(budgetMax).toLocaleString('en-US')}
-                      onChange={(e) => setBudgetMax(e.target.value.replace(/\D/g, '').replace(/^0+/, '').slice(0, 7))}
-                    />
-                    <span className="budget-suffix">{selectedCategory === 'Staycation' ? '/night' : '/mo'}</span>
-                    {budgetMax !== '' && (
-                      <button
-                        type="button"
-                        className="budget-clear"
-                        aria-label="Clear budget"
-                        onClick={() => setBudgetMax('')}
-                      >
-                        <X size={14} />
-                      </button>
-                    )}
-                  </div>
                   {maxBudget > 0 && (
                     <p className="budget-hint">
                       Up to ₱{maxBudget.toLocaleString()}{selectedCategory === 'Staycation' ? ' per night' : ' per month'} • {filteredListings.length} results
@@ -1152,7 +1256,7 @@ function App() {
                 <button 
                   key={cat} 
                   className={`category-chip ${selectedCategory === cat ? 'active' : ''}`}
-                  onClick={() => { if (cat !== selectedCategory) setBudgetMax(''); setSelectedCategory(cat); }}
+                  onClick={() => { if (cat !== selectedCategory) { setBudgetMax(''); resetRentPlace(); } setSelectedCategory(cat); }}
                 >
                   <span className="chip-emoji">{React.createElement(CATEGORY_ICON[cat] || House, { size: 20, strokeWidth: 2.2 })}</span>
                   {CATEGORY_LABEL[cat] || cat}
@@ -1323,6 +1427,27 @@ function App() {
               <h3>Your Listings</h3>
               <span>{filteredListings.length} properties</span>
             </div>
+            {(() => {
+              const mine = properties.filter(p => p.user_id === session?.user?.id).length;
+              const limit = listingLimitFor(myPlan);
+              const pro = isProActive(myPlan);
+              return (
+                <div className="listing-quota">
+                  <div>
+                    <strong>{mine} / {limit} listings</strong>
+                    <small>
+                      {pro
+                        ? `${PRO_PLAN.label} active until ${new Date(myPlan.expires_at).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })}`
+                        : `First ${FREE_LISTING_LIMIT} listings are free`}
+                    </small>
+                  </div>
+                  {!pro && mine >= FREE_LISTING_LIMIT - 1 && (
+                    <button type="button" onClick={() => setActiveTab('upgrade')}>Get {PRO_PLAN.label} · ₱{PRO_PLAN.price}</button>
+                  )}
+                  {pro && mine >= PRO_LISTING_LIMIT && <small>Maximum reached</small>}
+                </div>
+              );
+            })()}
             {loading && properties.length === 0 ? (
               <div className="listing-grid">
                 {[1, 2].map(n => (
@@ -1554,15 +1679,27 @@ function App() {
         </Suspense>
       )}
 
+      {activeTab === 'upgrade' && (
+        <Suspense fallback={<div className="text-center py-10"><Loader2 className="animate-spin text-primary mx-auto" size={40} /></div>}>
+          <VerificationPage session={session} mode="listings" onDone={() => setActiveTab('mylistings')} />
+        </Suspense>
+      )}
+
       {activeTab === 'verified' && (
         <Suspense fallback={<div className="text-center py-10"><Loader2 className="animate-spin text-primary mx-auto" size={40} /></div>}>
-          <VerificationPage session={session} onDone={() => setActiveTab('mylistings')} />
+          <VerificationPage session={session} mode={isGuest ? 'tenant' : 'verify'} onDone={() => setActiveTab(isGuest ? 'home' : 'mylistings')} />
         </Suspense>
       )}
 
       {activeTab === 'inbox' && isGuest && (
         <Suspense fallback={<div className="text-center py-10"><Loader2 className="animate-spin text-primary mx-auto" size={40} /></div>}>
           <InboxPage properties={properties} unread={guestUnread} onChatChanged={() => reloadGuestRef.current?.()} />
+        </Suspense>
+      )}
+
+      {activeTab === 'analytics' && !isGuest && (
+        <Suspense fallback={<div className="text-center py-10"><Loader2 className="animate-spin text-primary mx-auto" size={40} /></div>}>
+          <BookingAnalytics session={session} properties={properties} />
         </Suspense>
       )}
 
@@ -1770,6 +1907,8 @@ function App() {
             user={session.user}
             onClose={() => setIsTenantAccountOpen(false)}
             onLogout={() => { setIsTenantAccountOpen(false); handleLogout(); }}
+            verifiedUntil={tenantVerifiedUntil}
+            onGetVerified={() => { setIsTenantAccountOpen(false); setActiveTab('verified'); }}
           />
         </Suspense>
       )}
@@ -1823,7 +1962,16 @@ function App() {
                 className={`nav-item ico-account ${isProfileModalOpen ? 'active' : ''}`}
                 onClick={() => { setIsProfileEditing(false); setIsProfileModalOpen(true); }}
               >
-                <span className="nav-icon-box"><User size={22} /></span>
+                <span className="nav-icon-box" style={{ position: 'relative' }}>
+                  <User size={22} />
+                  <BadgeCheck
+                    size={15}
+                    fill={myVerified ? '#0066ff' : '#7c3aed'}
+                    color="white"
+                    aria-label={myVerified ? 'Verified account' : 'Not verified yet'}
+                    style={{ position: 'absolute', top: -6, right: -12 }}
+                  />
+                </span>
                 <span className="nav-label">Account</span>
               </button>
               <button
@@ -1896,6 +2044,7 @@ function App() {
             onClose={() => setIsPropertyFormOpen(false)} 
             session={session} 
             onListingAdded={fetchProperties} 
+            onUpgrade={() => { setIsPropertyFormOpen(false); setActiveTab('upgrade'); }}
           />
         </Suspense>
       )}
@@ -1903,13 +2052,7 @@ function App() {
       {/* Edit Profile Modal */}
       {isProfileModalOpen && (
         <Suspense fallback={<div className="modal-overlay centered"><Loader2 className="animate-spin" color="white" size={40} /></div>}>
-          <ProfileModal session={session} onClose={() => setIsProfileModalOpen(false)} isEditingInitial={isProfileEditing} onProfileUpdated={fetchProperties} />
-        </Suspense>
-      )}
-
-      {lockedExpiry && (
-        <Suspense fallback={null}>
-          <SubscriptionLock session={session} expiry={lockedExpiry} onLogout={handleLogout} onRefresh={fetchProperties} />
+          <ProfileModal session={session} onClose={() => setIsProfileModalOpen(false)} isEditingInitial={isProfileEditing} onProfileUpdated={fetchProperties} onGetVerified={() => { setIsProfileModalOpen(false); setActiveTab('verified'); }} />
         </Suspense>
       )}
 

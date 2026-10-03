@@ -326,6 +326,50 @@
 
 .profile-details { gap: 12px; }
 
+/* Landlord na hindi pa verified: paanyaya mag-get verified */
+.get-verified-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  width: 100%;
+  padding: 14px;
+  border: 1.5px solid rgba(124, 58, 237, 0.35);
+  border-radius: 16px;
+  background: #f5f0ff;
+  color: #4c1d95;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  margin-bottom: 4px;
+}
+.get-verified-card:hover { background: #ede4ff; }
+.get-verified-card .gv-icon {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: #7c3aed;
+  color: #fff;
+}
+.get-verified-card .gv-check {
+  flex-shrink: 0;
+  align-self: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: #7c3aed;
+  color: #fff;
+}
+.get-verified-card .gv-text { flex: 1; display: flex; flex-direction: column; gap: 3px; }
+.get-verified-card .gv-text strong { font-size: 0.95rem; color: #6d28d9; }
+.get-verified-card .gv-text span { font-size: 0.78rem; line-height: 1.4; color: #5b21b6; }
+
 .info-group {
   align-items: center;
   gap: 14px;

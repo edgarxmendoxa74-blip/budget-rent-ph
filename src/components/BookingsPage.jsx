@@ -1,14 +1,15 @@
 import React, { useMemo, useState } from 'react';
-import { Phone, Mail, Users, PawPrint, Clock, CheckCircle2, XCircle, MessageCircle, Trash2 } from 'lucide-react';
+import { Phone, Mail, Users, PawPrint, Clock, CheckCircle2, MessageCircle, Trash2 } from 'lucide-react';
 import { HeroBudi } from './MascotSplash';
 import BookingChat from './BookingChat';
+import { tenantFromBooking } from '../lib/chatProfiles';
 import './BookingsPage.css';
 
 const FILTERS = [
   { key: 'pending', label: 'Pending' },
   { key: 'confirmed', label: 'Confirmed' },
-  { key: 'declined', label: 'Declined' },
-  { key: 'all', label: 'All' }
+  { key: 'declined', label: 'Cancelled' },
+  { key: 'successful', label: 'Successful' }
 ];
 
 const peso = (n) => `₱${Number(n || 0).toLocaleString()}`;
@@ -28,12 +29,17 @@ const BookingsPage = ({ bookings, properties, onSetStatus, onDismiss, unread = {
 
   const counts = useMemo(() => ({
     pending: bookings.filter((b) => b.status === 'pending').length,
-    confirmed: bookings.filter((b) => b.status === 'confirmed').length,
+    confirmed: bookings.filter((b) => b.status === 'confirmed' && b.outcome !== 'successful').length,
     declined: bookings.filter((b) => b.status === 'declined').length,
-    all: bookings.length
+    successful: bookings.filter((b) => b.outcome === 'successful').length
   }), [bookings]);
 
-  const list = filter === 'all' ? bookings : bookings.filter((b) => b.status === filter);
+  // Successful = minarkahan ng landlord/tenant na successful; hindi na ito binibilang sa Confirmed
+  const list = bookings.filter((b) => {
+    if (filter === 'successful') return b.outcome === 'successful';
+    if (filter === 'confirmed') return b.status === 'confirmed' && b.outcome !== 'successful';
+    return b.status === filter;
+  });
 
   const act = async (id, status) => {
     setBusyId(id);
@@ -78,7 +84,7 @@ const BookingsPage = ({ bookings, properties, onSetStatus, onDismiss, unread = {
                 <strong>{b.customer_name}</strong>
                 <span>{nameOf(b.property_id)} • {b.kind === 'rent' ? 'Rental' : 'Staycation'}</span>
               </div>
-              <em className={`booking-status ${b.status}`}>{b.status === 'pending' ? 'Pending' : b.status === 'confirmed' ? 'Confirmed' : 'Declined'}</em>
+              <em className={`booking-status ${b.status}`}>{b.status === 'pending' ? 'Pending' : b.status === 'confirmed' ? 'Confirmed' : 'Cancelled'}</em>
             </div>
 
             <div className="booking-dates">
@@ -106,22 +112,17 @@ const BookingsPage = ({ bookings, properties, onSetStatus, onDismiss, unread = {
             </div>
 
             <div className="booking-actions">
-              <button type="button" className="chat" onClick={() => setChat({ id: b.id, title: b.customer_name })}><MessageCircle size={14} /> Chat{unread[b.id] > 0 && <span className="chat-unread">{unread[b.id]}</span>}</button>
-              {b.status !== 'pending' && onDismiss && (
+              <button type="button" className="chat blue" onClick={() => setChat({ id: b.id, title: b.customer_name, other: tenantFromBooking(b) })}><MessageCircle size={14} /> Chat{unread[b.id] > 0 && <span className="chat-unread">{unread[b.id]}</span>}</button>
+              {b.status === 'pending' ? (
+                <button type="button" className="confirm" disabled={busyId === b.id} onClick={() => act(b.id, 'confirmed')}><CheckCircle2 size={14} /> Confirm</button>
+              ) : onDismiss && (
                 <button type="button" className="decline" disabled={busyId === b.id} onClick={() => remove(b)}><Trash2 size={14} /> Delete</button>
               )}
             </div>
-
-            {b.status === 'pending' && (
-              <div className="booking-actions">
-                <button type="button" className="confirm" disabled={busyId === b.id} onClick={() => act(b.id, 'confirmed')}><CheckCircle2 size={14} /> Confirm</button>
-                <button type="button" className="decline" disabled={busyId === b.id} onClick={() => act(b.id, 'declined')}><XCircle size={14} /> Decline</button>
-              </div>
-            )}
           </article>
         ))}
       </div>
-      {chat && <BookingChat bookingId={chat.id} role="owner" title={chat.title} onRead={onChatChanged} onClose={() => { setChat(null); onChatChanged?.(); }} />}
+      {chat && <BookingChat bookingId={chat.id} role="owner" title={chat.title} other={chat.other} onRead={onChatChanged} onClose={() => { setChat(null); onChatChanged?.(); }} />}
     </div>
   );
 };

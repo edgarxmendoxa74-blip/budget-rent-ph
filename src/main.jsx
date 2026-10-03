@@ -1,6 +1,7 @@
 import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.jsx'
+import './ios-theme.css'
 import OfflineGate from './components/OfflineGate.jsx'
 import MascotSplash from './components/MascotSplash.jsx'
 import { preloadBudiScene } from './lib/budiSplash.js'

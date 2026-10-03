@@ -4,6 +4,7 @@ const PENDING_KEY = 'budgetrent_budi_splash';
 export const BUDI_SPLASH_EVENT = 'budi:splash';
 
 export function showBudiSplash() {
+  preloadBudiScene(); // simulan na ang pag-load ng 3D para handa na pagdating ng splash
   try { sessionStorage.setItem(PENDING_KEY, '1'); } catch { /* private mode: okay lang */ }
   window.dispatchEvent(new Event(BUDI_SPLASH_EVENT));
 }

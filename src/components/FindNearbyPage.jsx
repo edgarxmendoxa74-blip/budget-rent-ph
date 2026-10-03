@@ -2,8 +2,8 @@ import React, { useState, useEffect, useRef, useMemo, Suspense, lazy } from 'rea
 import { createRoot } from 'react-dom/client';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { Navigation, Loader2, MapPin, Star, X, Search, AlertCircle, Signal, LocateFixed, Radar, BadgeCheck, House, TreePalm, Route as RouteIcon, Car, Bus, Bike, Footprints, ChevronDown, ChevronUp, WifiOff, CalendarCheck, Lightbulb } from 'lucide-react';
-import { TILE_URL, TILE_OPTIONS, MAP_OPTIONS, toCoords, distanceKm, formatDistance, geocodeAddress, inArea, getCurrentPosition, openDeviceLocationSettings } from '../lib/geo';
+import { Navigation, Loader2, MapPin, Star, X, Search, AlertCircle, Signal, LocateFixed, Radar, BadgeCheck, House, TreePalm, Route as RouteIcon, Car, Bus, Bike, Footprints, ChevronDown, ChevronUp, MapPinOff, WifiOff, CalendarCheck, Lightbulb } from 'lucide-react';
+import { TILE_URL, TILE_OPTIONS, MAP_OPTIONS, toCoords, distanceKm, formatDistance, geocodeAddress, inArea, getCurrentPosition, openDeviceLocationSettings, isDeviceLocationOn } from '../lib/geo';
 import { useApproxCoords } from '../lib/useApproxCoords';
 import ListingActionSheet from './ListingActionSheet';
 import { HeroBudi } from './MascotSplash';
@@ -103,10 +103,10 @@ const MIN_MOVE_KM = 0.02; // huwag i-update ang radar sa GPS jitter na < 20m
 
 
 // Registered landlord = may account (user_id) sa app. May pin sa mapa.
-// Occupied na rent (hindi staycation, na puwede pa ring i-reserve): nasa mapa pa rin pero may "Occupied" badge
+// Occupied na rent o staycation: nasa mapa pa rin, kulay purple at may "Occupied" badge
 const isOccupied = (item) => {
   const value = String(item?.availability || '').toLowerCase().trim();
-  return !isStay(item) && (value === 'occupied' || value === 'accommodated' || value === 'rented' || value === 'unavailable');
+  return (value === 'occupied' || value === 'accommodated' || value === 'rented' || value === 'unavailable');
 };
 
 // Kahit occupied na, nasa mapa pa rin.
@@ -134,6 +134,7 @@ const RadarMap = ({ center, radiusKm, results, scanning, selectedId, onSelect, i
   onSelectRef.current = onSelect;
   const followRef = useRef(true);
   const meMarker = useRef(null);
+  const routeLines = useRef(null);
   const meRef = useRef(me);
   meRef.current = me;
 
@@ -247,8 +248,12 @@ const RadarMap = ({ center, radiusKm, results, scanning, selectedId, onSelect, i
     if (!map) return undefined;
     if (!route || route.status !== 'ready') return undefined;
     const group = L.layerGroup();
-    L.polyline(route.data.coords, { color: '#ffffff', weight: 11, opacity: 0.95, lineCap: 'round', lineJoin: 'round', interactive: false }).addTo(group);
-    L.polyline(route.data.coords, { color: '#0a63ff', weight: 6, opacity: 1, lineCap: 'round', lineJoin: 'round', interactive: false }).addTo(group);
+    // Nalakad na: kupas na abo; natitira: puting gilid + asul
+    routeLines.current = {
+      walked: L.polyline([], { color: '#94a3b8', weight: 5, opacity: 0.4, lineCap: 'round', lineJoin: 'round', interactive: false }).addTo(group),
+      casing: L.polyline(route.data.coords, { color: '#ffffff', weight: 11, opacity: 0.95, lineCap: 'round', lineJoin: 'round', interactive: false }).addTo(group),
+      line: L.polyline(route.data.coords, { color: '#0a63ff', weight: 6, opacity: 1, lineCap: 'round', lineJoin: 'round', interactive: false }).addTo(group)
+    };
     const endSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">${isStay(route.item) ? MARKER_ICONS.stay : MARKER_ICONS.rent}</svg>`;
     L.marker([route.to.lat, route.to.lng], {
       icon: L.divIcon({ className: 'route-marker-wrap', html: `<div class="route-end ${isStay(route.item) ? 'stay' : ''}"><span>${endSvg}</span></div>`, iconSize: [38, 46], iconAnchor: [19, 46] }),
@@ -259,9 +264,24 @@ const RadarMap = ({ center, radiusKm, results, scanning, selectedId, onSelect, i
       followRef.current = true;
       map.fitBounds(L.latLngBounds(route.data.coords), { padding: [44, 44] });
     }
-    return () => { group.remove(); };
+    return () => { group.remove(); routeLines.current = null; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [route?.status, route?.data, route?.to, route?.item]);
+
+  // I-fade ang parte ng ruta na nalakaran na habang gumagalaw si Budi
+  useEffect(() => {
+    const lines = routeLines.current;
+    if (!lines || route?.status !== 'ready') return;
+    const coords = route.data.coords;
+    const pos = me || meRef.current;
+    if (!pos) { lines.walked.setLatLngs([]); lines.casing.setLatLngs(coords); lines.line.setLatLngs(coords); return; }
+    const { offKm, splitIndex, splitPoint } = routeProgress(coords, pos);
+    if (!splitPoint || offKm > OFF_ROUTE_KM) { lines.walked.setLatLngs([]); lines.casing.setLatLngs(coords); lines.line.setLatLngs(coords); return; }
+    const rest = [splitPoint, ...coords.slice(splitIndex + 1)];
+    lines.walked.setLatLngs([...coords.slice(0, splitIndex + 1), splitPoint]);
+    lines.casing.setLatLngs(rest);
+    lines.line.setLatLngs(rest);
+  }, [me, route?.status, route?.data]);
 
   // "Ikaw" = si Budi: sumusunod sa live GPS habang bumibiyahe
   useEffect(() => {
@@ -433,6 +453,8 @@ const FindNearbyPage = ({ listings, reviewStats, onSelectProperty, isLandlord, u
   const [routeMode, setRouteMode] = useState('car');
   const [showSteps, setShowSteps] = useState(false);
   const [actionSheet, setActionSheet] = useState(null); // { item, kind: 'book' | 'inquire' }
+  const [phoneLocOff, setPhoneLocOff] = useState(false); // naka-off ang GPS ng phone (native app)
+  const [locModalDismissed, setLocModalDismissed] = useState(false);
   const routeSeq = useRef(0);
   const watchId = useRef(null);
   const scanTimer = useRef(null);
@@ -604,7 +626,9 @@ const FindNearbyPage = ({ listings, reviewStats, onSelectProperty, isLandlord, u
   const errorTypeRef = useRef(null);
   errorTypeRef.current = errorType;
   useEffect(() => {
+    isDeviceLocationOn().then((on) => setPhoneLocOff(on === false)).catch(() => {});
     const recheck = () => {
+      isDeviceLocationOn().then((on) => setPhoneLocOff(on === false)).catch(() => {});
       if (document.visibilityState === 'visible' && (errorTypeRef.current === 'denied' || errorTypeRef.current === 'unavailable')) startLiveTracking();
     };
     document.addEventListener('visibilitychange', recheck);
@@ -710,6 +734,38 @@ const FindNearbyPage = ({ listings, reviewStats, onSelectProperty, isLandlord, u
     if (center) runScan();
   };
 
+  // Pagpasok sa Nearby (phone) na naka-off ang Location: isang modal lang, sa mismong screen ng Find Rent / Staycation.
+  // Pag na-on na (pagbalik mula sa Settings), kusa itong nawawala at ang dalawang option na lang ang natitira.
+  const needsLocation = !locationFound && !locating && !isLandlord && !device.isDesktop
+    && (phoneLocOff || errorType === 'denied' || errorType === 'unavailable');
+  const locationModal = needsLocation && !locModalDismissed && (
+    <div className="modal-overlay centered" style={{ zIndex: 9000 }} onClick={() => setLocModalDismissed(true)}>
+      <div
+        role="dialog"
+        aria-modal="true"
+        className="animate-slide-up"
+        onClick={(e) => e.stopPropagation()}
+        style={{ background: '#fff', borderRadius: 20, padding: '28px 22px', width: 'min(92vw, 360px)', textAlign: 'center', color: '#1f2937' }}
+      >
+        <MapPinOff size={52} color="#f59e0b" />
+        <h3 style={{ margin: '14px 0 8px' }}>Turn On Location</h3>
+        <p style={{ margin: 0, color: '#6b7280', lineHeight: 1.5, fontSize: '0.95rem' }}>
+          {errorType === 'denied'
+            ? 'Location is blocked for this app. Allow it in Settings > Apps > Budget Rent PH > Permissions > Location to see rentals near you.'
+            : 'Your phone\'s Location (GPS) is off. Turn it on to see rentals near you and how far each one is.'}
+        </p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 20 }}>
+          <button type="button" className="near-cta" onClick={async () => { if (!(await openDeviceLocationSettings())) startLiveTracking(); }}>
+            <MapPin size={19} /> Open Location Settings
+          </button>
+          <button type="button" className="near-cta" onClick={() => setLocModalDismissed(true)} style={{ background: '#e5e7eb', color: '#374151' }}>
+            Not now
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
   const offlineModal = isOffline && (
     <div className="modal-overlay" style={{ zIndex: 10000, backgroundColor: 'rgba(0,0,0,0.6)' }}>
       <div className="modal-content animate-slide-up" role="alertdialog" aria-modal="true" aria-labelledby="offline-title" style={{ maxWidth: '380px', borderRadius: '24px', padding: '32px 24px', textAlign: 'center' }}>
@@ -750,6 +806,7 @@ const FindNearbyPage = ({ listings, reviewStats, onSelectProperty, isLandlord, u
           </div>
         </main>
         {offlineModal}
+        {locationModal}
       </div>
     );
   }
@@ -776,7 +833,7 @@ const FindNearbyPage = ({ listings, reviewStats, onSelectProperty, isLandlord, u
 
               <form onSubmit={handleManualSearch} className="search-bar nearby-search">
                 <Search className="search-icon" size={20} />
-                <input type="text" placeholder="Where are you moving? (e.g. Dagupan, Pangasinan)" value={manualQuery} onChange={(e) => setManualQuery(e.target.value)} />
+                <input type="text" placeholder="Search city or barangay" value={manualQuery} onChange={(e) => setManualQuery(e.target.value)} />
                 <button type="submit" className="nearby-search-btn" disabled={locating}>Search</button>
               </form>
             </>
@@ -824,10 +881,11 @@ const FindNearbyPage = ({ listings, reviewStats, onSelectProperty, isLandlord, u
                 {errorType === 'unavailable' && (
                   <>
                     <p className="near-inline-error"><AlertCircle size={15} /> {device.isDesktop ? 'Couldn\'t get your location. Make sure Wi-Fi and Location services are on, or use the search.' : 'Couldn\'t get a GPS signal. Make sure your phone\'s Location is on, then try again or use the search.'}</p>
-                    {!device.isDesktop && (
+                    {device.isDesktop ? (
+                      <button type="button" className="near-cta" onClick={startLiveTracking}><MapPin size={20} /> Try again</button>
+                    ) : (
                       <button type="button" className="near-cta" onClick={async () => { if (!(await openDeviceLocationSettings())) startLiveTracking(); }}><MapPin size={20} /> Open Location Settings</button>
                     )}
-                    <button type="button" className="near-cta" onClick={startLiveTracking}><MapPin size={20} /> Try again</button>
                   </>
                 )}
 
@@ -851,7 +909,7 @@ const FindNearbyPage = ({ listings, reviewStats, onSelectProperty, isLandlord, u
           <div className="listings">
             <div className="nearby-head">
               <div>
-                <h3>{scanning ? 'Scanning...' : isSearch ? `${results.length} available in ${placeLabel}` : `${results.length} available within ${radiusKm} km`}</h3>
+                <h3>{scanning ? 'Scanning...' : isSearch ? `${results.length} places in ${placeLabel}` : `${results.length} places within ${radiusKm} km`}</h3>
                 <p className="gps-status">
                   <span className={`gps-dot ${isSearch ? 'manual' : ''}`} />
                   {mode === 'live' ? (device.isDesktop ? 'Location Connected • Updating Live' : 'GPS Connected • Updating Live') : `Search area: ${placeLabel}`}

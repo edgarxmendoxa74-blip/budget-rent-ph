@@ -75,6 +75,64 @@ export const signUpTenant = async (form) => {
   return signInTenant(form.phone, form.password);
 };
 
+// ---------- Edit ng tenant profile: isang beses lang kada buwan ----------
+export const PROFILE_EDIT_INTERVAL_DAYS = 30;
+
+// Petsa kung kailan puwede ulit mag-edit; null kung puwede na ngayon
+export const nextProfileEditDate = (meta) => {
+  const last = meta?.profile_edited_at ? new Date(meta.profile_edited_at) : null;
+  if (!last || Number.isNaN(last.getTime())) return null;
+  const next = new Date(last.getTime() + PROFILE_EDIT_INTERVAL_DAYS * 24 * 60 * 60 * 1000);
+  return next > new Date() ? next : null;
+};
+
+// Facebook link o username -> "https://www.facebook.com/<name>". Blank = '' (optional), hindi valid = null
+export const normalizeFacebook = (input) => {
+  const raw = String(input || '').trim();
+  if (!raw) return '';
+  if (/^[A-Za-z0-9.]{5,50}$/.test(raw)) return `https://www.facebook.com/${raw}`;
+  try {
+    const url = new URL(/^https?:\/\//i.test(raw) ? raw : `https://${raw}`);
+    if (!/(^|\.)(facebook\.com|fb\.com|fb\.me)$/i.test(url.hostname)) return null;
+    const path = url.pathname.replace(/\/+$/, '');
+    if (!path || path === '/') return null;
+    const id = path === '/profile.php' ? `profile.php?id=${url.searchParams.get('id') || ''}` : path.slice(1);
+    if (!id || id === 'profile.php?id=' || id.length > 120) return null;
+    return `https://www.facebook.com/${id}`;
+  } catch {
+    return null;
+  }
+};
+
+export const validateTenantProfile = ({ fullName, birthday, workStatus, facebook }) => {
+  if (String(fullName || '').trim().length < 2) return 'Please enter your full name.';
+  const age = birthday ? ageOf(birthday) : null;
+  if (age === null || age < MIN_AGE || age > 110) return `Please enter a valid birthday (you must be at least ${MIN_AGE} years old).`;
+  if (!WORK_STATUSES.includes(workStatus)) return 'Please select your work status.';
+  if (normalizeFacebook(facebook) === null) return 'Please enter a valid Facebook profile link (e.g. facebook.com/juan.delacruz).';
+  return null;
+};
+
+// Sine-save sa user metadata. Binabasa muna ang pinakabagong metadata sa server para sigurado ang buwanang limit.
+export const updateTenantProfile = async (form) => {
+  const problem = validateTenantProfile(form);
+  if (problem) throw new Error(problem);
+  const { data: current, error: readError } = await supabase.auth.getUser();
+  if (readError || !current?.user) throw new Error('Unable to verify your account right now. Please try again.');
+  const next = nextProfileEditDate(current.user.user_metadata);
+  if (next) throw new Error(`You can edit your profile once a month. Next edit: ${next.toLocaleDateString('en-PH', { month: 'long', day: 'numeric', year: 'numeric' })}.`);
+  const { error } = await supabase.auth.updateUser({
+    data: {
+      full_name: form.fullName.trim(),
+      birthday: form.birthday,
+      work_status: form.workStatus,
+      facebook: normalizeFacebook(form.facebook),
+      profile_edited_at: new Date().toISOString()
+    }
+  });
+  if (error) throw new Error(error.message || 'Unable to save your profile right now.');
+};
+
 export const signInTenant = async (phoneInput, password) => {
   const phone = normalizePhone(phoneInput);
   if (!phone) throw new Error('Please enter a valid Philippine mobile number (e.g. 09171234567).');

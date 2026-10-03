@@ -37,3 +37,39 @@
   font-weight: 700;
   line-height: 1.4;
 }
+
+/* Avatar kada mensahe */
+.bchat-head { align-items: center; }
+.bchat-title { flex: 1; min-width: 0; }
+.bchat-title strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bchat-row { display: flex; align-items: flex-end; gap: 8px; max-width: 92%; }
+.bchat-row.mine { align-self: flex-end; flex-direction: row-reverse; }
+.bchat-row.theirs { align-self: flex-start; }
+.bchat-row .bchat-msg { max-width: none; min-width: 0; }
+
+/* Outcome buttons: Successful / Cancelled booking */
+.bchat-outcome { padding: 8px 14px 4px; display: flex; flex-direction: column; gap: 5px; }
+.bchat-outcome-btns { display: flex; gap: 8px; }
+.bchat-outcome-btns button { flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 5px; padding: 9px 8px; border: none; border-radius: 12px; font-family: inherit; font-size: 0.78rem; font-weight: 800; cursor: pointer; }
+.bchat-outcome-btns .ok { background: #16a34a; color: #fff; }
+.bchat-outcome-btns .no { background: #fee2e2; color: #b91c1c; }
+.bchat-outcome-btns button:disabled { opacity: 0.55; cursor: not-allowed; }
+.bchat-outcome small { font-size: 0.7rem; color: #64748b; font-weight: 600; }
+.bchat-outcome-done { margin: 0; display: inline-flex; align-items: center; gap: 6px; padding: 8px 12px; border-radius: 12px; font-size: 0.8rem; font-weight: 800; }
+.bchat-outcome-done.successful { background: #dcfce7; color: #15803d; }
+.bchat-outcome-done.cancelled { background: #fee2e2; color: #b91c1c; }
+
+
+/* Modal ng kumpirmasyon (Cancel / Successful booking) */
+.bchat-confirm-overlay { position: fixed; inset: 0; z-index: 20090; display: flex; align-items: center; justify-content: center; padding: 16px; background: rgba(0, 20, 45, 0.6); }
+.bchat-confirm { width: 100%; max-width: 340px; padding: 24px 20px 18px; border-radius: 24px; background: #fff; text-align: center; box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35); }
+.bchat-confirm-icon { width: 54px; height: 54px; margin: 0 auto 10px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+.bchat-confirm-icon.cancelled { background: #fee2e2; color: #b91c1c; }
+.bchat-confirm-icon.successful { background: #dcfce7; color: #15803d; }
+.bchat-confirm h3 { margin: 0 0 6px; font-size: 1.1rem; color: var(--primary-dark); }
+.bchat-confirm p { margin: 0 0 16px; font-size: 0.88rem; line-height: 1.5; color: var(--text-muted); }
+.bchat-confirm-actions { display: flex; gap: 10px; }
+.bchat-confirm-actions button { flex: 1; padding: 12px; border: none; border-radius: 14px; font: inherit; font-weight: 800; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; }
+.bchat-confirm-actions .keep { background: #eef2f7; color: #334155; }
+.bchat-confirm-actions .go.cancelled { background: #dc2626; color: #fff; }
+.bchat-confirm-actions .go.successful { background: #16a34a; color: #fff; }

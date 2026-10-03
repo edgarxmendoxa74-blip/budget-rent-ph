@@ -448,7 +448,7 @@
 }
 
 .reviews-score .rev-star { color: rgba(255, 255, 255, 0.35); }
-.reviews-score .rev-star.on { color: var(--secondary-gold); }
+.reviews-score .rev-star.on { color: #FFC107; }
 .reviews-score span { font-size: 0.72rem; font-weight: 700; color: rgba(255, 255, 255, 0.8); }
 
 .reviews-bars {
@@ -541,7 +541,8 @@
   background: var(--primary-light);
 }
 
-.rev-stars.interactive .rev-star.on { color: var(--secondary); }
+.rev-star.on,
+.rev-stars.interactive .rev-star.on { color: #FFC107; }
 
 .review-btn.submit {
   background: var(--primary-gradient);

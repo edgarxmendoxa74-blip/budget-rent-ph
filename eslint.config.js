@@ -5,7 +5,7 @@ import reactRefresh from 'eslint-plugin-react-refresh'
 import { defineConfig, globalIgnores } from 'eslint/config'
 
 export default defineConfig([
-  globalIgnores(['dist']),
+  globalIgnores(['dist', 'android', 'node_modules', 'scratch', 'supabase/functions']),
   {
     files: ['**/*.{js,jsx}'],
     extends: [
@@ -25,5 +25,11 @@ export default defineConfig([
     rules: {
       'no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]' }],
     },
+  },
+  {
+    // Node-only na mga script sa root
+    files: ['*.js'],
+    ignores: ['eslint.config.js', 'vite.config.js'],
+    languageOptions: { globals: globals.node },
   },
 ])

@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { updateThumbnail } from '../lib/updates';
 import { fetchPlans } from '../lib/plans';
+import { PRO_PLAN, TENANT_PLAN } from '../lib/listingPlan';
 import { downloadCsv, fmtDate } from '../lib/csv';
 import './AdminPanel.css';
 import { ikImage } from '../lib/imagekit';
@@ -116,7 +117,9 @@ const AdminPanel = ({ onLogout }) => {
   const [, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [receiptModal, setReceiptModal] = useState(null); // request na ipinapakita ang resibo sa modal
   const [proofInput, setProofInput] = useState('');
+  const [payProofs, setPayProofs] = useState({}); // request id -> signed link ng screenshot (o '' kung hindi makita)
   const [proofUrl, setProofUrl] = useState('');
   const [proofError, setProofError] = useState('');
   const [listingFilter, setListingFilter] = useState('paupahan'); // paupahan | staycation
@@ -547,8 +550,8 @@ const AdminPanel = ({ onLogout }) => {
 
   const handleRenew = async (landlordEmail, planId = 'yearly') => {
     const plan = plans.find(p => p.id === planId);
-    if (!plan) return alert('Plans not loaded yet. Try again.');
-    if (!window.confirm(`Avail ${plan.label} Subscription (${plan.note}) for ${landlordEmail}? This will cost ₱${plan.price}.`)) return;
+    if (!plan) { alert('Plans not loaded yet. Try again.'); return false; }
+    if (!window.confirm(`Avail ${plan.label} Subscription (${plan.note}) for ${landlordEmail}? This will cost ₱${plan.price}.`)) return false;
 
     const now = new Date();
     const expiry = new Date();
@@ -567,9 +570,78 @@ const AdminPanel = ({ onLogout }) => {
       setRenewSuccess({ email: landlordEmail, label: plan.label, expiry: expiry.toLocaleDateString() });
       setActiveTab('subscriptions');
       fetchData();
+      return true;
     } catch (err) {
       alert("Error: " + err.message);
+      return false;
     }
+  };
+
+  // ---- Bayad na hinihintay ang approval (galing sa Get Verified / Pro Listings) ----
+  const parseRequest = (r) => {
+    const msg = r.message || '';
+    const planLabel = (/Plan:\s*([^\n(]+)/.exec(msg)?.[1] || '').trim();
+    return {
+      planLabel,
+      proof: /Proof of Payment \(file\):\s*(\S+)/.exec(msg)?.[1] || '',
+      isPro: /Pro Listings/i.test(planLabel),
+      isTenant: /Verified Tenant/i.test(planLabel)
+    };
+  };
+  const pendingPayments = useMemo(
+    () => verificationRequests.filter(r => r.status === 'pending' && /Receipt Code|Proof of Payment/i.test(r.message || '')),
+    [verificationRequests]
+  );
+
+  // Pro Listings: +2 buwan (idinaragdag sa natitirang araw kung aktibo pa)
+  const handleActivatePro = async (userId) => {
+    if (!userId) { alert('This request has no user account attached.'); return false; }
+    const { data: existing } = await supabase.from('landlord_plans').select('expires_at').eq('user_id', userId).maybeSingle();
+    const base = existing?.expires_at && new Date(existing.expires_at) > new Date() ? new Date(existing.expires_at) : new Date();
+    const expiry = new Date(base);
+    expiry.setMonth(expiry.getMonth() + PRO_PLAN.months);
+    const { error } = await supabase.from('landlord_plans').upsert({ user_id: userId, plan: 'pro', expires_at: expiry.toISOString(), updated_at: new Date().toISOString() });
+    if (error) {
+      alert('Error: ' + error.message + '\n(Did you run add_listing_plan.sql in Supabase?)');
+      return false;
+    }
+    alert(`Pro Listings active until ${expiry.toLocaleDateString()}.`);
+    return true;
+  };
+
+  const approveRequest = async (r) => {
+    const { planLabel, isPro, isTenant } = parseRequest(r);
+    let ok = false;
+    if (isTenant) {
+      if (!r.user_id) return alert('This request has no user account attached.');
+      if (!window.confirm(`Verify tenant ${r.full_name} for ${TENANT_PLAN.note} (₱${TENANT_PLAN.price})?`)) return;
+      const { data, error } = await supabase.rpc('admin_verify_tenant', { p_user: r.user_id, p_months: TENANT_PLAN.months });
+      if (error) return alert('Error: ' + error.message + '\n(Did you run add_tenant_verification.sql?)');
+      alert(`Tenant verified until ${new Date(data).toLocaleDateString()}.`);
+      ok = true;
+    } else if (isPro) {
+      if (!window.confirm(`Activate ${PRO_PLAN.label} (₱${PRO_PLAN.price} / ${PRO_PLAN.note}) for ${r.email || r.full_name}?`)) return;
+      ok = await handleActivatePro(r.user_id);
+    } else {
+      const planId = /year/i.test(planLabel) ? 'yearly' : 'monthly';
+      ok = await handleRenew(r.email, planId);
+    }
+    if (!ok) return;
+    const { error } = await supabase.from('verification_requests').update({ status: 'approved' }).eq('id', r.id);
+    if (error) return alert('Activated, but could not mark the request as approved: ' + error.message);
+    setVerificationRequests(prev => prev.map(x => (x.id === r.id ? { ...x, status: 'approved' } : x)));
+  };
+
+  const deleteRequest = async (r) => {
+    if (!window.confirm(`Delete the verification request of ${r.full_name}? This cannot be undone.`)) return;
+    const { error } = await supabase.from('verification_requests').delete().eq('id', r.id);
+    if (error) return alert('Error: ' + error.message);
+    setVerificationRequests(prev => prev.filter(x => x.id !== r.id));
+  };
+
+  const showProofFor = async (r, proof) => {
+    const { data, error } = await supabase.storage.from('payment-proofs').createSignedUrl(proof, 300);
+    setPayProofs(prev => ({ ...prev, [r.id]: error || !data?.signedUrl ? 'error' : data.signedUrl }));
   };
 
   const handlePlanChange = (id, field, value) => {
@@ -1041,6 +1113,32 @@ const AdminPanel = ({ onLogout }) => {
 
           {activeTab === 'landlords' && (
             <div className="admin-list">
+              {pendingPayments.length > 0 && (
+                <div className="pay-requests">
+                  <h4>Payments waiting for approval ({pendingPayments.length})</h4>
+                  {pendingPayments.map(r => {
+                    const { planLabel, proof, isPro } = parseRequest(r);
+                    const link = payProofs[r.id];
+                    return (
+                      <div key={r.id} className="pay-request">
+                        <div>
+                          <strong>{r.full_name}</strong> <span className={`status-pill ${isPro ? 'inactive' : 'active'}`}>{isPro ? 'Pro Listings' : (planLabel || 'Verified')}</span>
+                          <small>{r.email} · {r.contact_number}</small>
+                          <small>{fmtDate(r.created_at)}</small>
+                        </div>
+                        <div className="pay-request-actions">
+                          <button type="button" className="manage-btn pay-delete" onClick={() => deleteRequest(r)}><Trash2 size={13}/> Delete</button>
+                          <button type="button" className="manage-btn" onClick={() => setReceiptModal(r)}>View receipt</button>
+                          {proof && <button type="button" className="manage-btn" onClick={() => showProofFor(r, proof)}>View proof</button>}
+                          <button type="button" className="verify-btn" onClick={() => approveRequest(r)}>{isPro ? 'Activate Pro' : 'Approve & Verify'}</button>
+                        </div>
+                        {link === 'error' && <small className="proof-error">Hindi makita ang screenshot.</small>}
+                        {link && link !== 'error' && <a href={link} target="_blank" rel="noopener noreferrer"><img src={link} alt="Payment proof" /></a>}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
               <div className="admin-list-head landlord-row">
                 <span>Landlord</span><span>Status</span><span>Listings</span><span>Badge</span><span>Actions</span>
               </div>
@@ -1066,7 +1164,6 @@ const AdminPanel = ({ onLogout }) => {
                   </button>
                   <div className="row-actions">
                     <button className="manage-btn" onClick={() => viewLandlordListings(l.email)}>Properties</button>
-                    <button className="verify-btn" onClick={() => handleRenew(l.email, 'monthly')}>{l.is_verified ? 'Monthly' : 'Verify Monthly'}</button>
                     <button className="verify-btn" onClick={() => handleRenew(l.email, 'yearly')}>{l.is_verified ? 'Yearly' : 'Verify Yearly'}</button>
                     <button className="landlord-delete-btn" onClick={() => handleDeleteLandlord(l)} title="Delete landlord" aria-label="Delete landlord"><Trash2 size={14} /></button>
                   </div>
@@ -1115,7 +1212,6 @@ const AdminPanel = ({ onLogout }) => {
                     {l.subscription_expiry ? new Date(l.subscription_expiry).toLocaleDateString() : 'N/A'}
                   </span>
                   <div className="row-actions">
-                    <button className="manage-btn" onClick={() => handleRenew(l.email, 'monthly')}><RefreshCw size={13}/> Monthly</button>
                     <button className="manage-btn" onClick={() => handleRenew(l.email, 'yearly')}><RefreshCw size={13}/> Yearly</button>
                   </div>
                 </div>
@@ -1180,6 +1276,20 @@ const AdminPanel = ({ onLogout }) => {
             <div className="success-icon"><Check size={36} color="#16a34a" /></div>
             <h3>Successful!</h3>
             <p>{renewSuccess.label} subscription activated for <strong>{renewSuccess.email}</strong> until {renewSuccess.expiry}. Moved to Managed Plans.</p>
+          </div>
+        </div>
+      )}
+
+      {receiptModal && (
+        <div className="modal-overlay admin-dialog-overlay" onClick={() => setReceiptModal(null)}>
+          <div className="modal-content admin-dialog animate-slide-up" onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="Payment receipt">
+            <div className="admin-modal-head">
+              <h3>Payment receipt</h3>
+              <button onClick={() => setReceiptModal(null)} aria-label="Close"><X size={18}/></button>
+            </div>
+            <p className="admin-dialog-email">{receiptModal.full_name}{receiptModal.email ? ` · ${receiptModal.email}` : ''}</p>
+            <pre className="pay-receipt">{receiptModal.message}</pre>
+            <small className="pay-receipt-date">Submitted {fmtDate(receiptModal.created_at)}</small>
           </div>
         </div>
       )}

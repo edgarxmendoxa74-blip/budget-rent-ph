@@ -86,7 +86,7 @@ export const apiDelete = (endpoint, options = {}) => {
 /**
  * Verify response signature (optional for extra security)
  */
-export const verifyResponseSignature = (response, signature, secret) => {
+export const verifyResponseSignature = () => {
   // This requires a matching server implementation
   // For now, we rely on HTTPS and CSP headers
   return true;

@@ -245,7 +245,8 @@ function SplashRun({ onDone, forceSvg = false }) {
         {webglFailed ? (
           <Budi phase={phase} />
         ) : (
-          <Suspense fallback={<SplashFallback phase={phase} onReady={() => setStarted(true)} />}>
+          // Walang static na Budi habang naglo-load: blangko muna, at magsisimula ang animation kapag handa na ang 3D
+          <Suspense fallback={<div className="budi-3d" />}>
             <BudiScene
               phase={phase}
               onReady={() => setStarted(true)}
@@ -261,12 +262,6 @@ function SplashRun({ onDone, forceSvg = false }) {
       </div>
     </div>
   );
-}
-
-// Habang hindi pa handa ang 3D: SVG Budi agad (hindi blangko), at umaandar na ang timeline
-function SplashFallback({ phase, onReady }) {
-  useEffect(() => { onReady(); }, [onReady]);
-  return <Budi phase={phase} />;
 }
 
 // Budi sa sulok ng hero: kumakaway pakaliwa at sinasabi kung ano ang gagawin sa section

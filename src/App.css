@@ -89,7 +89,11 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  padding: 6px;
+  /* Pare-parehong laki ang lahat ng header buttons (menu, bell, call, account) */
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  padding: 0;
   border-radius: 12px;
   box-shadow: var(--shadow-gold);
   transition: all 0.25s var(--ease-pop);
@@ -107,8 +111,8 @@
 }
 
 .menu-btn svg {
-  width: 18px;
-  height: 18px;
+  width: 22px;
+  height: 22px;
   transition: transform 0.25s var(--ease-pop);
 }
 
@@ -164,7 +168,6 @@
 .notif-btn.call-btn {
   background: #10B981;
   color: #fff;
-  border-radius: 50%;
   box-shadow: 0 4px 10px rgba(16, 185, 129, 0.4);
 }
 
@@ -1464,6 +1467,8 @@
   line-height: 1.4;
 }
 
+.card-rating svg { color: #FFC107; }
+
 .card-rating em {
   font-style: normal;
   color: var(--text-muted);
@@ -1683,7 +1688,7 @@
 }
 
 .avail-badge.occupied {
-  background: rgba(239, 68, 68, 0.94);
+  background: rgba(124, 58, 237, 0.94);
 }
 
 .avail-badge.inline {
@@ -2841,7 +2846,7 @@
   background: #10b981;
   transition: background 0.2s;
 }
-.mine-toggle.occupied .mine-toggle-track { background: #ef4444; }
+.mine-toggle.occupied .mine-toggle-track { background: #7c3aed; }
 .mine-toggle-knob {
   position: absolute;
   top: 2px;
@@ -2855,7 +2860,7 @@
 }
 .mine-toggle.occupied .mine-toggle-knob { transform: translateX(16px); }
 .mine-toggle-text { font-size: 0.78rem; font-weight: 800; color: #047857; }
-.mine-toggle.occupied .mine-toggle-text { color: #dc2626; }
+.mine-toggle.occupied .mine-toggle-text { color: #6d28d9; }
 .mine-toggle-text em { font-style: normal; font-weight: 700; color: var(--text-muted); font-size: 0.7rem; }
 
 .stay-reserve-note {
@@ -3302,3 +3307,40 @@
 }
 
 .property-detail-modal .contact-btn.email:hover { box-shadow: 0 12px 28px -4px rgba(245, 158, 11, 0.55); }
+
+/* Rentals search: kapareho ng Staycation card — Province | Town/City sa taas, Barangay | Budget sa ilalim */
+.staycation-search.rent-search {
+  display: grid;
+  grid-template-columns: 1fr 1fr 46px;
+  grid-template-rows: auto auto;
+  align-items: stretch;
+  gap: 2px 0;
+  padding: 6px;
+  border-radius: 26px;
+}
+.rent-search .stay-seg { align-items: flex-start; text-align: left; padding: 8px 12px; border-radius: 16px; cursor: text; }
+.rent-search .stay-seg input { text-align: left; font-size: 0.86rem; }
+.rent-search .stay-seg label { font-size: 0.64rem; }
+.rent-search .stay-input-row { width: 100%; }
+.rent-search .rent-seg-province { grid-column: 1; grid-row: 1; border-bottom: 1px solid var(--border); border-radius: 18px 8px 8px 8px; }
+.rent-search .rent-seg-town { grid-column: 2; grid-row: 1; border-bottom: 1px solid var(--border); border-radius: 8px 18px 8px 8px; }
+.rent-search .rent-seg-brgy { grid-column: 1; grid-row: 2; }
+.rent-search .rent-seg-budget { grid-column: 2; grid-row: 2; }
+.rent-search .stay-search-btn { grid-column: 3; grid-row: 1 / 3; align-self: center; justify-self: center; width: 42px; height: 42px; }
+
+/* Para hindi matakpan ng category bar ang dropdown ng mga mungkahing lugar */
+.hero { z-index: 2; }
+
+/* Staycation: Budget sa loob ng card (hilera 3, katabi ng search button) */
+.staycation-search .stay-seg-budget { flex: 1; }
+@media (max-width: 560px) {
+  .staycation-search:not(.rent-search) .stay-seg-budget { grid-column: 1 / 3; grid-row: 3; border-top: 1px solid var(--border); border-radius: 8px 8px 18px 18px; padding: 8px 14px 9px; }
+  .staycation-search:not(.rent-search) .stay-search-btn { grid-row: 2 / 4; }
+  .staycation-search:not(.rent-search) .stay-seg-budget .stay-input-row { width: 100%; }
+}
+
+/* Bilang ng listings ng landlord (libre 5, Pro hanggang 10) */
+.listing-quota { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0 0 14px; padding: 12px 14px; border-radius: 16px; background: #fff; border: 1px solid var(--border); }
+.listing-quota strong { display: block; color: var(--primary); font-size: 0.95rem; }
+.listing-quota small { color: var(--text-muted); font-size: 0.75rem; }
+.listing-quota button { flex: none; padding: 10px 14px; border: none; border-radius: 12px; background: var(--secondary-gradient); color: var(--primary); font-weight: 800; font-size: 0.8rem; cursor: pointer; }

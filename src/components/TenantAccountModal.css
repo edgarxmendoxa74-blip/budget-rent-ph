@@ -103,6 +103,41 @@
 .tacct-list small { display: block; font-size: 0.68rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.03em; }
 .tacct-list strong { display: block; font-size: 0.92rem; color: #1e293b; overflow-wrap: anywhere; }
 
+.tacct-list a { color: var(--primary, #003b7a); font-weight: 800; text-decoration: underline; }
+
+.tacct-edit {
+  width: 100%;
+  margin-top: 14px;
+  padding: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: none;
+  border-radius: 14px;
+  background: var(--secondary-gradient, linear-gradient(135deg, #ffd34d, #f59e0b));
+  color: var(--primary, #003b7a);
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+.tacct-edit:disabled { background: #eef2f7; color: #64748b; cursor: not-allowed; filter: none; }
+
+.tacct-success { margin: 12px 0 0; padding: 10px 12px; border-radius: 12px; background: #ecfdf5; color: #047857; font-size: 0.82rem; font-weight: 700; text-align: center; }
+.tacct-error { margin: 0; padding: 10px 12px; border-radius: 12px; background: #fef2f2; color: #b91c1c; font-size: 0.82rem; font-weight: 700; }
+
+.tacct-form { display: flex; flex-direction: column; gap: 12px; }
+.tacct-form label { display: flex; flex-direction: column; gap: 6px; }
+.tacct-form label span { font-size: 0.74rem; font-weight: 600; color: #64748b; }
+.tacct-form label em { font-style: normal; font-weight: 500; color: #94a3b8; }
+.tacct-form input, .tacct-form select { width: 100%; }
+.tacct-warn { display: flex; gap: 6px; align-items: flex-start; margin: 2px 2px 0; font-size: 0.76rem; line-height: 1.45; color: #92400e; background: #fffbeb; border-radius: 12px; padding: 10px 12px; }
+.tacct-warn svg { flex: none; margin-top: 2px; }
+.tacct-actions { display: flex; gap: 10px; }
+.tacct-actions button { flex: 1; padding: 12px; border: none; border-radius: 14px; font: inherit; font-weight: 800; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; }
+.tacct-cancel { background: #eef2f7; color: #334155; }
+.tacct-save { background: var(--primary-gradient, #003b7a); color: #fff; }
+
 .tacct-note { margin: 14px 2px 0; font-size: 0.74rem; line-height: 1.5; color: #64748b; text-align: center; }
 
 .tacct-logout {
@@ -121,3 +156,35 @@
   font-weight: 800;
   cursor: pointer;
 }
+
+/* "Tap to get verified" card */
+.tacct-gv {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  width: 100%;
+  padding: 14px;
+  margin-bottom: 12px;
+  border: 1.5px solid rgba(124, 58, 237, 0.35);
+  border-radius: 16px;
+  background: #f5f0ff;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.tacct-gv:hover { background: #ede4ff; }
+.tacct-gv-icon, .tacct-gv-check {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: #7c3aed;
+  color: #fff;
+}
+.tacct-gv-icon { width: 42px; height: 42px; }
+.tacct-gv-check { width: 26px; height: 26px; align-self: center; }
+.tacct-gv-text { flex: 1; display: flex; flex-direction: column; gap: 3px; }
+.tacct-gv-text strong { font-size: 0.95rem; color: #6d28d9; }
+.tacct-gv-text span { font-size: 0.78rem; line-height: 1.4; color: #5b21b6; }
+.tacct-verified-until { display: block; margin-top: 4px; font-size: 0.72rem; font-weight: 600; opacity: 0.85; }
