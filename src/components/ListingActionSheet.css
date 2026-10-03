@@ -366,3 +366,40 @@ label.act-check.agree { display: flex; align-items: flex-start; font-size: 0.78r
 .act-success { text-align: center; padding: 8px 0 4px; }
 .act-success h4 { margin: 8px 0 6px; color: var(--primary-dark); font-size: 1.05rem; }
 .act-success p { margin: 4px 0; font-size: 0.82rem; color: var(--text-muted); line-height: 1.5; }
+
+/* Mobile: kasya ang buong modal sa screen, walang horizontal overflow */
+.act-sheet { max-height: 92vh; max-height: 92dvh; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; box-sizing: border-box; overflow-x: hidden; }
+.act-form > *, .act-form label { min-width: 0; }
+.act-form input, .act-form select, .act-extra input { width: 100%; min-width: 0; box-sizing: border-box; }
+
+@media (max-width: 559px) {
+  .act-sheet { padding: 14px 14px calc(16px + env(safe-area-inset-bottom)); max-height: 94vh; max-height: 94dvh; }
+  .act-close { top: 10px; right: 10px; }
+  .act-head { margin-bottom: 8px; gap: 10px; }
+  .act-badge { width: 36px; height: 36px; border-radius: 12px; }
+  .act-head h3 { font-size: 1.05rem; }
+  .act-head p { font-size: 0.8rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 60vw; }
+  .act-summary { padding: 8px; gap: 10px; margin-bottom: 10px; }
+  .act-summary img { width: 48px; height: 48px; border-radius: 10px; }
+  .act-form { gap: 8px; margin-bottom: 10px; }
+  .act-form input, .act-form select, .act-extra input { padding: 8px 10px; font-size: 16px; border-radius: 10px; }
+  .act-option { padding: 11px 12px; }
+}
+
+/* Directions + Book Here: magkatabi, pantay ang laki */
+.peek-actions { flex-wrap: nowrap; align-items: stretch; gap: 6px; }
+.peek-actions .peek-directions,
+.peek-actions .peek-action { flex: 1 1 0; min-width: 0; justify-content: center; align-self: stretch; margin-top: 0; padding: 7px 8px; white-space: nowrap; }
+
+/* Mas maliit na modal */
+.act-sheet { max-width: 420px; }
+@media (max-width: 559px) {
+  .act-sheet { max-height: 80vh; max-height: 80dvh; padding: 12px 12px calc(12px + env(safe-area-inset-bottom)); border-radius: 20px 20px 0 0; }
+  .act-head { margin-bottom: 6px; }
+  .act-summary { display: none; }
+  .act-form { gap: 6px; margin-bottom: 8px; }
+  .act-form label { font-size: 0.7rem; gap: 2px; }
+  .act-form input, .act-form select, .act-extra input { padding: 7px 10px; }
+  .act-option { padding: 9px 12px; font-size: 0.88rem; }
+  .act-note, .act-hint { font-size: 0.7rem; margin: 6px 0 0; }
+}

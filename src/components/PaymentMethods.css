@@ -1,0 +1,19 @@
+.pm-container { padding: 24px var(--container-padding) 120px; max-width: 520px; margin: 0 auto; width: 100%; }
+.pm-title { display: flex; align-items: center; gap: 8px; margin: 0 0 6px; color: var(--primary-dark); font-size: 1.3rem; font-weight: 800; }
+.pm-sub { margin: 0 0 16px; color: var(--text-muted); font-size: 0.85rem; line-height: 1.5; }
+.pm-card { display: flex; flex-direction: column; gap: 10px; padding: 16px; border-radius: 20px; background: #fff; border: 1px solid var(--border-subtle); box-shadow: 0 6px 22px rgba(0, 38, 82, 0.06); }
+.pm-card label { display: flex; flex-direction: column; gap: 4px; font-size: 0.75rem; font-weight: 700; color: var(--primary-dark); }
+.pm-card input, .pm-card select { width: 100%; box-sizing: border-box; padding: 10px 12px; border-radius: 12px; border: 1.5px solid #cfdcee; font-size: 16px; font-family: inherit; background: #fff; color: var(--primary-dark); }
+.pm-add { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 12px; border: none; border-radius: 14px; background: var(--primary-gradient); color: #fff; font-weight: 800; font-family: inherit; cursor: pointer; }
+.pm-add:disabled { opacity: 0.6; }
+.pm-error { margin: 0; display: flex; gap: 6px; align-items: center; color: #dc2626; font-size: 0.78rem; font-weight: 700; }
+.pm-list-title { margin: 20px 0 8px; color: var(--primary-dark); font-size: 1rem; }
+.pm-empty { color: var(--text-muted); font-size: 0.85rem; }
+.pm-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.pm-list li { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 12px 14px; border-radius: 16px; background: #f8fbff; border: 1.5px solid #dbe6f5; }
+.pm-list li div { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.pm-list strong { color: var(--primary); font-size: 0.95rem; }
+.pm-list span { color: var(--text-muted); font-size: 0.8rem; }
+.pm-list b { color: var(--primary-dark); font-size: 1rem; letter-spacing: 0.02em; word-break: break-all; }
+.pm-list em { font-style: normal; color: #92400e; font-size: 0.72rem; }
+.pm-list li button { flex-shrink: 0; width: 34px; height: 34px; border: none; border-radius: 50%; background: #fee2e2; color: #b91c1c; display: flex; align-items: center; justify-content: center; cursor: pointer; }

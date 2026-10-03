@@ -73,3 +73,13 @@
 .bchat-confirm-actions .keep { background: #eef2f7; color: #334155; }
 .bchat-confirm-actions .go.cancelled { background: #dc2626; color: #fff; }
 .bchat-confirm-actions .go.successful { background: #16a34a; color: #fff; }
+
+/* Show payment method (tenant) */
+.bchat-form .bchat-pay-btn { width: auto; height: 44px; padding: 0 12px; border-radius: 999px; gap: 5px; background: #e8f0fb; color: var(--primary); font-family: inherit; font-weight: 800; font-size: 0.78rem; white-space: nowrap; }
+.bchat-pay-list { list-style: none; margin: 0 0 14px; padding: 0; display: flex; flex-direction: column; gap: 8px; max-height: 50vh; overflow-y: auto; text-align: left; }
+.bchat-pay-list li { display: flex; flex-direction: column; gap: 1px; padding: 10px 12px; border-radius: 14px; background: #f8fbff; border: 1.5px solid #dbe6f5; }
+.bchat-pay-list strong { color: var(--primary); }
+.bchat-pay-list span { color: var(--text-muted); font-size: 0.8rem; }
+.bchat-pay-list b { color: var(--primary-dark); font-size: 1.05rem; word-break: break-all; }
+.bchat-pay-list em { font-style: normal; color: #92400e; font-size: 0.72rem; }
+.bchat-pay-list button { align-self: flex-start; margin-top: 6px; display: inline-flex; align-items: center; gap: 4px; padding: 5px 10px; border: none; border-radius: 999px; background: var(--primary); color: #fff; font-family: inherit; font-size: 0.72rem; font-weight: 800; cursor: pointer; }

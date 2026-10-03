@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef, Suspense, lazy } from 'react';
 import { HeroBudi } from './components/MascotSplash';
-import { Search, MapPin, Bed, Bath, Wifi, Shield, Star, Menu, X, Heart, MessageCircle, Phone, LogOut, Building2, User, Users, Loader2, ClipboardList, Mail, BadgeCheck, Headset, ArrowLeft, Home, Navigation, Globe, Trash2, ChevronLeft, ChevronRight, Bell, FileText, HousePlus, LocateFixed, PawPrint, ScrollText, FileSignature, Info, House, TreePalm, Plus, Lightbulb, Megaphone, CalendarCheck, Inbox, BarChart3 } from 'lucide-react';
+import { Search, MapPin, Bed, Bath, Wifi, Shield, Star, Menu, X, Heart, MessageCircle, Phone, LogOut, Building2, User, Users, Loader2, ClipboardList, Mail, BadgeCheck, Headset, ArrowLeft, Home, Navigation, Globe, Trash2, ChevronLeft, ChevronRight, Bell, FileText, HousePlus, LocateFixed, PawPrint, ScrollText, FileSignature, Info, House, TreePalm, Plus, Lightbulb, Megaphone, CalendarCheck, Inbox, BarChart3, Wallet } from 'lucide-react';
 import { clearSupabaseSessionStorage, recoverFromJwtError, supabase, validateCurrentSession } from './lib/supabase';
 import { isAdminEmail, isAdminPath } from './lib/admin';
 import { playNotifySound, unlockNotifySound } from './lib/notifySound';
@@ -27,6 +27,7 @@ const EditListings = lazy(() => import('./components/EditListings'));
 const VerificationPage = lazy(() => import('./components/VerificationPage'));
 const CustomerSupportPage = lazy(() => import('./components/CustomerSupportPage'));
 const BookingsPage = lazy(() => import('./components/BookingsPage'));
+const PaymentMethods = lazy(() => import('./components/PaymentMethods'));
 const InboxPage = lazy(() => import('./components/InboxPage'));
 const WelcomeModal = lazy(() => import('./components/WelcomeModal'));
 const TenantAccountModal = lazy(() => import('./components/TenantAccountModal'));
@@ -983,6 +984,9 @@ function App() {
                   <button className={`menu-link${activeTab === 'agreement' ? ' active' : ''}`} onClick={() => { setIsMenuOpen(false); setActiveTab('agreement'); }}>
                     <div className="icon-container-mini secondary-icon"><FileSignature size={18} /></div> Create Agreement Draft
                   </button>
+                  <button className={`menu-link${activeTab === 'payments' ? ' active' : ''}`} onClick={() => { setIsMenuOpen(false); setActiveTab('payments'); }}>
+                    <div className="icon-container-mini"><Wallet size={18} /></div> Payment Methods
+                  </button>
                   <button className="menu-link" onClick={() => { setIsMenuOpen(false); setIsProfileEditing(true); setIsProfileModalOpen(true); }}>
                     <div className="icon-container-mini"><User size={18} /></div> Contact & Profile
                   </button>
@@ -1524,6 +1528,12 @@ function App() {
       {activeTab === 'agreement' && (
         <Suspense fallback={<div className="text-center py-10"><Loader2 className="animate-spin text-primary mx-auto" size={40} /></div>}>
           <AgreementDraft session={session} />
+        </Suspense>
+      )}
+
+      {activeTab === 'payments' && !isGuest && (
+        <Suspense fallback={<div className="text-center py-10"><Loader2 className="animate-spin text-primary mx-auto" size={40} /></div>}>
+          <PaymentMethods session={session} />
         </Suspense>
       )}
 

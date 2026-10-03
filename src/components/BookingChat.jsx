@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Send, Loader2, Trash2, CheckCircle2, XCircle } from 'lucide-react';
+import { X, Send, Loader2, Trash2, CheckCircle2, XCircle, Wallet, Copy } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { profileFromUser } from '../lib/chatProfiles';
 import { ChatAvatar, ProfileSheet } from './ChatProfile';
@@ -62,6 +62,22 @@ const BookingChat = ({ bookingId, title, role, token, other, meName, onClose, on
     }
     setBooking((prev) => ({ ...(prev || {}), ...data }));
     onReadRef.current?.();
+  };
+
+  // Payment methods ng landlord (tenant lang ang may button)
+  const [payOpen, setPayOpen] = useState(false);
+  const [payLoading, setPayLoading] = useState(false);
+  const [payMethods, setPayMethods] = useState(null);
+  const [copiedId, setCopiedId] = useState(null);
+  const showPayments = async () => {
+    setPayOpen(true);
+    setPayLoading(true);
+    const { data } = await supabase.rpc('get_booking_payment_methods', { p_booking_id: bookingId, p_token: direct ? null : token });
+    setPayMethods(data || []);
+    setPayLoading(false);
+  };
+  const copyNumber = async (m) => {
+    try { await navigator.clipboard.writeText(m.account_number); setCopiedId(m.id); setTimeout(() => setCopiedId(null), 1500); } catch { /* ignore */ }
   };
 
   const load = useCallback(async () => {
@@ -208,6 +224,11 @@ const BookingChat = ({ bookingId, title, role, token, other, meName, onClose, on
           <button type="submit" disabled={sending || limitReached || !text.trim()} aria-label="Send">
             {sending ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
           </button>
+          {role !== 'owner' && (
+            <button type="button" className="bchat-pay-btn" onClick={showPayments} aria-label="Show payment method" title="Show payment method">
+              <Wallet size={16} /> <span>Payment</span>
+            </button>
+          )}
         </form>
         <p className="bchat-note">Never share passwords or bank details. This chat updates automatically.</p>
       </div>
@@ -227,6 +248,30 @@ const BookingChat = ({ bookingId, title, role, token, other, meName, onClose, on
                 {outcomeBusy ? <Loader2 size={15} className="animate-spin" /> : null} {confirmOutcome === 'cancelled' ? 'Yes, cancel it' : 'Yes, confirm'}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+      {payOpen && (
+        <div className="bchat-confirm-overlay" onClick={() => setPayOpen(false)}>
+          <div className="bchat-confirm bchat-pay animate-slide-up" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
+            <span className="bchat-confirm-icon successful"><Wallet size={26} /></span>
+            <h3>Payment method</h3>
+            {payLoading ? <Loader2 size={20} className="animate-spin" /> : !payMethods?.length ? (
+              <p>The landlord hasn&apos;t added a payment method yet. Please ask them in the chat.</p>
+            ) : (
+              <ul className="bchat-pay-list">
+                {payMethods.map((m) => (
+                  <li key={m.id}>
+                    <strong>{m.provider}</strong>
+                    <span>{m.account_name}</span>
+                    <b>{m.account_number}</b>
+                    {m.notes && <em>{m.notes}</em>}
+                    <button type="button" onClick={() => copyNumber(m)}><Copy size={13} /> {copiedId === m.id ? 'Copied!' : 'Copy number'}</button>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <div className="bchat-confirm-actions"><button type="button" className="keep" onClick={() => setPayOpen(false)}>Close</button></div>
           </div>
         </div>
       )}

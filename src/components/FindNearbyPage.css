@@ -1394,3 +1394,9 @@
 .house-marker.occupied .hm-icon { color: #7c3aed; }
 .house-marker.occupied.selected { background: #7c3aed; border-color: #7c3aed; color: #fff; }
 .house-marker.occupied.selected .hm-icon { color: #fff; }
+
+/* Mas maliit na km at Occupied badges */
+.near-distance { left: 8px; top: 8px; gap: 3px; padding: 2px 7px; font-size: 0.58rem; border-width: 1px; box-shadow: 0 2px 6px rgba(245, 158, 11, 0.4); }
+.near-distance svg { width: 9px; height: 9px; }
+.occupied-badge { font-size: 0.55rem; padding: 1px 6px; letter-spacing: 0.02em; }
+.occupied-badge.on-image { top: 8px; right: 8px; }
