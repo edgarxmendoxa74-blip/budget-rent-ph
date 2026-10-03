@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { PAYMENT_METHODS, PAYMENT_PAGE_ID } from '../lib/paymentMethods';
+import { PAYMENT_METHODS, PAYMENT_PAGE_ID, fetchPaymentMethods } from '../lib/paymentMethods';
 import { fetchPlans } from '../lib/plans';
 import { Lock, Upload, Loader2, CheckCircle2, LogOut, RefreshCw, X as XIcon } from 'lucide-react';
 
@@ -10,6 +10,8 @@ const labelStyle = { display: 'block', fontSize: '0.68rem', fontWeight: 800, col
 const SubscriptionLock = ({ session, expiry, onLogout, onRefresh }) => {
   const meta = session?.user?.user_metadata || {};
   const [plans, setPlans] = useState([]);
+  const [payMethods, setPayMethods] = useState(PAYMENT_METHODS); // galing sa super admin (app_settings)
+  useEffect(() => { fetchPaymentMethods().then(setPayMethods); }, []);
   const [plan, setPlan] = useState('yearly');
   useEffect(() => { fetchPlans().then(setPlans); }, []);
   const [form, setForm] = useState({ fullName: meta.full_name || '', phone: meta.phone || '', reference: '' });
@@ -114,7 +116,7 @@ Proof of Payment (file): ${path}`;
             <div>
               <label style={labelStyle}>Payment Method — Amount: ₱{selectedPlan?.price}</label>
               <div style={{ display: 'grid', gap: '8px' }}>
-                {PAYMENT_METHODS.map(pay => (
+                {payMethods.map(pay => (
                   <div key={pay.method} onClick={() => setMethod(pay.method)} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 10px', borderRadius: '14px', cursor: 'pointer', border: `2px solid ${method === pay.method ? pay.color : '#f0f0f0'}`, background: '#fafbfc' }}>
                     {pay.qr ? (
                       <img src={pay.qr} alt="QR" onClick={(e) => { e.stopPropagation(); setQr(pay); }} style={{ width: 56, height: 56, borderRadius: 8, background: 'white', padding: 2, border: '1px solid #eee' }} />

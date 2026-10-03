@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { supabase } from '../lib/supabase';
 import { ShieldCheck, CheckCircle2, ArrowLeft, Loader2, Zap, AlertCircle, X as XIcon } from 'lucide-react';
 import { HeroBudi } from './MascotSplash';
-import { PAYMENT_METHODS } from '../lib/paymentMethods';
+import { PAYMENT_METHODS, fetchPaymentMethods } from '../lib/paymentMethods';
 import { fetchPlans } from '../lib/plans';
 import { PRO_PLAN, TENANT_PLAN } from '../lib/listingPlan';
 
@@ -21,6 +21,8 @@ const VerificationPage = ({ onDone, session, mode = 'verify' }) => {
   const initialPhone = /^639\d{9}$/.test(meta.phone || '') ? `0${String(meta.phone).slice(2)}` : (meta.phone || '');
   const [formData, setFormData] = useState({ fullName: meta.full_name || '', phone: initialPhone, paidOn: today, reference: '' });
   const [plans, setPlans] = useState([]);
+  const [payMethods, setPayMethods] = useState(PAYMENT_METHODS); // galing sa super admin (app_settings)
+  useEffect(() => { fetchPaymentMethods().then(setPayMethods); }, []);
   const [planId, setPlanId] = useState(isListings ? PRO_PLAN.id : isTenant ? TENANT_PLAN.id : 'yearly');
   const [error, setError] = useState('');
   const [agreed, setAgreed] = useState(false);
@@ -163,7 +165,7 @@ const VerificationPage = ({ onDone, session, mode = 'verify' }) => {
 
               <div className="input-group" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
                 <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '800', color: '#64748b', marginBottom: '8px', marginLeft: '4px' }}>AMOUNT TO PAY: ₱{plan?.price ?? '—'}</label>
-                <button type="button" onClick={() => setShowPaymentModal(true)} style={{ marginTop: '10px', padding: '12px', borderRadius: '14px', fontWeight: 800, background: 'white', color: '#003366', border: '2px solid #003366', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                <button type="button" onClick={() => { fetchPaymentMethods().then(setPayMethods); setShowPaymentModal(true); }} style={{ marginTop: '10px', padding: '12px', borderRadius: '14px', fontWeight: 800, background: 'white', color: '#003366', border: '2px solid #003366', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
                   <Zap size={18} fill="#003366" color="#003366" /> Show where to pay
                 </button>
               </div>
@@ -291,7 +293,7 @@ const VerificationPage = ({ onDone, session, mode = 'verify' }) => {
             </div>
             
             <div style={{ display: 'grid', gap: '8px' }}>
-              {PAYMENT_METHODS.map((pay, pIdx) => (
+              {payMethods.map((pay, pIdx) => (
                 <div key={pIdx} style={{ 
                   background: '#fafbfc', 
                   padding: '10px 14px', 

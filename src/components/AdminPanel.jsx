@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { updateThumbnail } from '../lib/updates';
 import { fetchPlans } from '../lib/plans';
+import { PAYMENT_SETTINGS_KEY } from '../lib/paymentMethods';
 import { PRO_PLAN, TENANT_PLAN } from '../lib/listingPlan';
 import { downloadCsv, fmtDate } from '../lib/csv';
 import './AdminPanel.css';
@@ -19,7 +20,7 @@ const PAYMENT_METHODS_KEY = 'budgetrent_payment_methods';
 const DEFAULT_PAYMENT_METHODS = [
   { id: 1, method: 'GCash', accountName: 'EDGAR M.', accountNumber: '09171234567', qrUrl: '' },
   { id: 2, method: 'Maya', accountName: 'EDGAR M.', accountNumber: '09171234567', qrUrl: '' },
-  { id: 3, method: 'ShopeePay', accountName: 'EDGAR M.', accountNumber: '09171234567', qrUrl: '' }
+  { id: 3, method: 'Bank', accountName: 'EDGAR M.', accountNumber: '1234-5678-90', qrUrl: '' }
 ];
 
 const getHiddenPropertyIds = () => {
@@ -90,6 +91,17 @@ const tenantAge = (iso) => {
 const AdminPanel = ({ onLogout }) => {
   const [activeTab, setActiveTab] = useState('analytics'); 
   const [paymentMethods, setPaymentMethods] = useState(getStoredPaymentMethods);
+  // Ang database (app_settings) ang totoong source; ang localStorage ay panimulang laman lang
+  useEffect(() => {
+    let alive = true;
+    supabase.from('app_settings').select('value').eq('key', PAYMENT_SETTINGS_KEY).maybeSingle()
+      .then(({ data }) => {
+        if (alive && Array.isArray(data?.value) && data.value.length) {
+          setPaymentMethods(data.value.map((m, i) => ({ id: m.id ?? i + 1, ...m })));
+        }
+      });
+    return () => { alive = false; };
+  }, []);
   const [plans, setPlans] = useState([]);
   const [renewSuccess, setRenewSuccess] = useState(null);
   const [planOwner, setPlanOwner] = useState(null);
@@ -117,6 +129,7 @@ const AdminPanel = ({ onLogout }) => {
   const [, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [paymentSaved, setPaymentSaved] = useState(false); // "Successful!" pagkatapos ma-save ang payment details
   const [receiptModal, setReceiptModal] = useState(null); // request na ipinapakita ang resibo sa modal
   const [proofInput, setProofInput] = useState('');
   const [payProofs, setPayProofs] = useState({}); // request id -> signed link ng screenshot (o '' kung hindi makita)
@@ -665,19 +678,31 @@ const AdminPanel = ({ onLogout }) => {
     )));
   };
 
+  // Sa database (app_settings) sine-save para makita ng lahat ng user sa "Show where to pay"
+  const persistPaymentMethods = async (list) => {
+    const { error } = await supabase.from('app_settings').upsert({ key: PAYMENT_SETTINGS_KEY, value: list, updated_at: new Date().toISOString() });
+    if (error) { alert('Error: ' + error.message + '\n(Did you run add_app_settings.sql?)'); return false; }
+    localStorage.setItem(PAYMENT_METHODS_KEY, JSON.stringify(list));
+    setPaymentSaved(true);
+    setTimeout(() => setPaymentSaved(false), 2200);
+    return true;
+  };
+
+  // Awtomatikong nase-save pagka-upload ng QR, para hindi na kailangang pindutin ang Update
   const handlePaymentQrUpload = (idx, file) => {
     if (!file) return;
+    if (!file.type.startsWith('image/')) return alert('Image file lang po (JPG, PNG, WebP).');
+    if (file.size > 1024 * 1024) return alert('Masyadong malaki ang QR image (max 1MB).');
     const reader = new FileReader();
     reader.onload = () => {
-      handlePaymentMethodChange(idx, 'qrUrl', reader.result);
+      const next = paymentMethods.map((pm, pmIdx) => (pmIdx === idx ? { ...pm, qrUrl: reader.result } : pm));
+      setPaymentMethods(next);
+      persistPaymentMethods(next);
     };
     reader.readAsDataURL(file);
   };
 
-  const handleSavePaymentDetails = () => {
-    localStorage.setItem(PAYMENT_METHODS_KEY, JSON.stringify(paymentMethods));
-    alert('Payment details updated successfully.');
-  };
+  const handleSavePaymentDetails = () => persistPaymentMethods(paymentMethods);
 
   const viewLandlordListings = (landlordEmail) => {
     const listings = allProperties.filter(p => p.email === landlordEmail);
@@ -1276,6 +1301,16 @@ const AdminPanel = ({ onLogout }) => {
             <div className="success-icon"><Check size={36} color="#16a34a" /></div>
             <h3>Successful!</h3>
             <p>{renewSuccess.label} subscription activated for <strong>{renewSuccess.email}</strong> until {renewSuccess.expiry}. Moved to Managed Plans.</p>
+          </div>
+        </div>
+      )}
+
+      {paymentSaved && (
+        <div className="modal-overlay admin-dialog-overlay" onClick={() => setPaymentSaved(false)}>
+          <div className="modal-content admin-dialog admin-dialog-success animate-slide-up" onClick={e => e.stopPropagation()} role="status">
+            <div className="success-icon"><Check size={36} color="#16a34a" /></div>
+            <h3>Successful!</h3>
+            <p>Payment details updated.</p>
           </div>
         </div>
       )}
