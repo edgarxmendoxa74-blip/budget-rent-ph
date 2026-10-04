@@ -1022,15 +1022,6 @@ function App() {
                   <button className={`menu-link${activeTab === 'explore' ? ' active' : ''}`} onClick={() => { setIsMenuOpen(false); setActiveTab('explore'); }}>
                     <div className="icon-container-mini"><Navigation size={18} /></div> Nearby Map
                   </button>
-                  <button
-                    className="menu-link"
-                    onClick={() => { if (userLoc.status !== 'granted') { setIsMenuOpen(false); (locNeedsFix ? userLoc.openSettings : userLoc.request)(); } }}
-                  >
-                    <div className="icon-container-mini"><MapPin size={18} /></div> Location Settings
-                    <span className={`menu-loc-status${userLoc.status === 'granted' ? ' on' : ''}`}>
-                      {userLoc.status === 'granted' ? 'On' : userLoc.status === 'loading' ? '...' : userLoc.status === 'denied' ? 'Blocked' : 'Off'}
-                    </span>
-                  </button>
                   <button className={`menu-link${activeTab === 'inbox' ? ' active' : ''}`} onClick={() => { setIsMenuOpen(false); setActiveTab('inbox'); }}>
                     <div className="icon-container-mini secondary-icon"><Inbox size={18} /></div> Inbox{guestUnreadTotal > 0 ? ` (${guestUnreadTotal})` : ''}
                   </button>
@@ -1099,7 +1090,17 @@ function App() {
       
       {activeTab === 'home' && (
         <>
-          <header className={`hero ${activeTab === 'saved' ? 'saved-hero' : ''}`}>
+          <header className={`hero ${activeTab === 'saved' ? 'saved-hero' : ''}`} style={{ position: 'relative' }}>
+            {isGuest && (
+              <button
+                type="button"
+                className={`hero-loc-btn ${userLoc.status === 'granted' ? 'on' : 'off'}`}
+                onClick={userLoc.status === 'granted' ? undefined : (locNeedsFix ? userLoc.openSettings : userLoc.request)}
+                aria-label={userLoc.status === 'granted' ? 'Location is on' : 'Open location settings'}
+              >
+                <MapPin size={14} /> {userLoc.status === 'granted' ? 'Location on' : 'Location off'}
+              </button>
+            )}
             <HeroBudi message="Hello! 👋 I'm Budi. Find a rental or staycation that fits your budget here." />
             <div className="hero-content">
               <h2>Welcome to <span>BudgetRentPH</span></h2>
