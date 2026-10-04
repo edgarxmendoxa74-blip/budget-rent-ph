@@ -91,7 +91,7 @@ Deno.serve(async (req) => {
           message: {
             token,
             notification: { title: msg.title, body: msg.body },
-            android: { priority: 'HIGH', notification: { channel_id: CHANNEL_ID, sound: 'default' } },
+            android: { priority: 'HIGH', notification: { channel_id: CHANNEL_ID, sound: 'default', icon: 'ic_stat_notify', color: '#0B3F82' } },
           },
         }),
       });
