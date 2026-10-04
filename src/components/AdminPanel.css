@@ -17,7 +17,7 @@
   min-height: 100vh;
   background-color: var(--admin-bg);
   font-family: var(--font-main);
-  overflow-x: hidden;
+  overflow-x: clip; /* clip (hindi hidden) para gumana ang sticky sidebar */
 }
 
 .animate-fade-in {
@@ -47,6 +47,9 @@
   position: sticky;
   top: 0;
   height: 100vh;
+  height: 100dvh;
+  overflow-y: auto;
+  flex-shrink: 0;
   display: flex;
   flex-direction: column;
   z-index: 100;
@@ -728,38 +731,38 @@
 }
 
 /* ----- Notifications / announcements ----- */
-.ann-wrap { display: flex; flex-direction: column; gap: 20px; }
+.ann-wrap { display: flex; flex-direction: column; gap: 14px; }
 .ann-form {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  padding: 18px;
+  gap: 5px;
+  padding: 12px 14px;
   background: #fff;
   border: 1px solid var(--border-subtle, #e2e8f0);
   border-radius: 16px;
 }
-.ann-form h4 { margin: 0; font-size: 1rem; color: var(--primary); }
-.ann-hint { margin: 0; font-size: 0.8rem; color: var(--text-muted); }
+.ann-form h4 { margin: 0; font-size: 0.88rem; color: var(--primary); }
+.ann-hint { margin: 0; font-size: 0.7rem; color: var(--text-muted); }
 .ann-form input,
 .ann-form textarea {
   width: 100%;
   box-sizing: border-box;
-  padding: 11px 13px;
+  padding: 7px 10px;
   border: 1.5px solid var(--border, #e2e8f0);
-  border-radius: 12px;
+  border-radius: 9px;
   font: inherit;
-  font-size: 0.9rem;
+  font-size: 0.78rem;
 }
 .ann-actions { display: flex; gap: 10px; }
 .ann-send, .ann-cancel {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
-  padding: 10px 18px;
+  gap: 5px;
+  padding: 7px 14px;
   border-radius: 100px;
   border: none;
   font-weight: 800;
-  font-size: 0.85rem;
+  font-size: 0.75rem;
   cursor: pointer;
 }
 .ann-send { background: var(--primary); color: #fff; }
@@ -769,21 +772,21 @@
   display: flex;
   justify-content: space-between;
   gap: 12px;
-  padding: 14px 16px;
+  padding: 10px 14px;
   border-bottom: 1px solid var(--border-subtle, #e2e8f0);
 }
 .ann-row-text { min-width: 0; }
 .ann-row-text strong { display: block; color: var(--primary); }
-.ann-row-text p { margin: 4px 0; font-size: 0.85rem; overflow-wrap: anywhere; }
+.ann-row-text p { margin: 2px 0; font-size: 0.76rem; overflow-wrap: anywhere; }
 .ann-row-text small { color: var(--text-muted); }
 .ann-row-btns { display: flex; gap: 8px; align-items: flex-start; flex-shrink: 0; }
 .ann-row-btns button {
-  width: 34px;
-  height: 34px;
+  width: 28px;
+  height: 28px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 10px;
+  border-radius: 8px;
   border: 1px solid var(--border, #e2e8f0);
   background: #fff;
   color: var(--primary);
@@ -876,3 +879,115 @@
 .manage-btn.pay-delete, .manage-btn.pay-delete:hover { background: #dc2626; border-color: #dc2626; color: #fff; }
 .manage-btn.pay-delete:hover { background: #b91c1c; border-color: #b91c1c; }
 .pay-receipt-date { display: block; margin-top: 8px; font-size: 0.72rem; color: #64748b; }
+
+/* Announcement dashboard: mas maliit na text at icons */
+.ann-row-text strong { font-size: 0.85rem; }
+.ann-row-text small { font-size: 0.68rem; }
+.ann-send svg, .ann-cancel svg { width: 13px; height: 13px; }
+.ann-row-btns { gap: 6px; }
+.ann-row-btns button svg { width: 13px; height: 13px; }
+
+/* Announcement/Updates form: bawat field ay naka-box */
+.ann-form input,
+.ann-form textarea {
+  background: #fff;
+  border: 1.5px solid #94a3b8;
+  border-radius: 8px;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.ann-form input:focus,
+.ann-form textarea:focus {
+  border-color: var(--admin-navy);
+  box-shadow: 0 0 0 3px rgba(0, 59, 122, 0.12);
+}
+.ann-form textarea { resize: vertical; }
+
+/* ===== SUPERADMIN: compact na text, icons at form fields ===== */
+.admin-sidebar { width: 220px; padding: 18px 10px; }
+.admin-logo { margin-bottom: 20px; }
+.admin-logo-img { height: 32px; }
+.sidebar-group { margin-bottom: 14px; }
+.sidebar-group label { font-size: 0.6rem; margin-bottom: 4px; }
+.sidebar-group button { padding: 7px 10px; font-size: 0.76rem; border-radius: 9px; gap: 8px; }
+.sidebar-group button svg, .sidebar-footer svg { width: 15px; height: 15px; }
+.sidebar-footer button { padding: 8px 10px; font-size: 0.76rem; }
+
+.admin-main { padding: 16px 20px; }
+.admin-header h2 { font-size: 1.1rem; }
+.admin-header-sub { font-size: 0.68rem; }
+.admin-header svg, .search-bar svg, .admin-toolbar svg { width: 15px; height: 15px; }
+.search-bar { padding: 6px 10px; }
+.search-bar input { font-size: 0.76rem; }
+
+.stat-card { padding: 10px 12px; }
+.stat-card label { font-size: 0.62rem; }
+.stat-card h3 { font-size: 1.15rem; }
+.stat-card small { font-size: 0.6rem; }
+.stat-card svg, .analytics-panel svg { width: 14px; height: 14px; }
+.analytics-panel h4 { font-size: 0.76rem; }
+
+.admin-list-head { min-height: 28px; font-size: 0.58rem; }
+.admin-list-row { min-height: 42px; font-size: 0.74rem; padding-top: 4px; padding-bottom: 4px; }
+.admin-list-row svg { width: 14px; height: 14px; }
+.row-avatar { width: 26px; height: 26px; font-size: 0.68rem; border-radius: 8px; }
+.row-user-info strong { font-size: 0.76rem; }
+.row-user-info small { font-size: 0.64rem; }
+.row-date { font-size: 0.68rem; }
+.status-pill { font-size: 0.6rem; padding: 2px 8px; }
+.status-badge { font-size: 0.56rem; padding: 2px 8px; }
+.slot-badge { font-size: 0.56rem; }
+.admin-empty { padding: 18px; font-size: 0.76rem; }
+
+.admin-dashboard-root button:not(.ann-row-btns button) { font-size: 0.74rem; }
+.admin-dashboard-root input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+.admin-dashboard-root select,
+.admin-dashboard-root textarea {
+  padding: 6px 9px;
+  font-size: 0.76rem;
+  border-radius: 8px;
+}
+.slot-row input[type="text"] { padding: 5px 8px; font-size: 0.74rem; border-radius: 8px; }
+.listing-filter button { padding: 5px 12px; font-size: 0.7rem; }
+.listing-cat > summary { padding: 10px 14px; font-size: 0.8rem; }
+
+.admin-modal-head h3 { font-size: 0.92rem; }
+.admin-dialog-email { font-size: 0.72rem; }
+.admin-dialog-total { padding: 8px 12px; font-size: 0.76rem; }
+.admin-dialog-list li { font-size: 0.78rem; padding: 7px 10px; }
+.admin-dialog-empty, .admin-dialog-success p { font-size: 0.76rem; }
+
+/* Notifications at Updates form: kahon (box) ang bawat field */
+.ann-form {
+  gap: 10px;
+  padding: 14px;
+  border: 2px solid #cbd5e1;
+  border-radius: 6px;
+}
+.ann-form input:not([type="file"]),
+.ann-form textarea {
+  display: block;
+  width: 100%;
+  min-height: 38px;
+  padding: 8px 10px;
+  background: #fff;
+  border: 2px solid #64748b;
+  border-radius: 4px;
+  box-shadow: none;
+  font-size: 0.78rem;
+}
+.ann-form textarea { min-height: 76px; }
+.ann-form input:not([type="file"]):focus,
+.ann-form textarea:focus {
+  border-color: var(--admin-navy);
+  box-shadow: 0 0 0 3px rgba(0, 59, 122, 0.15);
+}
+.ann-form input::placeholder,
+.ann-form textarea::placeholder { color: #94a3b8; }
+.ann-send, .ann-cancel { border-radius: 4px; }
+.ann-row { border: 2px solid #e2e8f0; border-radius: 6px; margin: 8px; padding: 10px 12px; }
+.ann-row-btns button { border-radius: 4px; border-width: 2px; }
+
+/* Thumbnail ng update sa superadmin list */
+.upd-row-thumb { width: 96px; height: 54px; object-fit: cover; border-radius: 4px; border: 1px solid #e2e8f0; flex-shrink: 0; background: #f1f5f9; }

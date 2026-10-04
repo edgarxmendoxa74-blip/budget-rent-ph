@@ -1106,7 +1106,7 @@ const AdminPanel = ({ onLogout }) => {
                   </label>
                   {updForm.thumbnail_url && (
                     <>
-                      <img src={updForm.thumbnail_url} alt="Thumbnail preview" style={{ height: 48, borderRadius: 8, objectFit: 'cover' }} />
+                      <img src={updForm.thumbnail_url} alt="Thumbnail preview" style={{ height: 80, borderRadius: 6, objectFit: 'cover' }} />
                       <button type="button" className="ann-cancel" onClick={() => setUpdForm(f => ({ ...f, thumbnail_url: '' }))}>Alisin</button>
                     </>
                   )}
@@ -1125,7 +1125,8 @@ const AdminPanel = ({ onLogout }) => {
                 {updates.length === 0 && <div className="admin-empty">Wala pang update na na-post.</div>}
                 {updates.map(u => (
                   <div key={u.id} className="ann-row">
-                    <div className="ann-row-text">
+                    {updateThumbnail(u) && <img className="upd-row-thumb" src={updateThumbnail(u)} alt={u.title} loading="lazy" />}
+                    <div className="ann-row-text" style={{ flex: 1 }}>
                       <strong>{u.title}</strong>
                       <p style={{ wordBreak: 'break-all' }}>{u.video_url}</p>
                       <small>{fmtDate(u.created_at)}{updateThumbnail(u) ? '' : ' • walang thumbnail'}</small>
