@@ -595,7 +595,7 @@ function App() {
     const key = (a) => `${a.id}-${a.updated_at || a.created_at}`;
     if (seenAnnIds.current) {
       const fresh = list.find(a => !seenAnnIds.current.has(key(a)));
-      if (fresh) { playNotifySound(); showSystemNotification(fresh.title, fresh.body); }
+      if (fresh) { playNotifySound(10); showSystemNotification(fresh.title, fresh.body); }
     }
     seenAnnIds.current = new Set(list.map(key));
     setAnnouncements(list);
@@ -609,7 +609,13 @@ function App() {
   useEffect(() => {
     loadAnnouncements();
     const t = setInterval(loadAnnouncements, 60000);
-    return () => clearInterval(t);
+    // Realtime: pag nag-post ang admin, agad na may tunog at notification (ang polling ay backup lang)
+    const channel = supabase.channel('announcements-live')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'announcements' }, () => loadAnnouncements())
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'announcements' }, () => loadAnnouncements())
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'announcements' }, () => loadAnnouncements())
+      .subscribe();
+    return () => { clearInterval(t); supabase.removeChannel(channel); };
   }, []);
 
   // Customer info requests (gustong magpa-tawag) para sa landlord; RLS ang naglilimita sa listings niya
