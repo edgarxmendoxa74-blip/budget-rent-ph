@@ -59,7 +59,7 @@ export const showSystemNotification = async (title, body) => {
     if (isNative()) {
       await ensureChannel();
       await LocalNotifications.schedule({
-        notifications: [{ id: Math.floor(Date.now() % 2147483647), title, body: body || '', channelId: CHANNEL_ID }],
+        notifications: [{ id: Math.floor(Date.now() % 2147483647), title, body: body || '', channelId: CHANNEL_ID, smallIcon: 'ic_stat_notify', iconColor: '#0B3F82' }],
       });
       return;
     }

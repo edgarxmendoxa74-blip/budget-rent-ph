@@ -2,5 +2,11 @@
   "appId": "com.budgetrent.ph",
   "appName": "Budget Rent PH",
   "webDir": "dist",
-  "bundledWebRuntime": false
+  "bundledWebRuntime": false,
+  "plugins": {
+    "LocalNotifications": {
+      "smallIcon": "ic_stat_notify",
+      "iconColor": "#0B3F82"
+    }
+  }
 }
