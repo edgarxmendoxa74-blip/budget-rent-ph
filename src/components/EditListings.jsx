@@ -5,6 +5,8 @@ import LocationPicker from './LocationPicker';
 import { toCoords } from '../lib/geo';
 import './EditListings.css';
 import { ikImage } from '../lib/imagekit';
+import RoomFeeForm from './RoomFeeForm';
+import { needsRoomFee, fetchRoomFeeStatus, ROOM_FEE_THRESHOLD, ROOM_FEE_PLAN } from '../lib/roomFee';
 
 const CATEGORIES = ['Paupahan', 'Staycation'];
 const normalizeCategory = (type) =>
@@ -25,6 +27,14 @@ const EditListings = ({ session, onClose, onListingUpdated, initialEditingItem =
   const [deleting, setDeleting] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
+  const [roomFeeStatus, setRoomFeeStatus] = useState(null); // 'approved' | 'pending' | null
+
+  useEffect(() => {
+    let alive = true;
+    if (!editingItem?.id) { setRoomFeeStatus(null); return undefined; }
+    fetchRoomFeeStatus(session?.user?.id, editingItem.id).then((s) => { if (alive) setRoomFeeStatus(s); });
+    return () => { alive = false; };
+  }, [editingItem?.id, session?.user?.id]);
 
   useEffect(() => {
     fetchMyListings();
@@ -129,6 +139,12 @@ const EditListings = ({ session, onClose, onListingUpdated, initialEditingItem =
   };
 
   const handleSave = async () => {
+    if (needsRoomFee(editingItem.rooms) && roomFeeStatus !== 'approved') {
+      alert(roomFeeStatus === 'pending'
+        ? 'Your ₱50 room fee receipt is still waiting for admin approval.'
+        : `Listings with ${ROOM_FEE_THRESHOLD}+ rooms need the ₱${ROOM_FEE_PLAN.price} fee. Please pay and send your receipt first.`);
+      return;
+    }
     setSaving(true);
     try {
       const amenities = [];
@@ -358,7 +374,7 @@ const EditListings = ({ session, onClose, onListingUpdated, initialEditingItem =
               </div>
               <div className="edit-form-row">
                 <div className="edit-form-group">
-                  <label>Rooms</label>
+                  <label>How many rooms?</label>
                   <input type="number" min="1" value={editingItem.rooms || 1} onChange={e => handleEditChange('rooms', e.target.value)} />
                 </div>
                 <div className="edit-form-group">
@@ -372,6 +388,15 @@ const EditListings = ({ session, onClose, onListingUpdated, initialEditingItem =
                   </div>
                 )}
               </div>
+              {needsRoomFee(editingItem.rooms) && (
+                roomFeeStatus === 'approved' ? (
+                  <p style={{ margin: '0 0 12px', padding: '10px 12px', borderRadius: 12, background: '#f0fdf4', color: '#166534', fontSize: '0.8rem', fontWeight: 700 }}>Room fee paid and approved for this listing.</p>
+                ) : roomFeeStatus === 'pending' ? (
+                  <p style={{ margin: '0 0 12px', padding: '10px 12px', borderRadius: 12, background: '#fffbeb', color: '#92400e', fontSize: '0.8rem', fontWeight: 700 }}>Receipt sent. Waiting for admin approval, then you can save.</p>
+                ) : (
+                  <RoomFeeForm session={session} listing={editingItem} rooms={editingItem.rooms} onSubmitted={() => setRoomFeeStatus('pending')} />
+                )
+              )}
               <div className="edit-form-group">
                 <label>Contact Info</label>
                 <input value={editingItem.contact || ''} onChange={e => handleEditChange('contact', e.target.value)} />

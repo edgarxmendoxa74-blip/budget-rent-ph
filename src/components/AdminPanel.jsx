@@ -598,7 +598,8 @@ const AdminPanel = ({ onLogout }) => {
       planLabel,
       proof: /Proof of Payment \(file\):\s*(\S+)/.exec(msg)?.[1] || '',
       isPro: /Pro Listings/i.test(planLabel),
-      isTenant: /Verified Tenant/i.test(planLabel)
+      isTenant: /Verified Tenant/i.test(planLabel),
+      isRooms: /Room Fee/i.test(planLabel)
     };
   };
   const pendingPayments = useMemo(
@@ -623,9 +624,12 @@ const AdminPanel = ({ onLogout }) => {
   };
 
   const approveRequest = async (r) => {
-    const { planLabel, isPro, isTenant } = parseRequest(r);
+    const { planLabel, isPro, isTenant, isRooms } = parseRequest(r);
     let ok = false;
-    if (isTenant) {
+    if (isRooms) {
+      if (!window.confirm(`Approve the ₱50 room fee of ${r.full_name} for "${r.property_name}"?`)) return;
+      ok = true;
+    } else if (isTenant) {
       if (!r.user_id) return alert('This request has no user account attached.');
       if (!window.confirm(`Verify tenant ${r.full_name} for ${TENANT_PLAN.note} (₱${TENANT_PLAN.price})?`)) return;
       const { data, error } = await supabase.rpc('admin_verify_tenant', { p_user: r.user_id, p_months: TENANT_PLAN.months });
