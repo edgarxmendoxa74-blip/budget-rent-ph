@@ -610,9 +610,20 @@ function App() {
     loadAnnouncements();
     const t = setInterval(loadAnnouncements, 60000);
     // Realtime: pag nag-post ang admin, agad na may tunog at notification (ang polling ay backup lang)
+    // INSERT/UPDATE: gamitin agad ang laman ng event (walang dagdag na fetch) para walang delay
+    const onChange = (payload) => {
+      const a = payload.new;
+      if (!a?.id) return loadAnnouncements();
+      const key = `${a.id}-${a.updated_at || a.created_at}`;
+      if (seenAnnIds.current?.has(key)) return;
+      seenAnnIds.current = new Set(seenAnnIds.current || []).add(key);
+      playNotifySound(10);
+      showSystemNotification(a.title, a.body);
+      setAnnouncements(prev => [a, ...prev.filter(x => x.id !== a.id)]);
+    };
     const channel = supabase.channel('announcements-live')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'announcements' }, () => loadAnnouncements())
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'announcements' }, () => loadAnnouncements())
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'announcements' }, onChange)
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'announcements' }, onChange)
       .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'announcements' }, () => loadAnnouncements())
       .subscribe();
     return () => { clearInterval(t); supabase.removeChannel(channel); };
