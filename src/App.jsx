@@ -5,7 +5,8 @@ import { clearSupabaseSessionStorage, recoverFromJwtError, supabase, validateCur
 import { isAdminEmail, isAdminPath } from './lib/admin';
 import { playNotifySound, unlockNotifySound } from './lib/notifySound';
 import { useUserLocation } from './lib/useUserLocation';
-import { isInstalledApp, hasSeenTour, forceTourFromUrl } from './lib/tour';
+import { isInstalledApp, forceTourFromUrl } from './lib/tour';
+import { notifSupported, notifStatus, requestNotifPermission, wasNotifAsked, markNotifAsked, showSystemNotification } from './lib/systemNotify';
 import { useApproxCoords } from './lib/useApproxCoords';
 import { useAreaSearch } from './lib/useAreaSearch';
 import { NEW_TENANT_KEY } from './lib/tenantAuth';
@@ -282,11 +283,25 @@ function App() {
   };
   const locNeedsFix = ['denied', 'off', 'unavailable'].includes(userLoc.status);
 
-  // App tour: kusang lalabas sa unang bukas ng naka-install na app (o ?tour=1). Puwede ring buksan sa menu.
+  // Tour: sa menu na lang binubuksan (hindi na kusang lumalabas habang naglo-load); ?tour=1 pang-test
   useEffect(() => {
-    if (!session) return;
-    if (forceTourFromUrl() || (isInstalledApp() && !hasSeenTour())) setIsTourOpen(true);
-  }, [session, isGuest]);
+    if (session && forceTourFromUrl()) setIsTourOpen(true);
+  }, [session]);
+
+  // Notification permission: iminumungkahi sa naka-install na app para lumabas ang updates sa phone mismo
+  const [showNotifPrompt, setShowNotifPrompt] = useState(false);
+  useEffect(() => {
+    if (!session || !isInstalledApp() || !notifSupported() || wasNotifAsked()) return undefined;
+    const t = setTimeout(async () => {
+      if ((await notifStatus()) === 'default') setShowNotifPrompt(true);
+    }, 4000);
+    return () => clearTimeout(t);
+  }, [session]);
+  const answerNotifPrompt = async (allow) => {
+    setShowNotifPrompt(false);
+    markNotifAsked();
+    if (allow) await requestNotifPermission();
+  };
   // Staycation 'Where': hanapin ang buong lugar sa mapa, hindi lang text sa address
   const priceQuery = parseNumericQuery(debouncedSearchQuery);
   // Hanapin ang buong lugar (lalawigan/bayan/barangay) sa mapa para sa Paupahan at Staycation
@@ -578,7 +593,10 @@ function App() {
     if (error) return;
     const list = data || [];
     const key = (a) => `${a.id}-${a.updated_at || a.created_at}`;
-    if (seenAnnIds.current && list.some(a => !seenAnnIds.current.has(key(a)))) playNotifySound();
+    if (seenAnnIds.current) {
+      const fresh = list.find(a => !seenAnnIds.current.has(key(a)));
+      if (fresh) { playNotifySound(); showSystemNotification(fresh.title, fresh.body); }
+    }
     seenAnnIds.current = new Set(list.map(key));
     setAnnouncements(list);
   };
@@ -620,7 +638,10 @@ function App() {
       const unread = {};
       (mData || []).filter(m => !dismissed.has(m.booking_id)).forEach(m => { unread[m.booking_id] = (unread[m.booking_id] || 0) + 1; });
       const ids = [...list, ...bList].map(r => r.id).concat((mData || []).map(m => m.id));
-      if (seenInquiryIds.current && ids.some(id => !seenInquiryIds.current.has(id))) playNotifySound();
+      if (seenInquiryIds.current && ids.some(id => !seenInquiryIds.current.has(id))) {
+        playNotifySound();
+        showSystemNotification('BudgetRentPH', 'You have a new booking request or message.');
+      }
       seenInquiryIds.current = new Set(ids);
       setInquiries(list);
       setBookings(bList);
@@ -649,7 +670,10 @@ function App() {
       const dismissed = await fetchDismissedIds();
       (data || []).filter(r => !dismissed.has(r.booking_id)).forEach(r => { map[r.booking_id] = (map[r.booking_id] || 0) + 1; });
       const total = Object.values(map).reduce((a, b) => a + b, 0);
-      if (!first && total > prevTotal) playNotifySound();
+      if (!first && total > prevTotal) {
+        playNotifySound();
+        showSystemNotification('BudgetRentPH', 'The owner replied to your booking chat.');
+      }
       first = false;
       prevTotal = total;
       setGuestUnread(map);
@@ -1965,6 +1989,17 @@ function App() {
         <Suspense fallback={null}>
           <AppTour isLandlord={!isGuest} onClose={() => setIsTourOpen(false)} />
         </Suspense>
+      )}
+
+      {showNotifPrompt && (
+        <div role="dialog" aria-label="Allow notifications" style={{ position: 'fixed', left: 16, right: 16, bottom: 90, zIndex: 3000, background: '#fff', color: '#0f172a', borderRadius: 16, padding: 16, boxShadow: '0 10px 40px rgba(0,0,0,.25)' }}>
+          <strong style={{ display: 'block', marginBottom: 4 }}>🔔 Turn on notifications?</strong>
+          <p style={{ margin: '0 0 12px', fontSize: 14, color: '#475569' }}>Get updates and messages as notifications right on your phone, not just inside the app.</p>
+          <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+            <button type="button" onClick={() => answerNotifPrompt(false)} style={{ padding: '8px 14px', borderRadius: 10, border: '1px solid #cbd5e1', background: '#fff' }}>Not now</button>
+            <button type="button" onClick={() => answerNotifPrompt(true)} style={{ padding: '8px 14px', borderRadius: 10, border: 0, background: '#003366', color: '#fff', fontWeight: 600 }}>Allow</button>
+          </div>
+        </div>
       )}
 
       {/* Navigation Bar */}

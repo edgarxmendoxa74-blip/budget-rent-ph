@@ -227,7 +227,7 @@ const Auth = ({ onAuthSuccess }) => {
           {!tenantFormOpen ? (
             <div className="auth-form">
               <button type="button" className="auth-submit-btn" onClick={() => setTenantFormOpen(true)}>
-                <User size={19} strokeWidth={2.4} /> Enter as Tenant
+                <User size={19} strokeWidth={2.4} /> Enter as Tenant/Guest
               </button>
               <button type="button" className="auth-submit-btn secondary" onClick={() => setView('landlord')}>
                 <Building2 size={19} strokeWidth={2.4} /> Log in as Landlord

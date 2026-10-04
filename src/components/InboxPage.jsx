@@ -86,7 +86,7 @@ const InboxPage = ({ properties, unread = {}, onChatChanged }) => {
       <header className="hero branding-hero">
         <HeroBudi message={items.length > 0 ? 'Here are your bookings and the owners’ replies! 📬' : 'Your bookings and owner replies will show up here. 📬'} />
         <div className="hero-content">
-          <span className="branding-kicker">Tenant</span>
+          <span className="branding-kicker">Tenant/Guest</span>
           <h2>Inbox</h2>
           <p>Your booking requests and conversations with owners</p>
         </div>
