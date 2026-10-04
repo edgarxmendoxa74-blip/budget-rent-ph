@@ -1,4 +1,5 @@
 import { LocalNotifications } from '@capacitor/local-notifications';
+import { registerPush } from './pushRegister';
 
 const ASKED_KEY = 'budgetrent_notif_asked';
 const isNative = () => Boolean(window.Capacitor?.isNativePlatform?.());
@@ -35,6 +36,7 @@ export const requestNotifPermission = async () => {
   try {
     if (isNative()) {
       const r = await LocalNotifications.requestPermissions();
+      if (r.display === 'granted') registerPush(); // kunin agad ang push token pagka-allow
       return r.display;
     }
     return await Notification.requestPermission();

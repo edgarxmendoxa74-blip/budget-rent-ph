@@ -6,7 +6,8 @@ import { isAdminEmail, isAdminPath } from './lib/admin';
 import { playNotifySound, unlockNotifySound } from './lib/notifySound';
 import { useUserLocation } from './lib/useUserLocation';
 import { isInstalledApp, forceTourFromUrl } from './lib/tour';
-import { notifSupported, notifStatus, requestNotifPermission, wasNotifAsked, markNotifAsked, showSystemNotification } from './lib/systemNotify';
+import { registerPush, unregisterPush } from './lib/pushRegister';
+import { notifSupported,notifStatus, requestNotifPermission, wasNotifAsked, markNotifAsked, showSystemNotification } from './lib/systemNotify';
 import { useApproxCoords } from './lib/useApproxCoords';
 import { useAreaSearch } from './lib/useAreaSearch';
 import { NEW_TENANT_KEY } from './lib/tenantAuth';
@@ -455,7 +456,13 @@ function App() {
     }
   };
 
+  // Push (FCM): i-save ang token ng phone para sa naka-login na user, para tumunog kahit nakasara ang app
+  useEffect(() => {
+    if (session?.user?.id) registerPush(session.user.id);
+  }, [session?.user?.id]);
+
   const handleLogout = async () => {
+    unregisterPush();
     // Local sign-out is instant (no network); revoke the server session in the background so a slow connection doesn't stall logout
     const accessToken = session?.access_token;
     await supabase.auth.signOut({ scope: 'local' });

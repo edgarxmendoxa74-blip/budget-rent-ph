@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "277761453180",
+    "project_id": "budgetrentph",
+    "storage_bucket": "budgetrentph.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:277761453180:android:bc17bcff38886d8708adf9",
+        "android_client_info": {
+          "package_name": "com.budgetrent.ph"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCuWHQAJAS1-KD3ioLU443O1j98o33K5Tc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
