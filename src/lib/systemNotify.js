@@ -3,6 +3,19 @@ import { LocalNotifications } from '@capacitor/local-notifications';
 const ASKED_KEY = 'budgetrent_notif_asked';
 const isNative = () => Boolean(window.Capacitor?.isNativePlatform?.());
 
+// Android: high-importance channel para tumunog at lumabas sa taas ng screen (heads-up)
+const CHANNEL_ID = 'budgetrent-alerts';
+let channelReady = null;
+const ensureChannel = () => {
+  if (!channelReady) {
+    channelReady = LocalNotifications.createChannel({
+      id: CHANNEL_ID, name: 'Alerts', description: 'Announcements, bookings and chats',
+      importance: 5, visibility: 1, vibration: true, lights: true,
+    }).catch(() => {});
+  }
+  return channelReady;
+};
+
 export const notifSupported = () => isNative() || (typeof Notification !== 'undefined');
 
 // 'granted' | 'denied' | 'default'
@@ -42,8 +55,9 @@ export const showSystemNotification = async (title, body) => {
   try {
     if (!title || (await notifStatus()) !== 'granted') return;
     if (isNative()) {
+      await ensureChannel();
       await LocalNotifications.schedule({
-        notifications: [{ id: Math.floor(Date.now() % 2147483647), title, body: body || '' }],
+        notifications: [{ id: Math.floor(Date.now() % 2147483647), title, body: body || '', channelId: CHANNEL_ID }],
       });
       return;
     }
