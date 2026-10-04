@@ -1,8 +1,8 @@
 import { supabase } from './supabase';
 
-// Listing na may 8 o higit pang rooms: ₱50 na bayad (isang beses kada listing). Ina-approve ng admin ang resibo.
+// Listing na may 6 o higit pang rooms: ₱50 na bayad (isang beses kada listing). Ina-approve ng admin ang resibo.
 // Walang bagong table: nakaimbak sa verification_requests (message: "Plan: Room Fee" at "Listing ID: <id>").
-export const ROOM_FEE_THRESHOLD = 8;
+export const ROOM_FEE_THRESHOLD = 6;
 export const ROOM_FEE_PLAN = { id: 'rooms', label: 'Room Fee', price: 50, note: 'one-time per listing' };
 
 export const needsRoomFee = (rooms) => (parseInt(rooms, 10) || 0) >= ROOM_FEE_THRESHOLD;

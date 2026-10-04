@@ -187,7 +187,7 @@ function ListingCard({ item, isFav, onToggleFavorite, onOpen, stats, distanceLab
         </div>
 
         <div className="card-price-row">
-          <span className="price-tag">₱{item.price?.toLocaleString() || 0}</span>
+          <span className="price-tag"><sup>₱</sup>{item.price?.toLocaleString() || 0}</span>
           <span className="price-period">{isStaycation(item) ? '/night' : '/month'}</span>
         </div>
       </div>

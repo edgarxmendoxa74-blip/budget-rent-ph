@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { X, User, Save, Loader2, CheckCircle, Camera, Phone, MessageCircle, Building2, Globe, BadgeCheck, Check } from 'lucide-react';
-import NotificationSettings from './NotificationSettings';
 import './ProfileModal.css';
 
 const ProfileModal = ({ session, onClose, isEditingInitial = false, onProfileUpdated, onGetVerified }) => {
@@ -234,7 +233,6 @@ const ProfileModal = ({ session, onClose, isEditingInitial = false, onProfileUpd
           </form>
         ) : (
           <div className="profile-details">
-            <NotificationSettings />
             {verifyChecked && !isVerified && userRole === 'landlord' && onGetVerified && (
               <button type="button" className="get-verified-card" onClick={onGetVerified}>
                 <span className="gv-icon"><BadgeCheck size={26} /></span>
