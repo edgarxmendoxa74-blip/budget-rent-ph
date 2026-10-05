@@ -1056,8 +1056,11 @@ function App() {
             </div>
 
             {isGuest && session?.user && (
-              <button className="menu-btn" onClick={() => setIsTenantAccountOpen(true)} aria-label="My Account" title="My Account">
+              <button className="menu-btn" onClick={() => setIsTenantAccountOpen(true)} aria-label={tenantVerifiedUntil ? 'My Account (Verified)' : 'My Account'} title={tenantVerifiedUntil ? 'My Account • Verified Tenant' : 'My Account'} style={{ position: 'relative' }}>
                 <User size={22} />
+                {tenantVerifiedUntil && (
+                  <BadgeCheck size={16} fill="#0066ff" color="white" strokeWidth={2.2} style={{ position: 'absolute', right: -3, bottom: -3, background: '#fff', borderRadius: '50%' }} />
+                )}
               </button>
             )}
 
