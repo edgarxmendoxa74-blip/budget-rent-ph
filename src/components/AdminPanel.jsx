@@ -120,6 +120,8 @@ const AdminPanel = ({ onLogout }) => {
   const [reviews, setReviews] = useState([]);
   const [announcements, setAnnouncements] = useState([]);
   const [communityMembers, setCommunityMembers] = useState([]);
+  const [fbGroupUrl, setFbGroupUrl] = useState('');
+  const [fbGroupSaving, setFbGroupSaving] = useState(false);
   const [annForm, setAnnForm] = useState({ id: null, title: '', body: '' });
   const [annSaving, setAnnSaving] = useState(false);
   const EMPTY_UPD = { id: null, title: '', description: '', thumbnail_url: '', video_url: '' };
@@ -653,6 +655,22 @@ const AdminPanel = ({ onLogout }) => {
     setVerificationRequests(prev => prev.map(x => (x.id === r.id ? { ...x, status: 'approved' } : x)));
   };
 
+  useEffect(() => {
+    supabase.from('app_settings').select('value').eq('key', 'community_fb_group').maybeSingle()
+      .then(({ data }) => setFbGroupUrl(data?.value?.url || ''));
+  }, []);
+
+  const saveFbGroup = async (e) => {
+    e.preventDefault();
+    const url = fbGroupUrl.trim();
+    if (url && !/^https?:\/\//i.test(url)) return alert('Please enter a full link starting with https://');
+    setFbGroupSaving(true);
+    const { error } = await supabase.from('app_settings').upsert({ key: 'community_fb_group', value: { url }, updated_at: new Date().toISOString() });
+    setFbGroupSaving(false);
+    if (error) return alert('Error: ' + error.message);
+    alert(url ? 'Facebook group link saved. Approved members will see it in their notification.' : 'Facebook group link removed.');
+  };
+
   const decideMember = async (m, status) => {
     if (!window.confirm(`${status === 'approved' ? 'Approve' : 'Reject'} ${m.full_name} in Budget Rent Community?`)) return;
     const decided_at = new Date().toISOString();
@@ -1109,6 +1127,12 @@ const AdminPanel = ({ onLogout }) => {
 
           {activeTab === 'community' && (
             <div className="ann-wrap">
+              <form className="ann-form" onSubmit={saveFbGroup}>
+                <h4>Community Facebook group link</h4>
+                <p className="ann-hint">Approved members will see this link in their notification and must click it to join the group.</p>
+                <input type="url" placeholder="https://www.facebook.com/groups/..." value={fbGroupUrl} onChange={e => setFbGroupUrl(e.target.value)} />
+                <button type="submit" className="export-btn" disabled={fbGroupSaving}>{fbGroupSaving ? 'Saving...' : 'Save link'}</button>
+              </form>
               <div className="ann-form">
                 <h4>Community membership requests</h4>
                 <p className="ann-hint">Once approved, the landlord gets a notification and can enter Budget Rent Community.</p>

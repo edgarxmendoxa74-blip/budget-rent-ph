@@ -3363,3 +3363,5 @@
 .hero-community-icon { color: #2563eb; fill: rgba(37,99,235,0.15); }
 .hero-loc-btn.off { background: #dc2626; }
 .hero-loc-btn.on { background: #16a34a; cursor: default; }
+
+.notif-link-btn { display: inline-block; margin: 6px 0 2px; padding: 7px 14px; border-radius: 100px; background: #1877f2; color: #fff; font-size: 0.78rem; font-weight: 800; text-decoration: none; }

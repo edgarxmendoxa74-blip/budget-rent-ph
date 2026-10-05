@@ -639,6 +639,12 @@ function App() {
 
   // Community membership: notification kapag na-approve ng superadmin
   const [communityMember, setCommunityMember] = useState(null);
+  const [communityFbUrl, setCommunityFbUrl] = useState('');
+  useEffect(() => {
+    if (communityMember?.status !== 'approved') return;
+    supabase.from('app_settings').select('value').eq('key', 'community_fb_group').maybeSingle()
+      .then(({ data }) => setCommunityFbUrl(data?.value?.url || ''));
+  }, [communityMember?.status]);
   useEffect(() => {
     const uid = session?.user?.id;
     if (!uid || isGuest) { setCommunityMember(null); return undefined; }
@@ -749,7 +755,10 @@ function App() {
     const communityItems = communityMember?.status === 'approved' ? [{
       id: `community-approved-${communityMember.decided_at || communityMember.created_at}`,
       icon: '🤝', tone: 'green', title: 'Welcome to Budget Rent Community!',
-      body: 'You are now an approved member of Budget Rent Community. You can post and chat with fellow landlords.',
+      body: communityFbUrl
+        ? 'You are now an approved member of Budget Rent Community. To finish joining, tap the button below to join our Facebook group.'
+        : 'You are now an approved member of Budget Rent Community. You can post and chat with fellow landlords.',
+      link: communityFbUrl ? { url: communityFbUrl, label: 'Join the Facebook group' } : null,
       time: timeAgo(communityMember.decided_at || communityMember.created_at)
     }] : [];
     const items = [
@@ -985,6 +994,9 @@ function App() {
                           <div className="notif-text">
                             <p className="notif-title">{n.title}</p>
                             <p className="notif-body">{n.body}</p>
+                            {n.link && (
+                              <a className="notif-link-btn" href={n.link.url} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}>{n.link.label}</a>
+                            )}
                             <span className="notif-time">{n.time}</span>
                           </div>
                           <button
