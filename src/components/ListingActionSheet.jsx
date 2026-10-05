@@ -24,6 +24,8 @@ const readCustomer = () => {
 };
 const peso = (n) => `₱${Number(n || 0).toLocaleString()}`;
 const prettyDate = (s) => (s ? new Date(`${s}T00:00:00`).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' }) : '—');
+const PURPOSES = ['Family getaway', 'Barkada trip', 'Couple / Honeymoon', 'Celebration / Event', 'Work / Remote', 'Other'];
+const PAY_METHODS = ['GCash', 'Maya', 'Bank transfer', 'Cash'];
 const ARRIVAL_TIMES = ['Before 12 PM', '12 PM - 2 PM', '2 PM - 4 PM', '4 PM - 6 PM', '6 PM - 8 PM', 'After 8 PM'];
 
 // Book Here para sa Staycation (petsa, guests, presyo) at Find Rent (petsa ng lipat/bisita).
@@ -46,6 +48,11 @@ const ListingActionSheet = ({ item, kind, onClose, onViewDetails, fullPage }) =>
   const [pets, setPets] = useState(false);
   const [arrival, setArrival] = useState('');
   const [extra, setExtra] = useState('');
+  const [purpose, setPurpose] = useState('');
+  const [vehicles, setVehicles] = useState(0);
+  const [payMethod, setPayMethod] = useState('');
+  const [emName, setEmName] = useState('');
+  const [emPhone, setEmPhone] = useState('');
   const [agree, setAgree] = useState(false);
   const [step, setStep] = useState(1); // staycation: 1 = petsa at guests, 2 = detalye ng guest
   const [callGateOpen, setCallGateOpen] = useState(false);
@@ -103,6 +110,12 @@ const ListingActionSheet = ({ item, kind, onClose, onViewDetails, fullPage }) =>
     if (cleanName.length < 2) return setSendError('Please enter your full name.');
     if (!phoneCheck.isValid) return setSendError('Enter a valid PH number (e.g. 09171234567).');
     if (cleanEmail && !/^\S+@\S+\.\S+$/.test(cleanEmail)) return setSendError('Invalid email address.');
+    let emergencyPhone = null;
+    if (isBook && (emName.trim() || emPhone.trim())) {
+      const emCheck = validatePhone(emPhone);
+      if (emName.trim().length < 2 || !emCheck.isValid) return setSendError('Enter your emergency contact name and a valid PH number, or leave both blank.');
+      emergencyPhone = emCheck.sanitized;
+    }
     if (isBook && !agree) return setSendError('Please confirm that you agree to the house rules and booking terms.');
     if (!isBook && !rentDate) return setSendError('Pick a move-in or visit date.');
     setSending(true);
@@ -121,7 +134,7 @@ const ListingActionSheet = ({ item, kind, onClose, onViewDetails, fullPage }) =>
       note: extra.trim() || null
     };
     const payload = isBook
-      ? { ...common, kind: 'staycation', check_in: checkIn, check_out: checkOut, guests, adults, children, pets, arrival_time: arrival || null, total_price: total, down_payment: downPayment }
+      ? { ...common, kind: 'staycation', check_in: checkIn, check_out: checkOut, guests, adults, children, pets, arrival_time: arrival || null, total_price: total, down_payment: downPayment, purpose: purpose || null, vehicles, payment_method: downPayment > 0 ? (payMethod || null) : null, emergency_name: emergencyPhone ? emName.trim().slice(0, 80) : null, emergency_phone: emergencyPhone }
       : { ...common, kind: 'rent', check_in: rentDate, check_out: null, guests: occupants, adults: occupants, children: 0, pets: false, total_price: Number(item?.price) || 0, down_payment: 0 };
     const { error } = await supabase.from('booking_requests').insert(payload);
     setSending(false);
@@ -140,7 +153,7 @@ const ListingActionSheet = ({ item, kind, onClose, onViewDetails, fullPage }) =>
 
   const header = (
     <>
-      <button type="button" className="act-close" aria-label={fullPage && !isBook ? "Back" : "Close"} onClick={onClose}>{fullPage && !isBook ? <ArrowLeft size={18} /> : <X size={18} />}</button>
+      <button type="button" className="act-close" aria-label={fullPage ? "Back" : "Close"} onClick={onClose}>{fullPage ? <ArrowLeft size={18} /> : <X size={18} />}</button>
       <div className="act-head">
         <span className={`act-badge ${isBook ? 'stay' : 'rent'}`}>{isBook ? <CalendarCheck size={20} /> : <Send size={20} />}</span>
         <div>
@@ -170,7 +183,7 @@ const ListingActionSheet = ({ item, kind, onClose, onViewDetails, fullPage }) =>
   // ---------- Staycation: Book Here ----------
   if (isBook) {
     return createPortal(
-      <div className={`act-overlay${fullPage && !isBook ? " full" : ""}`} onClick={onClose}>
+      <div className={`act-overlay${fullPage ? " full" : ""}`} onClick={onClose}>
         <div className="act-sheet animate-slide-up" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="Book Here">
           {header}
 
@@ -273,6 +286,36 @@ const ListingActionSheet = ({ item, kind, onClose, onViewDetails, fullPage }) =>
                   </select>
                 </label>
                 <label className="wide">
+                  Purpose of stay
+                  <select value={purpose} onChange={(e) => setPurpose(e.target.value)}>
+                    <option value="">Select (optional)</option>
+                    {PURPOSES.map((t) => <option key={t} value={t}>{t}</option>)}
+                  </select>
+                </label>
+                <label>
+                  Vehicles (parking)
+                  <select value={vehicles} onChange={(e) => setVehicles(Number(e.target.value))}>
+                    {[0, 1, 2, 3, 4].map((n) => <option key={n} value={n}>{n === 0 ? 'None' : n}</option>)}
+                  </select>
+                </label>
+                {downPayment > 0 && (
+                  <label>
+                    Pay down payment via
+                    <select value={payMethod} onChange={(e) => setPayMethod(e.target.value)}>
+                      <option value="">Not sure yet</option>
+                      {PAY_METHODS.map((t) => <option key={t} value={t}>{t}</option>)}
+                    </select>
+                  </label>
+                )}
+                <label>
+                  Emergency contact (optional)
+                  <input type="text" maxLength={80} placeholder="Name" value={emName} onChange={(e) => setEmName(e.target.value)} />
+                </label>
+                <label>
+                  Emergency number
+                  <input type="tel" inputMode="tel" maxLength={16} placeholder="09171234567" value={emPhone} onChange={(e) => setEmPhone(e.target.value)} />
+                </label>
+                <label className="wide">
                   Message to host (optional)
                   <input type="text" maxLength={200} placeholder="e.g. It's a celebration / bringing kids" value={extra} onChange={(e) => setExtra(e.target.value)} />
                 </label>
@@ -293,7 +336,7 @@ const ListingActionSheet = ({ item, kind, onClose, onViewDetails, fullPage }) =>
 
               <label className="act-check agree">
                 <input type="checkbox" checked={agree} onChange={(e) => setAgree(e.target.checked)} />
-                <span>I agree to the host&apos;s house rules{item?.cancellation_policy ? ', cancellation policy' : ''}{downPayment > 0 ? ` and the ${peso(downPayment)} down payment to secure the booking` : ''}.</span>
+                <span>I agree to the host&apos;s house rules{item?.cancellation_policy ? ', cancellation policy' : ''}{downPayment > 0 ? ` and the ${peso(downPayment)} down payment to secure the booking` : ''}. I will present a valid ID upon check-in.</span>
               </label>
 
               <button type="button" className="act-option reserve" style={{ width: '100%', border: 'none', cursor: 'pointer', marginTop: 12 }}
@@ -317,7 +360,7 @@ const ListingActionSheet = ({ item, kind, onClose, onViewDetails, fullPage }) =>
   // ---------- Find Rent: Book Here ----------
   // Portal sa body para nasa ibabaw ng bottom nav at hindi maipit sa animated na parent
   return createPortal(
-    <div className={`act-overlay${fullPage && !isBook ? " full" : ""}`} onClick={onClose}>
+    <div className={`act-overlay${fullPage ? " full" : ""}`} onClick={onClose}>
       <div className="act-sheet animate-slide-up" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="Book Here">
         {header}
 

@@ -97,6 +97,9 @@ const BookingsPage = ({ bookings, properties, onSetStatus, onDismiss, unread = {
               <span><Users size={12} /> {b.kind === 'rent' ? `${b.guests} ${b.guests > 1 ? 'people' : 'person'}` : `${b.adults || b.guests} adult${(b.adults || b.guests) > 1 ? 's' : ''}${b.children ? `, ${b.children} ${b.children > 1 ? 'children' : 'child'}` : ''}`}</span>
               {b.pets && <span><PawPrint size={12} /> With pets</span>}
               {b.arrival_time && <span><Clock size={12} /> {b.arrival_time}</span>}
+              {b.purpose && <span>{b.purpose}</span>}
+              {b.vehicles > 0 && <span>{b.vehicles} vehicle{b.vehicles > 1 ? 's' : ''}</span>}
+              {b.payment_method && <span>Pays via {b.payment_method}</span>}
             </div>
 
             {b.kind !== 'rent' && Number(b.total_price) > 0 && (
@@ -105,6 +108,7 @@ const BookingsPage = ({ bookings, properties, onSetStatus, onDismiss, unread = {
               </p>
             )}
             {b.note && <p className="booking-note">"{b.note}"</p>}
+            {b.emergency_name && <p className="booking-note">Emergency: {b.emergency_name} • {b.emergency_phone}</p>}
 
             <div className="booking-contact">
               <a href={`tel:${b.customer_phone}`}><Phone size={12} /> {b.customer_phone}</a>
