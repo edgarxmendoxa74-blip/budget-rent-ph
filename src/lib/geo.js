@@ -105,7 +105,7 @@ export const getCurrentPosition = (options = {}) =>
 
 // ---- Tinatayang lokasyon para sa listings na wala pang pin ----
 // Hinahanap mula sa address text ng listing; naka-cache sa browser para hindi paulit-ulit ang request.
-const GEO_CACHE_KEY = 'budgetrent_geo_cache_v1';
+const GEO_CACHE_KEY = 'budgetrent_geo_cache_v2';
 const normalizeKey = (text) => String(text || '').trim().toLowerCase().replace(/\s+/g, ' ');
 
 const readGeoCache = () => {
@@ -126,7 +126,14 @@ export const geocodeListingLocation = async (text) => {
   if (key in cache) return cache[key];
 
   const parts = String(text).split(',').map((p) => p.trim()).filter(Boolean);
-  const attempts = [...new Set([parts.join(', '), parts.slice(-2).join(', ')])];
+  const words = parts.join(' ').split(/\s+/).filter(Boolean);
+  // Buong address muna, tapos paikli nang paikli (huling 3 at 2 salita, hal. "Urdaneta City") kapag walang kuwit
+  const attempts = [...new Set([
+    parts.join(', '),
+    parts.slice(-2).join(', '),
+    words.slice(-3).join(' '),
+    words.slice(-2).join(' ')
+  ])].filter(Boolean).slice(0, 4);
   let found = null;
   for (let i = 0; i < attempts.length && !found; i++) {
     if (i > 0) await new Promise((r) => setTimeout(r, 1100)); // Nominatim: max 1 request/second
