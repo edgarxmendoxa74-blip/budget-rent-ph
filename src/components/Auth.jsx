@@ -238,7 +238,7 @@ const Auth = ({ onAuthSuccess }) => {
                 <User size={19} strokeWidth={2.4} /> Enter as Tenant/Guest
               </button>
               <button type="button" className="auth-submit-btn secondary" onClick={() => setView('landlord')}>
-                <Building2 size={19} strokeWidth={2.4} /> Log in as Landlord
+                <Building2 size={19} strokeWidth={2.4} /> Enter as Landlord/Host
               </button>
             </div>
           ) : (
@@ -349,7 +349,6 @@ const Auth = ({ onAuthSuccess }) => {
           )}
 
           <div className="auth-footer">
-            <p>Simple search, quick move-in.</p>
             <button 
               className="how-to-use-btn" 
               onClick={() => setIsHowToUseOpen(true)}

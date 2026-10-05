@@ -17,7 +17,10 @@
   max-width: 380px;
   width: 100%;
   text-align: center;
-  overflow: hidden;
+  max-height: calc(100vh - 40px);
+  max-height: calc(100dvh - 40px);
+  overflow-x: hidden;
+  overflow-y: auto;
   box-shadow: 0 24px 70px rgba(0, 24, 53, 0.35);
   animation: evPop 0.4s var(--ease-pop, cubic-bezier(0.34, 1.56, 0.64, 1));
 }
