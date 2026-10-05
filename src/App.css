@@ -3359,5 +3359,7 @@
 
 /* Location button sa taas-kanan ng home hero: pula kung naka-off, berde kung naka-on */
 .hero-loc-btn { position: absolute; top: 10px; right: 12px; z-index: 5; display: inline-flex; align-items: center; gap: 6px; padding: 7px 12px; border: 0; border-radius: 100px; color: #fff; font-size: 0.75rem; font-weight: 800; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
+.hero-community-btn { position: absolute; top: 20px; right: 22px; z-index: 5; display: flex; flex-direction: column; align-items: center; padding: 6px; background: #fff; border: 1.5px solid var(--secondary-gold); border-radius: 50%; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.3), 0 0 0 3px rgba(255,184,0,0.25); }
+.hero-community-icon { color: #2563eb; fill: rgba(37,99,235,0.15); }
 .hero-loc-btn.off { background: #dc2626; }
 .hero-loc-btn.on { background: #16a34a; cursor: default; }

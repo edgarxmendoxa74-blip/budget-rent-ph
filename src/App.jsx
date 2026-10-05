@@ -42,6 +42,7 @@ const EmailVerificationHandler = lazy(() => import('./components/EmailVerificati
 const AgreementDraft = lazy(() => import('./components/AgreementDraft'));
 const ReviewsSection = lazy(() => import('./components/ReviewsSection'));
 const UpdatesPage = lazy(() => import('./components/UpdatesPage'));
+const CommunityPage = lazy(() => import('./components/CommunityPage'));
 
 // Custom Debounce Hook
 function useDebounce(value, delay) {
@@ -636,6 +637,25 @@ function App() {
     return () => { clearInterval(t); supabase.removeChannel(channel); };
   }, []);
 
+  // Community membership: notification kapag na-approve ng superadmin
+  const [communityMember, setCommunityMember] = useState(null);
+  useEffect(() => {
+    const uid = session?.user?.id;
+    if (!uid || isGuest) { setCommunityMember(null); return undefined; }
+    const apply = (m, announce) => {
+      setCommunityMember(m || null);
+      if (announce && m?.status === 'approved') {
+        playNotifySound(10);
+        showSystemNotification('Budget Rent Community', 'You have been approved as a member of Budget Rent Community!');
+      }
+    };
+    supabase.from('community_members').select('*').eq('user_id', uid).maybeSingle().then(({ data }) => apply(data, false));
+    const channel = supabase.channel(`community-member-${uid}`)
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'community_members', filter: `user_id=eq.${uid}` }, (p) => apply(p.new, true))
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [session?.user?.id, isGuest]);
+
   // Customer info requests (gustong magpa-tawag) para sa landlord; RLS ang naglilimita sa listings niya
   const [inquiries, setInquiries] = useState([]);
   const [bookings, setBookings] = useState([]);
@@ -726,7 +746,14 @@ function App() {
       id: `ann-${a.id}-${a.updated_at || a.created_at}`,
       icon: '📢', tone: 'gold', title: a.title, body: a.body, time: timeAgo(a.updated_at || a.created_at)
     }));
+    const communityItems = communityMember?.status === 'approved' ? [{
+      id: `community-approved-${communityMember.decided_at || communityMember.created_at}`,
+      icon: '🤝', tone: 'green', title: 'Welcome to Budget Rent Community!',
+      body: 'You are now an approved member of Budget Rent Community. You can post and chat with fellow landlords.',
+      time: timeAgo(communityMember.decided_at || communityMember.created_at)
+    }] : [];
     const items = [
+      ...communityItems,
       ...announcementItems,
       { id: 'welcome', icon: '🎉', tone: 'gold', title: 'Welcome to BudgetRentPH', body: 'Welcome! Start searching for an affordable rental.', time: 'Just now' },
       { id: 'categories', icon: '🏠', tone: 'navy', title: 'Rentals or Staycation', body: 'Pick a category to see the rentals you are looking for.', time: 'Today' },
@@ -736,7 +763,7 @@ function App() {
       items.push({ id: 'verified', icon: '✅', tone: 'green', title: 'Get Verified', body: 'Verify your account so tenants trust your listings more.', time: 'Tip' });
     }
     return items.filter(n => !deletedNotifs.includes(n.id));
-  }, [isGuest, announcements, deletedNotifs]);
+  }, [isGuest, announcements, deletedNotifs, communityMember]);
 
   // Hiwalay na call requests (Phone icon sa header) para sa landlord
   const callNotifs = useMemo(() => inquiries.map(r => ({
@@ -1489,6 +1516,9 @@ function App() {
       {activeTab === 'mylistings' && (
         <>
           <header className={`hero saved-hero`} style={{ position: 'relative' }}>
+            <button type="button" className="hero-community-btn" aria-label="Budget Rent Community" onClick={() => setActiveTab('community')}>
+              <Users size={22} strokeWidth={2.4} className="hero-community-icon" aria-hidden="true" />
+            </button>
             <HeroBudi message="All your listings show up here. Tap Edit to change the details or status." />
             <div className="hero-content">
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: '8px' }}>
@@ -1752,6 +1782,12 @@ function App() {
             </section>
           </main>
         </div>
+      )}
+
+      {activeTab === 'community' && !isGuest && (
+        <Suspense fallback={<div className="text-center py-10"><Loader2 className="animate-spin text-primary mx-auto" size={40} /></div>}>
+          <CommunityPage session={session} />
+        </Suspense>
       )}
 
       {activeTab === 'updates' && (

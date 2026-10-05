@@ -4,7 +4,7 @@ import {
   Users, ClipboardList, Shield, LogOut, Search, 
   Check, X, Building2, Trash2, Star,
   Settings, BarChart3, Clock, Award, AlertCircle, RefreshCw, ImagePlus,
-  Download, Home, MapPin, Megaphone, Pencil, Send, Video, User
+  Download, Home, MapPin, Megaphone, Pencil, Send, Video, User, MessagesSquare
 } from 'lucide-react';
 import { updateThumbnail } from '../lib/updates';
 import { fetchPlans } from '../lib/plans';
@@ -119,6 +119,7 @@ const AdminPanel = ({ onLogout }) => {
   const [allProperties, setAllProperties] = useState([]);
   const [reviews, setReviews] = useState([]);
   const [announcements, setAnnouncements] = useState([]);
+  const [communityMembers, setCommunityMembers] = useState([]);
   const [annForm, setAnnForm] = useState({ id: null, title: '', body: '' });
   const [annSaving, setAnnSaving] = useState(false);
   const EMPTY_UPD = { id: null, title: '', description: '', thumbnail_url: '', video_url: '' };
@@ -532,6 +533,9 @@ const AdminPanel = ({ onLogout }) => {
 
       setLandlords(checkedLandlords);
       setVerificationRequests(vData || []);
+      // Optional: hindi dapat mag-fail ang dashboard kung wala pang table
+      const { data: cmData } = await supabase.from('community_members').select('*').order('created_at', { ascending: false });
+      setCommunityMembers(cmData || []);
       setAllProperties(checkedProperties);
     } catch (error) {
        console.error("Data fetch error:", error);
@@ -647,6 +651,21 @@ const AdminPanel = ({ onLogout }) => {
     const { error } = await supabase.from('verification_requests').update({ status: 'approved' }).eq('id', r.id);
     if (error) return alert('Activated, but could not mark the request as approved: ' + error.message);
     setVerificationRequests(prev => prev.map(x => (x.id === r.id ? { ...x, status: 'approved' } : x)));
+  };
+
+  const decideMember = async (m, status) => {
+    if (!window.confirm(`${status === 'approved' ? 'Approve' : 'Reject'} ${m.full_name} in Budget Rent Community?`)) return;
+    const decided_at = new Date().toISOString();
+    const { error } = await supabase.from('community_members').update({ status, decided_at }).eq('user_id', m.user_id);
+    if (error) return alert('Error: ' + error.message);
+    setCommunityMembers(prev => prev.map(x => (x.user_id === m.user_id ? { ...x, status, decided_at } : x)));
+  };
+
+  const removeMember = async (m) => {
+    if (!window.confirm(`Remove ${m.full_name} from the community?`)) return;
+    const { error } = await supabase.from('community_members').delete().eq('user_id', m.user_id);
+    if (error) return alert('Error: ' + error.message);
+    setCommunityMembers(prev => prev.filter(x => x.user_id !== m.user_id));
   };
 
   const deleteRequest = async (r) => {
@@ -815,6 +834,7 @@ const AdminPanel = ({ onLogout }) => {
           <button className={activeTab === 'analytics' ? 'active' : ''} onClick={() => setActiveTab('analytics')}><BarChart3 size={18}/> <span>Analytics</span></button>
           <button className={activeTab === 'landlords' ? 'active' : ''} onClick={() => setActiveTab('landlords')}><Users size={18}/> <span>Verification Request</span></button>
           <button className={activeTab === 'announcements' ? 'active' : ''} onClick={() => setActiveTab('announcements')}><Megaphone size={18}/> <span>Notifications</span></button>
+          <button className={activeTab === 'community' ? 'active' : ''} onClick={() => setActiveTab('community')}><MessagesSquare size={18}/> <span>Community</span></button>
           <button className={activeTab === 'updates' ? 'active' : ''} onClick={() => setActiveTab('updates')}><Video size={18}/> <span>Updates (Video)</span></button>
         </div>
 
@@ -890,7 +910,7 @@ const AdminPanel = ({ onLogout }) => {
         )}
 
         <section className="admin-content-view">
-          {activeTab !== 'payments' && activeTab !== 'announcements' && activeTab !== 'updates' && (
+          {activeTab !== 'payments' && activeTab !== 'announcements' && activeTab !== 'updates' && activeTab !== 'community' && (
             <div className="admin-toolbar">
               <span>
                 {activeTab === 'analytics' && 'Key numbers for Budget Rent PH'}
@@ -1084,6 +1104,29 @@ const AdminPanel = ({ onLogout }) => {
                   </div>
                 ))}
               </div>
+            </div>
+          )}
+
+          {activeTab === 'community' && (
+            <div className="ann-wrap">
+              <div className="ann-form">
+                <h4>Community membership requests</h4>
+                <p className="ann-hint">Once approved, the landlord gets a notification and can enter Budget Rent Community.</p>
+              </div>
+              {communityMembers.length === 0 && <div className="admin-empty">No applications yet.</div>}
+              {communityMembers.map(m => (
+                <div key={m.user_id} className="ann-form" style={{ gap: 4 }}>
+                  <strong>{m.full_name} <span style={{ fontWeight: 600, fontSize: '0.75rem', color: m.status === 'approved' ? '#16a34a' : m.status === 'rejected' ? '#dc2626' : '#d97706' }}>· {m.status}</span></strong>
+                  <span className="ann-hint">{m.email} · {m.phone}</span>
+                  <span className="ann-hint">📍 {m.location} · {m.property_count} unit(s)</span>
+                  <span className="ann-hint">“{m.reason}”</span>
+                  <div className="row-actions" style={{ justifyContent: 'flex-start', marginTop: 6 }}>
+                    {m.status !== 'approved' && <button type="button" className="export-btn" onClick={() => decideMember(m, 'approved')}><Check size={14}/> Approve</button>}
+                    {m.status === 'pending' && <button type="button" className="export-btn" onClick={() => decideMember(m, 'rejected')}><X size={14}/> Reject</button>}
+                    <button type="button" className="export-btn" onClick={() => removeMember(m)}><Trash2 size={14}/> Remove</button>
+                  </div>
+                </div>
+              ))}
             </div>
           )}
 
