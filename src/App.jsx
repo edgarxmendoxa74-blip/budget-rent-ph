@@ -27,6 +27,7 @@ const PropertyForm = lazy(() => import('./components/PropertyForm'));
 const ProfileModal = lazy(() => import('./components/ProfileModal'));
 const EditListings = lazy(() => import('./components/EditListings'));
 const VerificationPage = lazy(() => import('./components/VerificationPage'));
+import { conditionInfo, genderText, roomsInfo } from './components/RentalCondition';
 const CustomerSupportPage = lazy(() => import('./components/CustomerSupportPage'));
 const BookingsPage = lazy(() => import('./components/BookingsPage'));
 const PaymentMethods = lazy(() => import('./components/PaymentMethods'));
@@ -73,6 +74,11 @@ const isStaycation = (item) => String(item?.type || item?.category || '').toLowe
 
 // Availability status: 'Available' (default) o 'Occupied'/'Accommodated'
 const isOccupied = (item) => {
+  // Rental na maraming kwarto: occupied lang kapag puno na ang lahat ng kwarto
+  if (!isStaycation(item)) {
+    const r = roomsInfo(item);
+    if (r.tracked) return r.free === 0;
+  }
   const value = String(item?.availability || '').toLowerCase().trim();
   return value === 'occupied' || value === 'accommodated' || value === 'rented' || value === 'unavailable';
 };
@@ -83,7 +89,15 @@ const stayCapacity = (item) => {
   return set > 0 ? set : Math.max(1, Number(item?.rooms) || 1) * 2;
 };
 // Staycation na occupied: puwede pa ring mag-reserve ng slot para sa ibang petsa
-const availabilityLabel = (item) => (isOccupied(item) ? (isStaycation(item) ? 'Occupied • Can still reserve' : 'Occupied') : 'Available');
+const availabilityLabel = (item) => {
+  if (!isStaycation(item) && String(item?.availability || '').toLowerCase().trim() === 'house only') return 'Available • 1 house only';
+  if (!isStaycation(item)) {
+    const r = roomsInfo(item);
+    if (r.tracked) return r.free === 0 ? 'Fully occupied' : `${r.free} of ${r.total} rooms available`;
+  }
+  return availabilityLabelBase(item);
+};
+const availabilityLabelBase = (item) => (isOccupied(item) ? (isStaycation(item) ? 'Occupied • Can still reserve' : 'Occupied') : 'Available');
 const HIDDEN_PROPERTIES_KEY = 'budgetrent_hidden_properties';
 
 const getHiddenPropertyIds = () => {
@@ -179,7 +193,7 @@ function ListingCard({ item, isFav, onToggleFavorite, onOpen, stats, distanceLab
             <h4 className="card-title">{item.location?.split(',')[0] || item.name}</h4>
             <p className="card-subtitle">
               {item.type || item.category || 'Rental Property'}
-              {isStaycation(item) && <span> • up to {stayCapacity(item)} guests</span>}
+              {isStaycation(item) ? <span> • up to {stayCapacity(item)} guests</span> : <span> • {genderText(item.allowed_gender)}</span>}
             </p>
           </div>
           {stats?.count > 0 && (
@@ -404,9 +418,10 @@ function App() {
     }
   };
 
-  const fetchProperties = async () => {
+  // silent = background refresh (walang loading flicker). Ginagamit para makita ng tenant ang bagong edits ng landlord.
+  const fetchProperties = async (silent = false) => {
     try {
-      setLoading(true);
+      if (silent !== true) setLoading(true);
       const { data, error } = await supabase
         .from('properties')
         .select('*')
@@ -416,7 +431,10 @@ function App() {
       if (error) throw error;
       const hiddenPropertyIds = new Set(getHiddenPropertyIds());
       const normalizedProperties = applySubscriptionExpiry(normalizePropertyOwnerProfiles(data || []));
-      setProperties(normalizedProperties.filter(item => !hiddenPropertyIds.has(item.id)));
+      const visibleProperties = normalizedProperties.filter(item => !hiddenPropertyIds.has(item.id));
+      setProperties(visibleProperties);
+      // I-update din ang listing na nakabukas para makita agad ang bagong detalye
+      setSelectedProperty((prev) => (prev ? (visibleProperties.find((p) => p.id === prev.id) || prev) : prev));
     } catch (error) {
       console.error('Error fetching properties:', error.message);
       if (await recoverFromJwtError(error)) {
@@ -426,6 +444,23 @@ function App() {
       setLoading(false);
     }
   };
+
+  // Auto-refresh ng listings: realtime, at kapag bumalik sa app/tab
+  const fetchPropertiesRef = useRef(fetchProperties);
+  fetchPropertiesRef.current = fetchProperties;
+  useEffect(() => {
+    const refresh = () => { if (document.visibilityState === 'visible') fetchPropertiesRef.current(true); };
+    const t = setInterval(refresh, 120000); // backup lang; realtime ang pangunahin
+    // Realtime: kapag may nag-add/edit/delete ng listing, i-refresh agad (debounced)
+    let timer = null;
+    const onChange = () => { clearTimeout(timer); timer = setTimeout(() => fetchPropertiesRef.current(true), 400); };
+    const channel = supabase.channel('properties-live')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'properties' }, onChange)
+      .subscribe();
+    document.addEventListener('visibilitychange', refresh);
+    window.addEventListener('focus', refresh);
+    return () => { clearInterval(t); clearTimeout(timer); supabase.removeChannel(channel); document.removeEventListener('visibilitychange', refresh); window.removeEventListener('focus', refresh); };
+  }, []);
 
   const handleDeleteProperty = async () => {
     if (!propertyToDelete) return;
@@ -1872,6 +1907,11 @@ function App() {
                 <span className={`avail-badge inline ${isOccupied(selectedProperty) ? 'occupied' : 'available'}`}>
                   {availabilityLabel(selectedProperty)}
                 </span>
+                {!isStaycation(selectedProperty) && (
+                  <span className="type-badge" style={{ marginLeft: 6, background: selectedProperty.allowed_gender === 'female' ? '#fce7f3' : selectedProperty.allowed_gender === 'male' ? '#dbeafe' : '#dcfce7', color: selectedProperty.allowed_gender === 'female' ? '#9d174d' : selectedProperty.allowed_gender === 'male' ? '#1e40af' : '#166534' }}>
+                    {genderText(selectedProperty.allowed_gender)}
+                  </span>
+                )}
               </div>
               <h2>{selectedProperty.name || selectedProperty.title}</h2>
               {isStaycation(selectedProperty) && isOccupied(selectedProperty) && (
@@ -1966,7 +2006,13 @@ function App() {
                   <div className="circle-icon"><Bed size={16} /></div> 
                   <div>
                     <label>Available Rooms</label>
-                    <p>{selectedProperty.rooms || 1} Room(s)</p>
+                    <p>{(() => {
+                      const r = roomsInfo(selectedProperty);
+                      if (isStaycation(selectedProperty)) return `${selectedProperty.rooms || 1} Room(s)`;
+                      if (r.whole) return `Whole house (${r.total} room${r.total > 1 ? 's' : ''}) — rented as one`;
+                      if (r.multi) return `${r.total} rooms${r.tracked ? ` • ${r.occupied} occupied • ${r.free} available` : ''}`;
+                      return `${selectedProperty.rooms || 1} Room(s)`;
+                    })()}</p>
                   </div>
                 </div>
                 <div className="amenity-item">
@@ -2020,6 +2066,17 @@ function App() {
                   </div>
                 )}
               </div>
+
+              {!isStaycation(selectedProperty) && conditionInfo(selectedProperty.house_condition) && (() => {
+                const c = conditionInfo(selectedProperty.house_condition);
+                return (
+                  <div style={{ margin: '4px 0 14px', padding: '12px 14px', borderRadius: 14, background: c.bg, color: c.color }}>
+                    <div style={{ fontSize: '0.72rem', fontWeight: 800, letterSpacing: '0.04em', textTransform: 'uppercase', opacity: 0.8 }}>House condition</div>
+                    <div style={{ fontSize: '1rem', fontWeight: 800 }}>{c.label}</div>
+                    {selectedProperty.condition_notes && <p style={{ margin: '6px 0 0', whiteSpace: 'pre-line', fontSize: '0.86rem', color: 'inherit' }}>{selectedProperty.condition_notes}</p>}
+                  </div>
+                );
+              })()}
 
               {isStaycation(selectedProperty) && Array.isArray(selectedProperty.stay_features) && selectedProperty.stay_features.length > 0 && (
                 <div style={{ margin: '14px 0' }}>

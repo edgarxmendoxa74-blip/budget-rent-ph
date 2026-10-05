@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { X, Send, CheckCircle, Home, MapPin, Tag, Info, Shield, Zap, TrendingUp, Camera, Loader2, Image as ImageIcon } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import LocationPicker from './LocationPicker';
-import StaycationExtras, { stayPayload, STAY_COLUMNS, STAY_COLUMN_RE } from './StaycationExtras';
+import StaycationExtras, { StayFeaturesSelect, MaxChildrenInput, stayPayload, STAY_COLUMNS, STAY_COLUMN_RE } from './StaycationExtras';
+import { ConditionSelect, ConditionNotes, GenderSelect, genderPayload, RoomsFields, roomsPayload, conditionPayload, CONDITION_COLUMNS, CONDITION_COLUMN_RE } from './RentalCondition';
 import { countMyListings, fetchMyPlan, listingLimitFor, isProActive, isLimitError, PRO_PLAN, PRO_LISTING_LIMIT, FREE_LISTING_LIMIT } from '../lib/listingPlan';
 import './PropertyForm.css';
 
@@ -32,6 +33,11 @@ const PropertyForm = ({ onClose, session, onListingAdded, onUpgrade }) => {
     stay_features: [],
     house_rules: '',
     cancellation_policy: '',
+    house_condition: '',
+    condition_notes: '',
+    allowed_gender: 'both',
+    rental_mode: 'rooms',
+    occupied_rooms: 0,
     kitchen: '0',
     email: session?.user?.user_metadata?.business_email || session?.user?.email || '',
     ownerBusinessName: session?.user?.user_metadata?.property_name || '',
@@ -172,6 +178,9 @@ const PropertyForm = ({ onClose, session, onListingAdded, onUpgrade }) => {
         pets_allowed: formData.type === 'Staycation' ? formData.petsAllowed : 'No',
         down_payment: formData.type === 'Staycation' ? Math.max(0, parseFloat(formData.downPayment || 0) || 0) : 0,
         ...stayPayload(formData, formData.type === 'Staycation'),
+        ...conditionPayload(formData, formData.type !== 'Staycation'),
+        ...genderPayload(formData, formData.type !== 'Staycation'),
+        ...roomsPayload(formData, formData.type !== 'Staycation'),
         kitchen: parseInt(formData.kitchen || 0),
         email: formData.email,
         amenities: amenities,
@@ -187,9 +196,10 @@ const PropertyForm = ({ onClose, session, onListingAdded, onUpgrade }) => {
       let { error } = await supabase.from('properties').insert(payload);
 
       // Fallback kapag wala pa ang availability / latitude / longitude columns sa database
-      if (error && (error.code === '42703' || /availability|latitude|longitude|pets_allowed|down_payment/i.test(error.message || '') || STAY_COLUMN_RE.test(error.message || ''))) {
+      if (error && (error.code === '42703' || /availability|latitude|longitude|pets_allowed|down_payment/i.test(error.message || '') || STAY_COLUMN_RE.test(error.message || '') || CONDITION_COLUMN_RE.test(error.message || ''))) {
         const legacyPayload = { ...payload };
         STAY_COLUMNS.forEach((c) => delete legacyPayload[c]);
+        CONDITION_COLUMNS.forEach((c) => delete legacyPayload[c]);
         delete legacyPayload.pets_allowed;
         delete legacyPayload.down_payment;
         delete legacyPayload.availability;
@@ -340,6 +350,7 @@ const PropertyForm = ({ onClose, session, onListingAdded, onUpgrade }) => {
               <label>Availability Status</label>
               <select name="availability" value={formData.availability} onChange={handleChange}>
                 <option value="Available">Available — has vacancies</option>
+                {formData.type !== 'Staycation' && <option value="House only">Available — 1 house only</option>}
                 <option value="Occupied">Occupied — fully booked</option>
               </select>
               <span className="upload-hint">Update this when the unit fills up or becomes vacant.</span>
@@ -387,6 +398,15 @@ const PropertyForm = ({ onClose, session, onListingAdded, onUpgrade }) => {
                   <option>Private</option>
                 </select>
               </div>
+              {formData.type !== 'Staycation' && (
+                <RoomsFields value={formData} onChange={(k, v) => setFormData((prev) => ({ ...prev, [k]: v }))} />
+              )}
+              {formData.type === 'Staycation' && (
+                <MaxChildrenInput value={formData} onChange={(k, v) => setFormData((prev) => ({ ...prev, [k]: v }))} />
+              )}
+              {formData.type !== 'Staycation' && (
+                <ConditionSelect value={formData} onChange={(k, v) => setFormData((prev) => ({ ...prev, [k]: v }))} selectProps={{ name: 'house_condition' }} />
+              )}
               <div className="form-group">
                 <label>Rooms</label>
                 <input type="number" name="rooms" min="1" value={formData.rooms} onChange={handleChange} />
@@ -411,7 +431,14 @@ const PropertyForm = ({ onClose, session, onListingAdded, onUpgrade }) => {
                   </select>
                 </div>
               )}
+              {formData.type === 'Staycation' && (
+                <StayFeaturesSelect value={formData} onChange={(k, v) => setFormData((prev) => ({ ...prev, [k]: v }))} />
+              )}
             </div>
+
+            {formData.type !== 'Staycation' && (
+              <ConditionNotes value={formData} onChange={(k, v) => setFormData((prev) => ({ ...prev, [k]: v }))} />
+            )}
 
             {formData.type === 'Staycation' && (
               <StaycationExtras value={formData} onChange={(k, v) => setFormData((prev) => ({ ...prev, [k]: v }))} />
@@ -422,9 +449,14 @@ const PropertyForm = ({ onClose, session, onListingAdded, onUpgrade }) => {
               <textarea name="description" placeholder="Other rules or details..." rows="2" required onChange={handleChange}></textarea>
             </div>
 
-            <div className="form-group">
-              <label>Contact Info (Phone/Messenger)</label>
-              <input name="contact" placeholder="09XX XXX XXXX" required onChange={handleChange} />
+            <div className="form-row">
+              <div className="form-group">
+                <label>Contact Info (Phone/Messenger)</label>
+                <input name="contact" placeholder="09XX XXX XXXX" required onChange={handleChange} />
+              </div>
+              {formData.type !== 'Staycation' && (
+                <GenderSelect value={formData} onChange={(k, v) => setFormData((prev) => ({ ...prev, [k]: v }))} selectProps={{ name: 'allowed_gender' }} />
+              )}
             </div>
 
             <div className="form-group">

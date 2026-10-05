@@ -10,6 +10,7 @@ import { HeroBudi } from './MascotSplash';
 import { fetchRoute, getEstimates, formatDuration, formatStepDistance, stepText, routeProgress } from '../lib/routing';
 import './FindNearbyPage.css';
 import { ikImage } from '../lib/imagekit';
+import { roomsInfo } from './RentalCondition';
 
 // three.js is heavy: i-load lang kapag may Directions na
 const BudiScene = lazy(() => import('./BudiScene.jsx'));
@@ -105,6 +106,11 @@ const MIN_MOVE_KM = 0.02; // huwag i-update ang radar sa GPS jitter na < 20m
 // Registered landlord = may account (user_id) sa app. May pin sa mapa.
 // Occupied na rent o staycation: nasa mapa pa rin, kulay purple at may "Occupied" badge
 const isOccupied = (item) => {
+  // Rental na maraming kwarto: occupied lang kapag puno na ang lahat ng kwarto
+  if (!isStay(item)) {
+    const r = roomsInfo(item);
+    if (r.tracked) return r.free === 0;
+  }
   const value = String(item?.availability || '').toLowerCase().trim();
   return (value === 'occupied' || value === 'accommodated' || value === 'rented' || value === 'unavailable');
 };
@@ -1073,7 +1079,6 @@ const FindNearbyPage = ({ listings, reviewStats, onSelectProperty, isLandlord, u
           item={actionSheet.item}
           kind={actionSheet.kind}
           onClose={() => setActionSheet(null)}
-          fullPage
           onViewDetails={onSelectProperty}
         />
       )}

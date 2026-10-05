@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 
 export const STAY_FEATURES = ['Air-conditioned', 'Toiletries', 'TV', 'Refrigerator', 'Washing machine', 'Heater'];
 
@@ -12,37 +12,9 @@ const StaycationExtras = ({ value, onChange, groupClass = 'form-group' }) => {
   return (
     <>
       <div className={groupClass}>
-        <label>Guests allowed</label>
-        <div style={{ display: 'flex', gap: 10 }}>
-          <input type="number" min="1" placeholder="Max adults" value={value.max_adults ?? ''} onChange={(e) => onChange('max_adults', e.target.value)} />
-          <input type="number" min="0" placeholder="Max children" value={value.max_children ?? ''} onChange={(e) => onChange('max_children', e.target.value)} />
-        </div>
-        <span style={hint}>Max number of adults and children you allow per booking.</span>
-      </div>
-
-      <div className={groupClass}>
-        <label>What&apos;s included</label>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-          {STAY_FEATURES.map((f) => {
-            const on = features.includes(f);
-            return (
-              <button
-                key={f}
-                type="button"
-                onClick={() => toggle(f)}
-                aria-pressed={on}
-                style={{
-                  padding: '7px 12px', borderRadius: 999, fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer',
-                  border: `1.5px solid ${on ? '#0f766e' : '#cbd5e1'}`,
-                  background: on ? '#ccfbf1' : '#fff',
-                  color: on ? '#0f766e' : '#475569'
-                }}
-              >
-                {on ? '✓ ' : ''}{f}
-              </button>
-            );
-          })}
-        </div>
+        <label>Max adults</label>
+        <input type="number" min="1" placeholder="Max adults" value={value.max_adults ?? ''} onChange={(e) => onChange('max_adults', e.target.value)} />
+        <span style={hint}>Max number of adults you allow per booking. Max children is set above, beside CR.</span>
       </div>
 
       <div className={groupClass}>
@@ -56,6 +28,50 @@ const StaycationExtras = ({ value, onChange, groupClass = 'form-group' }) => {
         <textarea rows="3" maxLength={1000} placeholder={'e.g. Free cancellation up to 3 days before check-in\nDown payment is non-refundable within 3 days'} value={value.cancellation_policy || ''} onChange={(e) => onChange('cancellation_policy', e.target.value)} />
       </div>
     </>
+  );
+};
+
+// Max children: katabi ng CR sa Add/Edit forms (staycation lang)
+export const MaxChildrenInput = ({ value, onChange, groupClass = 'form-group' }) => (
+  <div className={groupClass}>
+    <label>Max children</label>
+    <input type="number" min="0" placeholder="0" value={value.max_children ?? ''} onChange={(e) => onChange('max_children', e.target.value)} />
+  </div>
+);
+
+// "What's included": dropdown na kapareho ng Pets Allowed, may checklist na bumubukas. Katabi ng Pets Allowed sa Add/Edit forms.
+export const StayFeaturesSelect = ({ value, onChange, groupClass = 'form-group' }) => {
+  const features = Array.isArray(value.stay_features) ? value.stay_features : [];
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+  useEffect(() => {
+    if (!open) return undefined;
+    const close = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener('mousedown', close);
+    document.addEventListener('touchstart', close);
+    return () => { document.removeEventListener('mousedown', close); document.removeEventListener('touchstart', close); };
+  }, [open]);
+  const toggle = (f) => onChange('stay_features', features.includes(f) ? features.filter((x) => x !== f) : [...features, f]);
+  const summary = features.length === 0 ? 'None' : features.length === 1 ? features[0] : `${features.length} selected`;
+  return (
+    <div className={groupClass} ref={ref} style={{ position: 'relative' }}>
+      <label>What&apos;s included</label>
+      <select value="x" aria-haspopup="listbox" aria-expanded={open} onChange={() => {}}
+        onMouseDown={(e) => { e.preventDefault(); setOpen((o) => !o); }}
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ' || e.key === 'ArrowDown') { e.preventDefault(); setOpen((o) => !o); } }}>
+        <option value="x">{summary}</option>
+      </select>
+      {open && (
+        <div role="listbox" aria-multiselectable="true" style={{ position: 'absolute', zIndex: 20, top: '100%', left: 0, minWidth: '100%', width: 230, marginTop: 4, padding: 6, background: '#fff', border: '1.5px solid #cbd5e1', borderRadius: 12, boxShadow: '0 12px 30px rgba(0, 38, 82, 0.18)' }}>
+          {STAY_FEATURES.map((f) => (
+            <label key={f} style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 8, padding: '8px 10px', borderRadius: 8, fontSize: '0.88rem', fontWeight: 600, color: '#334155', cursor: 'pointer' }}>
+              <input type="checkbox" checked={features.includes(f)} onChange={() => toggle(f)} style={{ width: 16, height: 16, padding: 0, accentColor: '#0f766e' }} />
+              {f}
+            </label>
+          ))}
+        </div>
+      )}
+    </div>
   );
 };
 

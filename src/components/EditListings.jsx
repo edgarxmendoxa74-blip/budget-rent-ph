@@ -6,7 +6,8 @@ import { toCoords } from '../lib/geo';
 import './EditListings.css';
 import { ikImage } from '../lib/imagekit';
 import RoomFeeForm from './RoomFeeForm';
-import StaycationExtras, { stayPayload, STAY_COLUMNS, STAY_COLUMN_RE } from './StaycationExtras';
+import StaycationExtras, { StayFeaturesSelect, MaxChildrenInput, stayPayload, STAY_COLUMNS, STAY_COLUMN_RE } from './StaycationExtras';
+import { ConditionSelect, ConditionNotes, GenderSelect, genderPayload, RoomsFields, roomsPayload, conditionPayload, CONDITION_COLUMNS, CONDITION_COLUMN_RE } from './RentalCondition';
 import { needsRoomFee, fetchRoomFeeStatus, ROOM_FEE_THRESHOLD, ROOM_FEE_PLAN } from '../lib/roomFee';
 
 const CATEGORIES = ['Paupahan', 'Staycation'];
@@ -174,6 +175,9 @@ const EditListings = ({ session, onClose, onListingUpdated, initialEditingItem =
         pets_allowed: /staycation/i.test(editingItem.type || '') ? (editingItem.pets_allowed || 'No') : 'No',
         down_payment: /staycation/i.test(editingItem.type || '') ? Math.max(0, parseFloat(editingItem.down_payment || 0) || 0) : 0,
         ...stayPayload(editingItem, /staycation/i.test(editingItem.type || '')),
+        ...conditionPayload(editingItem, !/staycation/i.test(editingItem.type || '')),
+        ...genderPayload(editingItem, !/staycation/i.test(editingItem.type || '')),
+        ...roomsPayload(editingItem, !/staycation/i.test(editingItem.type || '')),
         kitchen: parseInt(editingItem.kitchen || 0),
         email: editingItem.email,
         availability: editingItem.availability || 'Available',
@@ -189,9 +193,10 @@ const EditListings = ({ session, onClose, onListingUpdated, initialEditingItem =
         .eq('id', editingItem.id);
 
       // Fallback kapag wala pa ang availability / latitude / longitude columns sa database
-      if (error && (error.code === '42703' || /availability|latitude|longitude|pets_allowed|advance_months|deposit_months|down_payment/i.test(error.message || '') || STAY_COLUMN_RE.test(error.message || ''))) {
+      if (error && (error.code === '42703' || /availability|latitude|longitude|pets_allowed|advance_months|deposit_months|down_payment/i.test(error.message || '') || STAY_COLUMN_RE.test(error.message || '') || CONDITION_COLUMN_RE.test(error.message || ''))) {
         const legacyPayload = { ...payload };
         STAY_COLUMNS.forEach((c) => delete legacyPayload[c]);
+        CONDITION_COLUMNS.forEach((c) => delete legacyPayload[c]);
         delete legacyPayload.down_payment;
         delete legacyPayload.pets_allowed;
         delete legacyPayload.advance_months;
@@ -203,6 +208,7 @@ const EditListings = ({ session, onClose, onListingUpdated, initialEditingItem =
           .from('properties')
           .update(legacyPayload)
           .eq('id', editingItem.id));
+        if (!error) alert('Saved, but some details (guest limits, pets, down payment, etc.) could not be saved because the database is missing some columns. Please contact support.');
       }
 
       if (error) throw error;
@@ -354,6 +360,7 @@ const EditListings = ({ session, onClose, onListingUpdated, initialEditingItem =
                 <label>Availability Status</label>
                 <select value={editingItem.availability || 'Available'} onChange={e => handleEditChange('availability', e.target.value)}>
                   <option value="Available">Available — has vacancies</option>
+                  {!/staycation/i.test(editingItem.type || '') && <option value="House only">Available — 1 house only</option>}
                   <option value="Occupied">Occupied — fully booked</option>
                 </select>
               </div>
@@ -374,6 +381,12 @@ const EditListings = ({ session, onClose, onListingUpdated, initialEditingItem =
                   <label>CR</label>
                   <select value={editingItem.cr || 'Shared'} onChange={e => handleEditChange('cr', e.target.value)}><option>Shared</option><option>Private</option></select>
                 </div>
+                {/staycation/i.test(editingItem.type || '') && (
+                  <MaxChildrenInput groupClass="edit-form-group" value={editingItem} onChange={(k, v) => handleEditChange(k, v)} />
+                )}
+                {!/staycation/i.test(editingItem.type || '') && (
+                  <ConditionSelect groupClass="edit-form-group" value={editingItem} onChange={(k, v) => handleEditChange(k, v)} />
+                )}
               </div>
               <div className="edit-form-row">
                 <div className="edit-form-group">
@@ -390,7 +403,18 @@ const EditListings = ({ session, onClose, onListingUpdated, initialEditingItem =
                     <select value={editingItem.pets_allowed || 'No'} onChange={e => handleEditChange('pets_allowed', e.target.value)}><option>Yes</option><option>No</option></select>
                   </div>
                 )}
+                {/staycation/i.test(editingItem.type || '') && (
+                  <StayFeaturesSelect groupClass="edit-form-group" value={editingItem} onChange={(k, v) => handleEditChange(k, v)} />
+                )}
               </div>
+              {!/staycation/i.test(editingItem.type || '') && (
+                <div className="edit-form-row">
+                  <RoomsFields groupClass="edit-form-group" value={editingItem} onChange={(k, v) => handleEditChange(k, v)} />
+                </div>
+              )}
+              {!/staycation/i.test(editingItem.type || '') && (
+                <ConditionNotes groupClass="edit-form-group" value={editingItem} onChange={(k, v) => handleEditChange(k, v)} />
+              )}
               {/staycation/i.test(editingItem.type || '') && (
                 <StaycationExtras groupClass="edit-form-group" value={editingItem} onChange={(k, v) => handleEditChange(k, v)} />
               )}
@@ -403,9 +427,14 @@ const EditListings = ({ session, onClose, onListingUpdated, initialEditingItem =
                   <RoomFeeForm session={session} listing={editingItem} rooms={editingItem.rooms} onSubmitted={() => setRoomFeeStatus('pending')} />
                 )
               )}
-              <div className="edit-form-group">
-                <label>Contact Info</label>
-                <input value={editingItem.contact || ''} onChange={e => handleEditChange('contact', e.target.value)} />
+              <div className="edit-form-row">
+                <div className="edit-form-group">
+                  <label>Contact Info</label>
+                  <input value={editingItem.contact || ''} onChange={e => handleEditChange('contact', e.target.value)} />
+                </div>
+                {!/staycation/i.test(editingItem.type || '') && (
+                  <GenderSelect groupClass="edit-form-group" value={editingItem} onChange={(k, v) => handleEditChange(k, v)} />
+                )}
               </div>
               <div className="edit-form-group">
                 <label>Email Address</label>

@@ -235,6 +235,11 @@ const ListingActionSheet = ({ item, kind, onClose, onViewDetails, fullPage }) =>
                     <span><PawPrint size={14} /> Bringing a pet</span>
                   </label>
                 )}
+                <label className="wide">
+                  Message to owner (optional)
+                  <textarea rows={3} maxLength={200} placeholder="e.g. It's a birthday celebration, bringing kids, early check-in request..." value={extra} onChange={(e) => setExtra(e.target.value)} />
+                  <small style={{ textAlign: 'right', fontWeight: 600, color: 'var(--text-muted)' }}>{extra.length}/200</small>
+                </label>
               </div>
 
               {overlaps && <p className="act-hint"><Info size={14} /> Some of these dates are already booked. Please pick other dates.</p>}
@@ -314,10 +319,6 @@ const ListingActionSheet = ({ item, kind, onClose, onViewDetails, fullPage }) =>
                 <label>
                   Emergency number
                   <input type="tel" inputMode="tel" maxLength={16} placeholder="09171234567" value={emPhone} onChange={(e) => setEmPhone(e.target.value)} />
-                </label>
-                <label className="wide">
-                  Message to host (optional)
-                  <input type="text" maxLength={200} placeholder="e.g. It's a celebration / bringing kids" value={extra} onChange={(e) => setExtra(e.target.value)} />
                 </label>
               </div>
 

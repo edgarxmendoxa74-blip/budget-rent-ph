@@ -1190,7 +1190,7 @@
 
 .image-container {
   width: 100%;
-  aspect-ratio: 3 / 2;
+  aspect-ratio: 16 / 9;
   flex-shrink: 0;
   position: relative;
   border-radius: 12px;
@@ -2804,7 +2804,7 @@
   /* Box na cards: 2 sa isang row */
   .mine-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
   .mine-card { flex-direction: column; gap: 6px; padding: 6px; border-radius: 14px; min-width: 0; }
-  .mine-img { flex: 0 0 auto; width: 100%; height: auto; aspect-ratio: 1 / 1; border-radius: 10px; }
+  .mine-img { flex: 0 0 auto; width: 100%; height: auto; aspect-ratio: 16 / 9; border-radius: 10px; }
   .mine-img .avail-badge { top: 5px; left: 5px; padding: 1px 6px; font-size: 0.56rem; }
   .mine-info { gap: 2px; padding: 0 2px 2px; }
   .mine-cat { padding: 1px 6px; font-size: 0.58rem; }
@@ -3398,3 +3398,7 @@ html body .property-detail-modal .modal-actions {
 @media (min-width: 700px) {
   html body .modal-overlay > .property-detail-modal { max-width: 640px; margin: 0 auto; }
 }
+
+/* Notification: laging nasa kanan ang delete icon kahit maikli ang text */
+.notif-item .notif-text { flex: 1 1 auto; min-width: 0; }
+.notif-item .notif-delete { margin-left: auto; }

@@ -17,3 +17,10 @@
 .pm-list b { color: var(--primary-dark); font-size: 1rem; letter-spacing: 0.02em; word-break: break-all; }
 .pm-list em { font-style: normal; color: #92400e; font-size: 0.72rem; }
 .pm-list li button { flex-shrink: 0; width: 34px; height: 34px; border: none; border-radius: 50%; background: #fee2e2; color: #b91c1c; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+.pm-limit { display: flex; gap: 6px; align-items: center; margin: 0; padding: 12px 14px; border-radius: 14px; background: #fff8e7; border: 1.5px solid #ffe2a1; color: #92400e; font-size: 0.8rem; font-weight: 700; }
+.pm-qr { display: flex; flex-direction: column; gap: 6px; font-size: 0.75rem; font-weight: 700; color: var(--primary-dark); }
+.pm-qr-pick { display: flex; flex-direction: row !important; align-items: center; justify-content: center; gap: 8px !important; padding: 12px; border-radius: 12px; border: 1.5px dashed #9db4d4; background: #f8fbff; color: var(--primary); font-weight: 800; cursor: pointer; }
+.pm-qr-preview { display: flex; align-items: center; gap: 12px; }
+.pm-qr-preview img { width: 96px; height: 96px; object-fit: contain; border-radius: 12px; border: 1.5px solid #dbe6f5; background: #fff; }
+.pm-qr-preview button { display: inline-flex; align-items: center; gap: 4px; padding: 7px 12px; border: none; border-radius: 999px; background: #fee2e2; color: #b91c1c; font-family: inherit; font-size: 0.75rem; font-weight: 800; cursor: pointer; }
+.pm-qr-thumb { width: 84px; height: 84px; margin-top: 6px; object-fit: contain; border-radius: 10px; border: 1.5px solid #dbe6f5; background: #fff; }

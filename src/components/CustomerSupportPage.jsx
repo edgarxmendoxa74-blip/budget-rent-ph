@@ -137,12 +137,11 @@ ${formData.issue}`;
         }
       `}</style>
 
-      <header className="hero branding-hero" style={{ position: 'relative' }}>
+      <header className="hero branding-hero" style={{ position: 'relative', paddingTop: '10px', paddingBottom: '44px' }}>
         <HeroBudi message="Hi! I’m Budi. Just tell us your concern and our team will help you out." />
         <div className="hero-content">
           <span className="branding-kicker">Help Center</span>
           <h2>Customer Support</h2>
-          <p>Tell us how we can assist you today</p>
         </div>
       </header>
 

@@ -94,3 +94,19 @@ html body .bchat-overlay > .bchat { max-width: none; width: 100%; height: 100%; 
 html body .bchat-head { justify-content: flex-start; padding-top: calc(12px + env(safe-area-inset-top, 0px)); }
 html body .bchat-form { padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px)); }
 @media (min-width: 700px) { html body .bchat-overlay > .bchat { max-width: 640px; margin: 0 auto; } }
+.bchat-pay-qr { display: flex; flex-direction: column; align-items: center; gap: 2px; margin-top: 8px; text-decoration: none; }
+.bchat-pay-qr img { width: 170px; max-width: 100%; height: auto; border-radius: 12px; border: 1.5px solid #dbe6f5; background: #fff; }
+.bchat-pay-qr small { color: var(--text-muted); font-size: 0.68rem; }
+
+/* Payment method modal: compact, QR sa kanan ng detalye */
+.bchat-confirm.bchat-pay { max-width: 380px; padding: 18px 16px 14px; text-align: left; }
+.bchat-pay-head { display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 12px; }
+.bchat-pay-head h3 { margin: 0; font-size: 1.05rem; }
+.bchat-pay-icon { width: 32px; height: 32px; border-radius: 50%; background: #dcfce7; color: #15803d; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.bchat-confirm.bchat-pay .bchat-pay-list { max-height: 58vh; max-height: 58dvh; margin-bottom: 12px; gap: 10px; }
+.bchat-confirm.bchat-pay .bchat-pay-list li { flex-direction: row; align-items: center; justify-content: space-between; gap: 12px; padding: 12px; }
+.bchat-pay-info { display: flex; flex-direction: column; gap: 1px; min-width: 0; flex: 1; }
+.bchat-pay-info strong { font-size: 0.98rem; }
+.bchat-pay-info b { font-size: 1rem; letter-spacing: 0.02em; }
+.bchat-confirm.bchat-pay .bchat-pay-qr { margin: 0; flex-shrink: 0; }
+.bchat-confirm.bchat-pay .bchat-pay-qr img { width: 96px; height: 96px; object-fit: contain; border-radius: 10px; padding: 3px; box-sizing: border-box; }

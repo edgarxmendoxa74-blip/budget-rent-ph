@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { X, ArrowLeft, Send, Loader2, Trash2, CheckCircle2, XCircle, Wallet, Copy } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { ikImage } from '../lib/imagekit';
 import { profileFromUser } from '../lib/chatProfiles';
 import { ChatAvatar, ProfileSheet } from './ChatProfile';
 import './BookingChat.css';
@@ -252,19 +253,23 @@ const BookingChat = ({ bookingId, title, role, token, other, meName, onClose, on
       {payOpen && (
         <div className="bchat-confirm-overlay" onClick={() => setPayOpen(false)}>
           <div className="bchat-confirm bchat-pay animate-slide-up" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
-            <span className="bchat-confirm-icon successful"><Wallet size={26} /></span>
-            <h3>Payment method</h3>
+            <div className="bchat-pay-head">
+              <span className="bchat-pay-icon"><Wallet size={20} /></span>
+              <h3>Payment method</h3>
+            </div>
             {payLoading ? <Loader2 size={20} className="animate-spin" /> : !payMethods?.length ? (
               <p>The {otherProfile.host ? 'host' : 'landlord'} hasn&apos;t added a payment method yet. Please ask them in the chat.</p>
             ) : (
               <ul className="bchat-pay-list">
                 {payMethods.map((m) => (
                   <li key={m.id}>
-                    <strong>{m.provider}</strong>
-                    <span>{m.account_name}</span>
-                    <b>{m.account_number}</b>
-                    {m.notes && <em>{m.notes}</em>}
-                    <button type="button" onClick={() => copyNumber(m)}><Copy size={13} /> {copiedId === m.id ? 'Copied!' : 'Copy number'}</button>
+                    <div className="bchat-pay-info">
+                      <strong>{m.provider}</strong>
+                      <span>{m.account_name}</span>
+                      <b>{m.account_number}</b>
+                      <button type="button" onClick={() => copyNumber(m)}><Copy size={13} /> {copiedId === m.id ? 'Copied!' : 'Copy number'}</button>
+                    </div>
+                    {m.qr_url && <a href={m.qr_url} target="_blank" rel="noreferrer" className="bchat-pay-qr"><img src={ikImage(m.qr_url, 320)} alt={`${m.provider} QR`} /><small>Tap to enlarge</small></a>}
                   </li>
                 ))}
               </ul>
