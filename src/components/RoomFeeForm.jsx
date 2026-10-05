@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { Loader2, Zap, X as XIcon, AlertCircle } from 'lucide-react';
+import { createPortal } from 'react-dom';
+import { Loader2, Zap, ArrowLeft, AlertCircle } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { PAYMENT_METHODS, fetchPaymentMethods } from '../lib/paymentMethods';
 import { ROOM_FEE_PLAN, ROOM_FEE_THRESHOLD } from '../lib/roomFee';
@@ -104,17 +105,17 @@ const RoomFeeForm = ({ session, listing, rooms, onSubmitted }) => {
         {loading ? <Loader2 size={18} className="animate-spin" /> : `Send receipt · ₱${ROOM_FEE_PLAN.price}`}
       </button>
 
-      {showPay && (
-        <div onClick={() => setShowPay(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,51,102,0.45)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
-          <div onClick={(e) => e.stopPropagation()} style={{ background: 'white', width: '92%', maxWidth: '330px', maxHeight: '80vh', overflowY: 'auto', borderRadius: '24px', padding: '18px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-              <div>
-                <h4 style={{ margin: 0, fontSize: '1.1rem', color: '#003366' }}>Scan to Pay</h4>
-                <p style={{ margin: 0, fontSize: '0.8rem', color: '#64748b' }}>Amount: <strong style={{ color: '#003366' }}>₱{ROOM_FEE_PLAN.price.toFixed(2)}</strong></p>
-              </div>
-              <button type="button" onClick={() => setShowPay(false)} style={{ background: '#f1f5f9', border: 'none', borderRadius: '50%', width: 32, height: 32, cursor: 'pointer' }}><XIcon size={16} /></button>
+      {showPay && createPortal(
+        <div style={{ position: 'fixed', inset: 0, background: '#f8fafc', zIndex: 9999, display: 'flex', flexDirection: 'column' }}>
+          <div style={{ background: '#003366', color: 'white', display: 'flex', alignItems: 'center', gap: '12px', padding: 'calc(12px + env(safe-area-inset-top, 0px)) 16px 12px' }}>
+            <button type="button" aria-label="Back" onClick={() => setShowPay(false)} style={{ background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: '50%', width: 36, height: 36, cursor: 'pointer', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><ArrowLeft size={20} /></button>
+            <div>
+              <h4 style={{ margin: 0, fontSize: '1.1rem' }}>Scan to Pay</h4>
+              <p style={{ margin: 0, fontSize: '0.8rem', opacity: 0.85 }}>Amount: <strong>₱{ROOM_FEE_PLAN.price.toFixed(2)}</strong></p>
             </div>
-            <div style={{ display: 'grid', gap: '8px' }}>
+          </div>
+          <div style={{ flex: 1, overflowY: 'auto', padding: '16px' }}>
+            <div style={{ display: 'grid', gap: '8px', maxWidth: '480px', margin: '0 auto' }}>
               {payMethods.map((pay, i) => (
                 <div key={i} style={{ background: '#fafbfc', padding: '10px 12px', borderRadius: '14px', border: '1px solid #f0f0f0', display: 'flex', alignItems: 'center', gap: '12px' }}>
                   {pay.qr ? (
@@ -130,9 +131,10 @@ const RoomFeeForm = ({ session, listing, rooms, onSubmitted }) => {
                 </div>
               ))}
             </div>
-            <button type="button" onClick={() => setShowPay(false)} style={{ width: '100%', marginTop: '14px', padding: '12px', borderRadius: '14px', background: '#003366', color: 'white', fontWeight: 800, border: 'none', cursor: 'pointer' }}>Done</button>
+            <button type="button" onClick={() => setShowPay(false)} style={{ display: 'block', width: '100%', maxWidth: '480px', margin: '14px auto 0', padding: '12px', borderRadius: '14px', background: '#003366', color: 'white', fontWeight: 800, border: 'none', cursor: 'pointer' }}>Done</button>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

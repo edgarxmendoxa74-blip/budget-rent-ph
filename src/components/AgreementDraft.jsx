@@ -193,7 +193,18 @@ const AgreementDraft = ({ session }) => {
 
       drawFooter();
       const safeName = (form.tenantName || 'tenant').replace(/[^a-z0-9]+/gi, '-').toLowerCase();
-      doc.save(`agreement-draft-${safeName}-${today}.pdf`);
+      const fileName = `agreement-draft-${safeName}-${today}.pdf`;
+      const { Capacitor } = await import('@capacitor/core');
+      if (Capacitor.isNativePlatform()) {
+        // Android WebView hindi nagda-download ng blob; i-save sa cache at buksan ang share sheet (Save to Files / Drive / Messenger)
+        const { Filesystem, Directory } = await import('@capacitor/filesystem');
+        const { Share } = await import('@capacitor/share');
+        const base64 = doc.output('datauristring').split(',')[1];
+        const saved = await Filesystem.writeFile({ path: fileName, data: base64, directory: Directory.Cache });
+        await Share.share({ title: 'Tenancy Agreement Draft', url: saved.uri, dialogTitle: 'Save or share PDF' });
+      } else {
+        doc.save(fileName);
+      }
       setDone(true);
       setTimeout(() => setDone(false), 4000);
     } catch (err) {

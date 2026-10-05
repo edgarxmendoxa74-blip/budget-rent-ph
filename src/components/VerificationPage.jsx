@@ -251,47 +251,18 @@ const VerificationPage = ({ onDone, session, mode = 'verify' }) => {
       {createPortal(<>
       {/* Payment Modal */}
       {showPaymentModal && (
-        <div style={{ 
-          position: 'fixed', 
-          top: 0, 
-          left: 0, 
-          right: 0, 
-          bottom: 0, 
-          background: 'rgba(0, 51, 102, 0.4)', 
-          backdropFilter: 'blur(8px)',
-          WebkitBackdropFilter: 'blur(8px)',
-          display: 'flex', 
-          alignItems: 'center', 
-          justifyContent: 'center', 
-          zIndex: 9999, // Ensure it's above everything
-          padding: '16px' 
-        }}>
-          <div className="animate-fade-in" style={{ 
-            background: 'white', 
-            width: '92%', 
-            maxWidth: '330px', 
-            borderRadius: '24px', 
-            padding: '18px', 
-            position: 'relative', 
-            maxHeight: '80vh',
-            overflowY: 'auto',
-            boxShadow: '0 20px 50px rgba(0, 0, 0, 0.2)',
-            margin: 'auto'
-          }}>
-            {/* Header with Close Icon */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
-              <div>
-                <h4 style={{ margin: '0', fontSize: '1.15rem', color: 'var(--primary)', fontWeight: '800' }}>Scan to Pay</h4>
-                <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-muted)' }}>Amount: <strong style={{color: 'var(--primary)'}}>₱{Number(plan?.price ?? 0).toFixed(2)}</strong></p>
-              </div>
-              <button 
-                onClick={() => setShowPaymentModal(false)} 
-                style={{ background: '#f1f5f9', border: 'none', borderRadius: '50%', width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--text-muted)' }}
-              >
-                <XIcon size={16} />
-              </button>
+        <div className="animate-fade-in" style={{ position: 'fixed', inset: 0, background: '#f8fafc', zIndex: 9999, display: 'flex', flexDirection: 'column' }}>
+          <div style={{ background: '#003366', color: 'white', display: 'flex', alignItems: 'center', gap: '12px', padding: 'calc(12px + env(safe-area-inset-top, 0px)) 16px 12px' }}>
+            <button type="button" aria-label="Back" onClick={() => setShowPaymentModal(false)} style={{ background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: '50%', width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'white' }}>
+              <ArrowLeft size={20} />
+            </button>
+            <div>
+              <h4 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800 }}>Scan to Pay</h4>
+              <p style={{ margin: 0, fontSize: '0.8rem', opacity: 0.85 }}>Amount: <strong>₱{Number(plan?.price ?? 0).toFixed(2)}</strong></p>
             </div>
-            
+          </div>
+          <div style={{ flex: 1, overflowY: 'auto', padding: '16px' }}>
+          <div style={{ maxWidth: '480px', margin: '0 auto' }}>
             <div style={{ display: 'grid', gap: '8px' }}>
               {payMethods.map((pay, pIdx) => (
                 <div key={pIdx} style={{ 
@@ -344,24 +315,13 @@ const VerificationPage = ({ onDone, session, mode = 'verify' }) => {
               ))}
             </div>
 
-            <button 
-              onClick={() => setShowPaymentModal(false)} 
-              style={{ 
-                width: '100%', 
-                marginTop: '14px', 
-                padding: '14px', 
-                borderRadius: '16px', 
-                background: 'var(--primary)', 
-                color: 'white', 
-                fontWeight: '800', 
-                fontSize: '0.95rem',
-                border: 'none', 
-                cursor: 'pointer',
-                boxShadow: '0 4px 12px rgba(0, 51, 102, 0.2)'
-              }}
+            <button
+              onClick={() => setShowPaymentModal(false)}
+              style={{ width: '100%', marginTop: '14px', padding: '14px', borderRadius: '16px', background: 'var(--primary)', color: 'white', fontWeight: '800', fontSize: '0.95rem', border: 'none', cursor: 'pointer', boxShadow: '0 4px 12px rgba(0, 51, 102, 0.2)' }}
             >
               Done
             </button>
+          </div>
           </div>
         </div>
       )}
