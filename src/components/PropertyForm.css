@@ -165,6 +165,82 @@
   }
 }
 
+/* Mobile fit: no horizontal overflow, bottom-sheet modal, compact amenities */
+.amenities-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.property-listing-form,
+.property-listing-form .form-group,
+.form-grid > * {
+  min-width: 0;
+}
+
+.property-listing-form input,
+.property-listing-form select,
+.property-listing-form textarea {
+  max-width: 100%;
+  box-sizing: border-box;
+  min-width: 0;
+}
+
+@media (max-width: 520px) {
+  .modal-overlay:not(.centered) .property-modal {
+    width: 100%;
+    max-width: 100% !important;
+    max-height: 94vh;
+    border-radius: 24px 24px 0 0 !important;
+    padding: 20px 14px calc(20px + env(safe-area-inset-bottom)) !important;
+    overflow-x: hidden;
+  }
+
+  .modal-header-section {
+    margin-bottom: 14px;
+    padding: 0 32px;
+  }
+
+  .modal-header-section h2 {
+    font-size: 1.3rem;
+  }
+
+  .benefits-section {
+    display: none;
+  }
+
+  .property-listing-form {
+    gap: 14px;
+  }
+
+  /* 16px prevents iOS zoom-on-focus */
+  .property-listing-form input,
+  .property-listing-form select,
+  .property-listing-form textarea {
+    font-size: 16px;
+    padding: 11px;
+  }
+
+  .form-row {
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  .amenities-form-grid {
+    gap: 10px;
+  }
+
+  .upload-hint {
+    max-width: 100%;
+  }
+
+  .submit-listing-btn {
+    position: sticky;
+    bottom: 0;
+    padding: 14px;
+  }
+}
+
 .submit-listing-btn {
   background: var(--primary-gradient);
   color: white;
