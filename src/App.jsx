@@ -1862,7 +1862,7 @@ function App() {
       {selectedProperty && (
         <div className="modal-overlay" onClick={() => setSelectedProperty(null)}>
           <div className="modal-content property-detail-modal animate-slide-up" onClick={e => e.stopPropagation()}>
-            <button className="close-btn" onClick={() => setSelectedProperty(null)}><X size={24} /></button>
+            <button className="close-btn" aria-label="Back" onClick={() => setSelectedProperty(null)}><ArrowLeft size={22} /></button>
             <div className="modal-image">
               <img src={ikImage(selectedProperty.image, 1080)} alt={selectedProperty.name || selectedProperty.title} />
             </div>

@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Send, Loader2, Trash2, CheckCircle2, XCircle, Wallet, Copy } from 'lucide-react';
+import { X, ArrowLeft, Send, Loader2, Trash2, CheckCircle2, XCircle, Wallet, Copy } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { profileFromUser } from '../lib/chatProfiles';
 import { ChatAvatar, ProfileSheet } from './ChatProfile';
@@ -159,6 +159,7 @@ const BookingChat = ({ bookingId, title, role, token, other, meName, onClose, on
     <div className="bchat-overlay" onClick={onClose}>
       <div className="bchat animate-slide-up" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="Chat">
         <div className="bchat-head">
+          <button type="button" className="bchat-back" aria-label="Back" onClick={onClose}><ArrowLeft size={20} /></button>
           <ChatAvatar profile={otherProfile} size={38} onClick={() => setProfileOf('other')} />
           <div className="bchat-title">
             <strong>{title}</strong>
@@ -169,7 +170,6 @@ const BookingChat = ({ bookingId, title, role, token, other, meName, onClose, on
               <Wallet size={16} /> <span>Payment</span>
             </button>
           )}
-          <button type="button" aria-label="Close" onClick={onClose}><X size={18} /></button>
         </div>
 
         {booking && (

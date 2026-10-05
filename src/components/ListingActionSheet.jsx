@@ -29,7 +29,7 @@ const ARRIVAL_TIMES = ['Before 12 PM', '12 PM - 2 PM', '2 PM - 4 PM', '4 PM - 6 
 // Book Here para sa Staycation (petsa, guests, presyo) at Find Rent (petsa ng lipat/bisita).
 // Nase-save sa booking_requests, lumalabas sa Bookings ng landlord, at may chat ang tenant at owner.
 // Request lang ito — ang owner pa rin ang magkukumpirma. Wala pang online payment.
-const ListingActionSheet = ({ item, kind, onClose, onViewDetails }) => {
+const ListingActionSheet = ({ item, kind, onClose, onViewDetails, fullPage }) => {
   const isBook = kind === 'book';
   const today = toDateInput(new Date());
   const setAdultsMax = Number(item?.max_adults) || 0;
@@ -140,7 +140,7 @@ const ListingActionSheet = ({ item, kind, onClose, onViewDetails }) => {
 
   const header = (
     <>
-      <button type="button" className="act-close" aria-label="Close" onClick={onClose}><X size={18} /></button>
+      <button type="button" className="act-close" aria-label={fullPage && !isBook ? "Back" : "Close"} onClick={onClose}>{fullPage && !isBook ? <ArrowLeft size={18} /> : <X size={18} />}</button>
       <div className="act-head">
         <span className={`act-badge ${isBook ? 'stay' : 'rent'}`}>{isBook ? <CalendarCheck size={20} /> : <Send size={20} />}</span>
         <div>
@@ -170,7 +170,7 @@ const ListingActionSheet = ({ item, kind, onClose, onViewDetails }) => {
   // ---------- Staycation: Book Here ----------
   if (isBook) {
     return createPortal(
-      <div className="act-overlay" onClick={onClose}>
+      <div className={`act-overlay${fullPage && !isBook ? " full" : ""}`} onClick={onClose}>
         <div className="act-sheet animate-slide-up" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="Book Here">
           {header}
 
@@ -317,7 +317,7 @@ const ListingActionSheet = ({ item, kind, onClose, onViewDetails }) => {
   // ---------- Find Rent: Book Here ----------
   // Portal sa body para nasa ibabaw ng bottom nav at hindi maipit sa animated na parent
   return createPortal(
-    <div className="act-overlay" onClick={onClose}>
+    <div className={`act-overlay${fullPage && !isBook ? " full" : ""}`} onClick={onClose}>
       <div className="act-sheet animate-slide-up" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="Book Here">
         {header}
 

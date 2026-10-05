@@ -3365,3 +3365,36 @@
 .hero-loc-btn.on { background: #16a34a; cursor: default; }
 
 .notif-link-btn { display: inline-block; margin: 6px 0 2px; padding: 7px 14px; border-radius: 100px; background: #1877f2; color: #fff; font-size: 0.78rem; font-weight: 800; text-decoration: none; }
+
+/* Listing details: full page (hindi na popup) */
+html body .modal-overlay:has(> .property-detail-modal) {
+  z-index: 3000;
+  background: #fff;
+  align-items: stretch;
+}
+html body .modal-overlay > .property-detail-modal {
+  max-width: none;
+  width: 100%;
+  height: 100%;
+  max-height: none;
+  border-radius: 0;
+  box-shadow: none;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+html body .property-detail-modal .modal-image { height: 300px; }
+html body .property-detail-modal .modal-body::before { display: none; }
+html body .property-detail-modal .close-btn {
+  position: fixed;
+  top: calc(12px + env(safe-area-inset-top, 0px));
+  left: 14px;
+  right: auto;
+}
+html body .property-detail-modal .modal-actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
+}
+@media (min-width: 700px) {
+  html body .modal-overlay > .property-detail-modal { max-width: 640px; margin: 0 auto; }
+}

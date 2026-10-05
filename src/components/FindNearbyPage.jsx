@@ -1073,6 +1073,7 @@ const FindNearbyPage = ({ listings, reviewStats, onSelectProperty, isLandlord, u
           item={actionSheet.item}
           kind={actionSheet.kind}
           onClose={() => setActionSheet(null)}
+          fullPage
           onViewDetails={onSelectProperty}
         />
       )}

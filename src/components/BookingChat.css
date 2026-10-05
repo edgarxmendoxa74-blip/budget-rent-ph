@@ -87,3 +87,10 @@
 .bchat-pay-list b { color: var(--primary-dark); font-size: 1.05rem; word-break: break-all; }
 .bchat-pay-list em { font-style: normal; color: #92400e; font-size: 0.72rem; }
 .bchat-pay-list button { align-self: flex-start; margin-top: 6px; display: inline-flex; align-items: center; gap: 4px; padding: 5px 10px; border: none; border-radius: 999px; background: var(--primary); color: #fff; font-family: inherit; font-size: 0.72rem; font-weight: 800; cursor: pointer; }
+
+/* Chat: full page (hindi na popup) */
+html body .bchat-overlay { background: #fff; align-items: stretch; }
+html body .bchat-overlay > .bchat { max-width: none; width: 100%; height: 100%; max-height: none; border-radius: 0; box-shadow: none; }
+html body .bchat-head { justify-content: flex-start; padding-top: calc(12px + env(safe-area-inset-top, 0px)); }
+html body .bchat-form { padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px)); }
+@media (min-width: 700px) { html body .bchat-overlay > .bchat { max-width: 640px; margin: 0 auto; } }

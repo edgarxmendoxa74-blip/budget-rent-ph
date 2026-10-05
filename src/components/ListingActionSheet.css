@@ -403,3 +403,14 @@ label.act-check.agree { display: flex; align-items: flex-start; font-size: 0.78r
   .act-option { padding: 9px 12px; font-size: 0.88rem; }
   .act-note, .act-hint { font-size: 0.7rem; margin: 6px 0 0; }
 }
+
+/* Inquire (Nearby): full page, hindi na popup */
+html body .act-overlay.full { background: #fff; align-items: stretch; }
+html body .act-overlay.full .act-sheet {
+  max-width: none; width: 100%; height: 100%; max-height: none; border-radius: 0; box-shadow: none;
+  padding: calc(14px + env(safe-area-inset-top, 0px)) 16px calc(20px + env(safe-area-inset-bottom, 0px));
+}
+html body .act-overlay.full .act-summary { display: flex; }
+html body .act-overlay.full .act-close { top: calc(12px + env(safe-area-inset-top, 0px)); left: 12px; right: auto; }
+html body .act-overlay.full .act-head { padding-left: 42px; }
+@media (min-width: 560px) { html body .act-overlay.full .act-sheet { max-width: 560px; margin: 0 auto; } }
