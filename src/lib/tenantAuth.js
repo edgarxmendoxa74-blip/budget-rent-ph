@@ -30,6 +30,17 @@ export const normalizePhone = (input) => {
 
 export const tenantEmail = (canonicalPhone) => `${canonicalPhone}@${TENANT_EMAIL_DOMAIN}`;
 
+// Address ng user sa sign up (tenant at landlord): street (optional), barangay, city/municipality, province
+export const EMPTY_ADDRESS = { street: '', barangay: '', city: '', province: '' };
+export const validateAddress = ({ barangay, city, province }) => {
+  if (String(barangay || '').trim().length < 2) return 'Please enter your barangay.';
+  if (String(city || '').trim().length < 2) return 'Please enter your city / municipality.';
+  if (String(province || '').trim().length < 2) return 'Please enter your province.';
+  return null;
+};
+export const formatAddress = ({ street, barangay, city, province }) =>
+  [street, barangay, city, province].map((p) => String(p || '').trim()).filter(Boolean).join(', ');
+
 const ageOf = (iso) => {
   const b = new Date(`${iso}T00:00:00`);
   if (Number.isNaN(b.getTime())) return null;
@@ -40,12 +51,14 @@ const ageOf = (iso) => {
 };
 
 // Ibinabalik ang mensahe ng error (Tagalog) o null kung okay
-export const validateTenantSignup = ({ fullName, phone, birthday, workStatus, password }) => {
+export const validateTenantSignup = ({ fullName, phone, birthday, workStatus, password, ...address }) => {
   if (String(fullName || '').trim().length < 2) return 'Please enter your full name.';
   if (!normalizePhone(phone)) return 'Please enter a valid Philippine mobile number (e.g. 09171234567).';
   const age = birthday ? ageOf(birthday) : null;
   if (age === null || age < MIN_AGE || age > 110) return `Please enter a valid birthday (you must be at least ${MIN_AGE} years old).`;
   if (!WORK_STATUSES.includes(workStatus)) return 'Please select your work status.';
+  const addressProblem = validateAddress(address);
+  if (addressProblem) return addressProblem;
   if (String(password || '').length < 6) return 'Password must be at least 6 characters.';
   return null;
 };
@@ -68,6 +81,10 @@ export const signUpTenant = async (form) => {
       phone,
       birthday: form.birthday,
       workStatus: form.workStatus,
+      street: form.street.trim(),
+      barangay: form.barangay.trim(),
+      city: form.city.trim(),
+      province: form.province.trim(),
       password: form.password
     }
   });

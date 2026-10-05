@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { supabase } from '../lib/supabase';
 import { showBudiSplash } from '../lib/budiSplash';
-import { signUpTenant, signInTenant, validateTenantSignup, WORK_STATUSES, workStatusLabel, NEW_TENANT_KEY } from '../lib/tenantAuth';
+import { signUpTenant, signInTenant, validateTenantSignup, validateAddress, formatAddress, EMPTY_ADDRESS, WORK_STATUSES, workStatusLabel, NEW_TENANT_KEY } from '../lib/tenantAuth';
 import { Mail, Lock, Cake, Briefcase, User, ArrowRight, Loader2, Building2, Phone, MessageCircle, Globe, X, Heart, Eye, EyeOff, BadgeCheck, Lightbulb, Search, MapPin, PlusCircle, UserPlus, Pencil, CheckCircle2 } from 'lucide-react';
 import './Auth.css';
 
@@ -77,7 +77,7 @@ const Auth = ({ onAuthSuccess }) => {
   const [tenantFormOpen, setTenantFormOpen] = useState(false); // lalabas lang ang tenant form pag pinindot ang "Enter as Tenant"
   const [tenantLoading, setTenantLoading] = useState(false);
   const [tenantError, setTenantError] = useState(null);
-  const [tenantForm, setTenantForm] = useState(() => ({ fullName: '', phone: readRememberedPhone(), birthday: '', workStatus: '', password: '' }));
+  const [tenantForm, setTenantForm] = useState(() => ({ fullName: '', phone: readRememberedPhone(), birthday: '', workStatus: '', ...EMPTY_ADDRESS, password: '' }));
   // Number lang ang naaalala ng app (hindi ang password). Ang password ay hawak ng password manager ng browser/phone.
   const [rememberPhone, setRememberPhone] = useState(() => readRememberedPhone() !== '');
   const handleTenantChange = (e) => setTenantForm((f) => ({ ...f, [e.target.name]: e.target.value }));
@@ -89,7 +89,8 @@ const Auth = ({ onAuthSuccess }) => {
     phone: '',
     propertyName: '',
     socialLink: '',
-    whatsapp: ''
+    whatsapp: '',
+    ...EMPTY_ADDRESS
   });
 
   const handleLandlordAuth = async (e) => {
@@ -122,6 +123,8 @@ const Auth = ({ onAuthSuccess }) => {
         if (!termsAgreed) {
           throw new Error('You must agree to the Terms and Policies to register.');
         }
+        const addressProblem = validateAddress(formData);
+        if (addressProblem) throw new Error(addressProblem);
         const { data, error } = await supabase.auth.signUp({
           email: formData.email,
           password: formData.password,
@@ -133,6 +136,11 @@ const Auth = ({ onAuthSuccess }) => {
               property_name: formData.propertyName,
               social_link: formData.socialLink,
               whatsapp: formData.whatsapp,
+              street: formData.street.trim(),
+              barangay: formData.barangay.trim(),
+              city: formData.city.trim(),
+              province: formData.province.trim(),
+              address: formatAddress(formData),
               user_role: 'landlord'
             }
           }
@@ -261,6 +269,23 @@ const Auth = ({ onAuthSuccess }) => {
                     <option value="">Work status</option>
                     {WORK_STATUSES.map((w) => <option key={w} value={w}>{workStatusLabel(w)}</option>)}
                   </select>
+                </div>
+                <label className="auth-field-label">Address</label>
+                <div className="input-group">
+                  <MapPin size={20} className="input-icon" />
+                  <input type="text" name="street" autoComplete="address-line1" placeholder="Street / House No. (optional)" maxLength={120} value={tenantForm.street} onChange={handleTenantChange} />
+                </div>
+                <div className="input-group">
+                  <MapPin size={20} className="input-icon" />
+                  <input type="text" name="barangay" autoComplete="address-line2" placeholder="Barangay" maxLength={80} value={tenantForm.barangay} onChange={handleTenantChange} />
+                </div>
+                <div className="input-group">
+                  <MapPin size={20} className="input-icon" />
+                  <input type="text" name="city" autoComplete="address-level2" placeholder="City / Municipality" maxLength={80} value={tenantForm.city} onChange={handleTenantChange} />
+                </div>
+                <div className="input-group">
+                  <MapPin size={20} className="input-icon" />
+                  <input type="text" name="province" autoComplete="address-level1" placeholder="Province" maxLength={80} value={tenantForm.province} onChange={handleTenantChange} />
                 </div>
               </>
             )}
@@ -438,6 +463,23 @@ const Auth = ({ onAuthSuccess }) => {
                   value={formData.phone}
                   onChange={handleInputChange}
                 />
+              </div>
+              <label className="auth-field-label">Address</label>
+              <div className="input-group">
+                <MapPin size={20} className="input-icon" />
+                <input type="text" name="street" autoComplete="address-line1" placeholder="Street / House No. (optional)" maxLength={120} value={formData.street} onChange={handleInputChange} />
+              </div>
+              <div className="input-group">
+                <MapPin size={20} className="input-icon" />
+                <input type="text" name="barangay" autoComplete="address-line2" placeholder="Barangay" required maxLength={80} value={formData.barangay} onChange={handleInputChange} />
+              </div>
+              <div className="input-group">
+                <MapPin size={20} className="input-icon" />
+                <input type="text" name="city" autoComplete="address-level2" placeholder="City / Municipality" required maxLength={80} value={formData.city} onChange={handleInputChange} />
+              </div>
+              <div className="input-group">
+                <MapPin size={20} className="input-icon" />
+                <input type="text" name="province" autoComplete="address-level1" placeholder="Province" required maxLength={80} value={formData.province} onChange={handleInputChange} />
               </div>
               <div className="input-group">
                 <Building2 size={20} className="input-icon" />

@@ -44,12 +44,19 @@ Deno.serve(async (req: Request) => {
   const birthday = String(body.birthday ?? '')
   const workStatus = String(body.workStatus ?? '')
   const password = String(body.password ?? '')
+  const street = String(body.street ?? '').trim().slice(0, 120)
+  const barangay = String(body.barangay ?? '').trim()
+  const city = String(body.city ?? '').trim()
+  const province = String(body.province ?? '').trim()
 
   if (fullName.length < 2 || fullName.length > 80) return reply(400, { error: 'Please enter your full name.' })
   if (!/^639\d{9}$/.test(phone)) return reply(400, { error: 'Please enter a valid Philippine mobile number.' })
   const age = birthday ? ageOf(birthday) : null
   if (age === null || age < MIN_AGE || age > 110) return reply(400, { error: 'Invalid birthday.' })
   if (!WORK_STATUSES.includes(workStatus)) return reply(400, { error: 'Please select your work status.' })
+  if ([barangay, city, province].some((v) => v.length < 2 || v.length > 80)) {
+    return reply(400, { error: 'Please enter your complete address.' })
+  }
   if (password.length < 6 || password.length > 72) return reply(400, { error: 'Password must be 6 to 72 characters.' })
 
   const url = Deno.env.get('SUPABASE_URL')
@@ -61,7 +68,7 @@ Deno.serve(async (req: Request) => {
     email: `${phone}@${TENANT_EMAIL_DOMAIN}`,
     password,
     email_confirm: true,
-    user_metadata: { full_name: fullName, phone, birthday, work_status: workStatus, user_role: 'tenant' }
+    user_metadata: { full_name: fullName, phone, birthday, work_status: workStatus, street, barangay, city, province, address: [street, barangay, city, province].filter(Boolean).join(', '), user_role: 'tenant' }
   })
 
   if (error) {
