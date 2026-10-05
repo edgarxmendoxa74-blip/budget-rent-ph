@@ -60,7 +60,7 @@ export const ProfileSheet = ({ profile, isMe, onClose }) => {
           <ChatAvatar profile={profile} size={76} onClick={() => {}} />
           <h3>{profile.name}{isMe ? ' (You)' : ''}</h3>
           <span className={`cprof-role ${isTenant ? 'tenant' : 'landlord'}`}>
-            {isTenant ? 'Tenant' : 'Landlord'}
+            {isTenant ? 'Tenant' : (profile.host ? 'Host' : 'Landlord')}
             {profile.verified && <em><BadgeCheck size={13} /> Verified</em>}
           </span>
         </div>

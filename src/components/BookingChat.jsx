@@ -162,7 +162,7 @@ const BookingChat = ({ bookingId, title, role, token, other, meName, onClose, on
           <ChatAvatar profile={otherProfile} size={38} onClick={() => setProfileOf('other')} />
           <div className="bchat-title">
             <strong>{title}</strong>
-            <span>{role === 'owner' ? 'Chat with guest' : 'Chat with owner'} · tap the photo for details</span>
+            <span>{role === 'owner' ? 'Chat with guest' : (otherProfile.host ? 'Chat with host' : 'Chat with owner')} · tap the photo for details</span>
           </div>
           {role !== 'owner' && (
             <button type="button" className="bchat-pay-btn" onClick={showPayments} aria-label="Show payment method" title="Show payment method">
@@ -255,7 +255,7 @@ const BookingChat = ({ bookingId, title, role, token, other, meName, onClose, on
             <span className="bchat-confirm-icon successful"><Wallet size={26} /></span>
             <h3>Payment method</h3>
             {payLoading ? <Loader2 size={20} className="animate-spin" /> : !payMethods?.length ? (
-              <p>The landlord hasn&apos;t added a payment method yet. Please ask them in the chat.</p>
+              <p>The {otherProfile.host ? 'host' : 'landlord'} hasn&apos;t added a payment method yet. Please ask them in the chat.</p>
             ) : (
               <ul className="bchat-pay-list">
                 {payMethods.map((m) => (

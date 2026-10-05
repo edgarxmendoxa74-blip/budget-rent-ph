@@ -32,11 +32,16 @@ const ARRIVAL_TIMES = ['Before 12 PM', '12 PM - 2 PM', '2 PM - 4 PM', '4 PM - 6 
 const ListingActionSheet = ({ item, kind, onClose, onViewDetails }) => {
   const isBook = kind === 'book';
   const today = toDateInput(new Date());
-  const capacity = Math.max(1, Number(item?.rooms) || 1) * 2;
+  const setAdultsMax = Number(item?.max_adults) || 0;
+  const setChildrenMax = Number(item?.max_children);
+  const hasLimits = setAdultsMax > 0;
+  const capacity = hasLimits ? setAdultsMax + Math.max(0, setChildrenMax || 0) : Math.max(1, Number(item?.rooms) || 1) * 2;
+  const adultsMax = hasLimits ? setAdultsMax : capacity;
+  const childrenMaxFor = (a) => (hasLimits ? Math.max(0, setChildrenMax || 0) : capacity - a);
 
   const [checkIn, setCheckIn] = useState('');
   const [checkOut, setCheckOut] = useState('');
-  const [adults, setAdults] = useState(Math.min(2, capacity));
+  const [adults, setAdults] = useState(Math.min(2, adultsMax));
   const [children, setChildren] = useState(0);
   const [pets, setPets] = useState(false);
   const [arrival, setArrival] = useState('');
@@ -129,7 +134,7 @@ const ListingActionSheet = ({ item, kind, onClose, onViewDetails }) => {
 
   const callOption = phone && (
     <a href={`tel:${phone}`} onClick={(e) => { e.preventDefault(); setCallGateOpen(true); }} className="act-option call">
-      <Phone size={18} /> Call Owner
+      <Phone size={18} /> Call {isBook ? 'Host' : 'Owner'}
     </a>
   );
 
@@ -174,9 +179,9 @@ const ListingActionSheet = ({ item, kind, onClose, onViewDetails }) => {
               <CheckCircle2 size={44} color="#059669" />
               <h4>Booking request sent!</h4>
               <p>{prettyDate(checkIn)} → {prettyDate(checkOut)} • {nights} night{nights > 1 ? 's' : ''} • {guests} guest{guests > 1 ? 's' : ''}</p>
-              <p>Please wait for the owner to confirm. They&apos;ll call you at {custPhone}. No payment has been taken.</p>
+              <p>Please wait for the host to confirm. They&apos;ll call you at {custPhone}. No payment has been taken.</p>
               <button type="button" className="act-option reserve" style={{ width: '100%', border: 'none', cursor: 'pointer', marginTop: 10 }} onClick={() => setChatOpen(true)}>
-                <MessageCircle size={18} /> Chat with owner
+                <MessageCircle size={18} /> Chat with host
               </button>
               <button type="button" className="act-details" onClick={onClose}>Close</button>
             </div>
@@ -201,14 +206,14 @@ const ListingActionSheet = ({ item, kind, onClose, onViewDetails }) => {
                 </label>
                 <label>
                   Adults
-                  <select value={adults} onChange={(e) => { const v = Number(e.target.value); setAdults(v); setChildren((c) => Math.min(c, capacity - v)); }}>
-                    {Array.from({ length: capacity }, (_, i) => i + 1).map((n) => <option key={n} value={n}>{n}</option>)}
+                  <select value={adults} onChange={(e) => { const v = Number(e.target.value); setAdults(v); setChildren((c) => Math.min(c, childrenMaxFor(v))); }}>
+                    {Array.from({ length: adultsMax }, (_, i) => i + 1).map((n) => <option key={n} value={n}>{n}</option>)}
                   </select>
                 </label>
                 <label>
                   Children
                   <select value={children} onChange={(e) => setChildren(Number(e.target.value))}>
-                    {Array.from({ length: capacity - adults + 1 }, (_, i) => i).map((n) => <option key={n} value={n}>{n}</option>)}
+                    {Array.from({ length: childrenMaxFor(adults) + 1 }, (_, i) => i).map((n) => <option key={n} value={n}>{n}</option>)}
                   </select>
                 </label>
                 {petsAllowed && (
@@ -268,14 +273,27 @@ const ListingActionSheet = ({ item, kind, onClose, onViewDetails }) => {
                   </select>
                 </label>
                 <label className="wide">
-                  Message to owner (optional)
+                  Message to host (optional)
                   <input type="text" maxLength={200} placeholder="e.g. It's a celebration / bringing kids" value={extra} onChange={(e) => setExtra(e.target.value)} />
                 </label>
               </div>
 
+              {item?.house_rules && (
+                <>
+                  <h4 className="act-section-title">House rules</h4>
+                  <p style={{ margin: '0 0 10px', whiteSpace: 'pre-line', fontSize: '0.85rem', color: '#475569' }}>{item.house_rules}</p>
+                </>
+              )}
+              {item?.cancellation_policy && (
+                <>
+                  <h4 className="act-section-title">Cancellation policy</h4>
+                  <p style={{ margin: '0 0 10px', whiteSpace: 'pre-line', fontSize: '0.85rem', color: '#475569' }}>{item.cancellation_policy}</p>
+                </>
+              )}
+
               <label className="act-check agree">
                 <input type="checkbox" checked={agree} onChange={(e) => setAgree(e.target.checked)} />
-                <span>I agree to the owner&apos;s house rules{downPayment > 0 ? ` and the ${peso(downPayment)} down payment to secure the booking` : ''}.</span>
+                <span>I agree to the host&apos;s house rules{item?.cancellation_policy ? ', cancellation policy' : ''}{downPayment > 0 ? ` and the ${peso(downPayment)} down payment to secure the booking` : ''}.</span>
               </label>
 
               <button type="button" className="act-option reserve" style={{ width: '100%', border: 'none', cursor: 'pointer', marginTop: 12 }}
@@ -283,7 +301,7 @@ const ListingActionSheet = ({ item, kind, onClose, onViewDetails }) => {
                 {sending ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />} Send Booking Request
               </button>
               {sendError && <p className="act-hint" style={{ color: '#dc2626' }}><Info size={14} /> {sendError}</p>}
-              <p className="act-note"><Info size={14} /> This is only a request — the owner will still confirm the booking. No payment is taken here.</p>
+              <p className="act-note"><Info size={14} /> This is only a request — the host will still confirm the booking. No payment is taken here.</p>
             </>
           )}
 

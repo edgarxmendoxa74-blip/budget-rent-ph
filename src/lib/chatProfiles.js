@@ -15,6 +15,7 @@ export const landlordFromProperty = (p) => ({
   email: p?.email || '',
   facebook: p?.owner_facebook || '',
   whatsapp: p?.owner_whatsapp || '',
+  host: /staycation/i.test(String(p?.type || p?.category || '')),
   verified: Boolean(p?.is_verified),
   avatar: p?.owner_avatar || ''
 });

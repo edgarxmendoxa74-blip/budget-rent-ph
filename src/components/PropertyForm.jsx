@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Send, CheckCircle, Home, MapPin, Tag, Info, Shield, Zap, TrendingUp, Camera, Loader2, Image as ImageIcon } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import LocationPicker from './LocationPicker';
+import StaycationExtras, { stayPayload, STAY_COLUMNS, STAY_COLUMN_RE } from './StaycationExtras';
 import { countMyListings, fetchMyPlan, listingLimitFor, isProActive, isLimitError, PRO_PLAN, PRO_LISTING_LIMIT, FREE_LISTING_LIMIT } from '../lib/listingPlan';
 import './PropertyForm.css';
 
@@ -26,6 +27,11 @@ const PropertyForm = ({ onClose, session, onListingAdded, onUpgrade }) => {
     secured: 'Yes',
     petsAllowed: 'No',
     downPayment: '',
+    max_adults: '',
+    max_children: '',
+    stay_features: [],
+    house_rules: '',
+    cancellation_policy: '',
     kitchen: '0',
     email: session?.user?.user_metadata?.business_email || session?.user?.email || '',
     ownerBusinessName: session?.user?.user_metadata?.property_name || '',
@@ -165,6 +171,7 @@ const PropertyForm = ({ onClose, session, onListingAdded, onUpgrade }) => {
         secured: formData.secured,
         pets_allowed: formData.type === 'Staycation' ? formData.petsAllowed : 'No',
         down_payment: formData.type === 'Staycation' ? Math.max(0, parseFloat(formData.downPayment || 0) || 0) : 0,
+        ...stayPayload(formData, formData.type === 'Staycation'),
         kitchen: parseInt(formData.kitchen || 0),
         email: formData.email,
         amenities: amenities,
@@ -180,8 +187,9 @@ const PropertyForm = ({ onClose, session, onListingAdded, onUpgrade }) => {
       let { error } = await supabase.from('properties').insert(payload);
 
       // Fallback kapag wala pa ang availability / latitude / longitude columns sa database
-      if (error && (error.code === '42703' || /availability|latitude|longitude|pets_allowed|down_payment/i.test(error.message || ''))) {
+      if (error && (error.code === '42703' || /availability|latitude|longitude|pets_allowed|down_payment/i.test(error.message || '') || STAY_COLUMN_RE.test(error.message || ''))) {
         const legacyPayload = { ...payload };
+        STAY_COLUMNS.forEach((c) => delete legacyPayload[c]);
         delete legacyPayload.pets_allowed;
         delete legacyPayload.down_payment;
         delete legacyPayload.availability;
@@ -404,6 +412,10 @@ const PropertyForm = ({ onClose, session, onListingAdded, onUpgrade }) => {
                 </div>
               )}
             </div>
+
+            {formData.type === 'Staycation' && (
+              <StaycationExtras value={formData} onChange={(k, v) => setFormData((prev) => ({ ...prev, [k]: v }))} />
+            )}
 
             <div className="form-group">
               <label>Additional Description</label>

@@ -77,7 +77,11 @@ const isOccupied = (item) => {
   return value === 'occupied' || value === 'accommodated' || value === 'rented' || value === 'unavailable';
 };
 // Tinatayang kasya sa staycation: 2 guests kada kwarto (wala pang capacity field sa database)
-const stayCapacity = (item) => Math.max(1, Number(item?.rooms) || 1) * 2;
+// Kapag may max_adults/max_children na itinakda ang landlord, iyon ang gagamitin
+const stayCapacity = (item) => {
+  const set = (Number(item?.max_adults) || 0) + (Number(item?.max_children) || 0);
+  return set > 0 ? set : Math.max(1, Number(item?.rooms) || 1) * 2;
+};
 // Staycation na occupied: puwede pa ring mag-reserve ng slot para sa ibang petsa
 const availabilityLabel = (item) => (isOccupied(item) ? (isStaycation(item) ? 'Occupied • Can still reserve' : 'Occupied') : 'Available');
 const HIDDEN_PROPERTIES_KEY = 'budgetrent_hidden_properties';
@@ -1941,7 +1945,7 @@ function App() {
                 </div>
                 <div className="property-owner-info">
                   <p className="property-owner-name">
-                    {selectedProperty.owner_name || 'Landlord'}
+                    {selectedProperty.owner_name || (isStaycation(selectedProperty) ? 'Host' : 'Landlord')}
                     {selectedProperty.is_verified && <BadgeCheck size={16} fill="#0066ff" color="white" style={{ display: 'inline', marginLeft: '6px', verticalAlign: 'middle' }} />}
                   </p>
                   <span className="property-owner-meta">Tap to view full profile</span>
@@ -2002,7 +2006,45 @@ function App() {
                     </div>
                   </div>
                 )}
+                {isStaycation(selectedProperty) && (Number(selectedProperty.max_adults) > 0 || Number(selectedProperty.max_children) > 0) && (
+                  <div className="amenity-item">
+                    <div className="circle-icon"><Users size={16} /></div>
+                    <div>
+                      <label>Guests allowed</label>
+                      <p>
+                        {Number(selectedProperty.max_adults) > 0 ? `Up to ${selectedProperty.max_adults} adult${selectedProperty.max_adults > 1 ? 's' : ''}` : ''}
+                        {Number(selectedProperty.max_adults) > 0 && Number(selectedProperty.max_children) > 0 ? ', ' : ''}
+                        {Number(selectedProperty.max_children) > 0 ? `${selectedProperty.max_children} child${selectedProperty.max_children > 1 ? 'ren' : ''}` : (Number(selectedProperty.max_adults) > 0 ? ', no children' : '')}
+                      </p>
+                    </div>
+                  </div>
+                )}
               </div>
+
+              {isStaycation(selectedProperty) && Array.isArray(selectedProperty.stay_features) && selectedProperty.stay_features.length > 0 && (
+                <div style={{ margin: '14px 0' }}>
+                  <h4 style={{ margin: '0 0 8px', fontSize: '0.95rem' }}>What&apos;s included</h4>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                    {selectedProperty.stay_features.map((f) => (
+                      <span key={f} style={{ padding: '6px 12px', borderRadius: 999, background: '#ccfbf1', color: '#0f766e', fontSize: '0.8rem', fontWeight: 700 }}>✓ {f}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {isStaycation(selectedProperty) && selectedProperty.house_rules && (
+                <div style={{ margin: '14px 0' }}>
+                  <h4 style={{ margin: '0 0 6px', fontSize: '0.95rem' }}>House rules</h4>
+                  <p style={{ margin: 0, whiteSpace: 'pre-line', fontSize: '0.88rem', color: '#475569' }}>{selectedProperty.house_rules}</p>
+                </div>
+              )}
+
+              {isStaycation(selectedProperty) && selectedProperty.cancellation_policy && (
+                <div style={{ margin: '14px 0' }}>
+                  <h4 style={{ margin: '0 0 6px', fontSize: '0.95rem' }}>Cancellation policy</h4>
+                  <p style={{ margin: 0, whiteSpace: 'pre-line', fontSize: '0.88rem', color: '#475569' }}>{selectedProperty.cancellation_policy}</p>
+                </div>
+              )}
 
               <Suspense fallback={null}>
                 <ReviewsSection
@@ -2017,7 +2059,7 @@ function App() {
 
               <div className="modal-actions">
                 <CallGateLink phone={selectedProperty.contact} propertyId={selectedProperty.id} ownerEmail={selectedProperty.email} className="contact-btn call">
-                  <Phone size={20} /> Call Owner
+                  <Phone size={20} /> Call {isStaycation(selectedProperty) ? 'Host' : 'Owner'}
                 </CallGateLink>
                 {selectedProperty.user_id !== session?.user?.id && (
                   <button type="button" className="contact-btn email" onClick={() => setBookSheet({ item: selectedProperty, kind: isStaycation(selectedProperty) ? 'book' : 'inquire' })}>
@@ -2225,10 +2267,16 @@ function App() {
                 )}
               </div>
                <span className={`role-badge ${viewingLandlord.is_verified ? 'verified' : 'landlord'}`}>
-                 {viewingLandlord.is_verified ? (<><BadgeCheck size={12} fill="white" color="var(--primary)" /> VERIFIED OWNER</>) : 'LANDLORD'}
+                 {(() => {
+                   const mine = properties.filter(p => (viewingLandlord.user_id ? p.user_id === viewingLandlord.user_id : p.email === viewingLandlord.email));
+                   const hasStay = mine.some(isStaycation) || isStaycation(viewingLandlord);
+                   const hasRent = mine.some(p => !isStaycation(p)) || (!mine.length && !isStaycation(viewingLandlord));
+                   const role = hasStay && hasRent ? 'HOST & LANDLORD' : hasStay ? 'HOST' : 'LANDLORD';
+                   return viewingLandlord.is_verified ? (<><BadgeCheck size={12} fill="white" color="var(--primary)" /> VERIFIED {role}</>) : role;
+                 })()}
                </span>
                <h2 style={{ marginBottom: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', color: '#fff' }}>
-                 {viewingLandlord.owner_name || 'Landlord'}
+                 {viewingLandlord.owner_name || (isStaycation(viewingLandlord) ? 'Host' : 'Landlord')}
                  {viewingLandlord.is_verified && <BadgeCheck size={22} fill="#0066ff" color="white" />}
                </h2>
                {viewingLandlord.email ? (

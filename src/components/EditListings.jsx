@@ -6,6 +6,7 @@ import { toCoords } from '../lib/geo';
 import './EditListings.css';
 import { ikImage } from '../lib/imagekit';
 import RoomFeeForm from './RoomFeeForm';
+import StaycationExtras, { stayPayload, STAY_COLUMNS, STAY_COLUMN_RE } from './StaycationExtras';
 import { needsRoomFee, fetchRoomFeeStatus, ROOM_FEE_THRESHOLD, ROOM_FEE_PLAN } from '../lib/roomFee';
 
 const CATEGORIES = ['Paupahan', 'Staycation'];
@@ -172,6 +173,7 @@ const EditListings = ({ session, onClose, onListingUpdated, initialEditingItem =
         secured: editingItem.secured,
         pets_allowed: /staycation/i.test(editingItem.type || '') ? (editingItem.pets_allowed || 'No') : 'No',
         down_payment: /staycation/i.test(editingItem.type || '') ? Math.max(0, parseFloat(editingItem.down_payment || 0) || 0) : 0,
+        ...stayPayload(editingItem, /staycation/i.test(editingItem.type || '')),
         kitchen: parseInt(editingItem.kitchen || 0),
         email: editingItem.email,
         availability: editingItem.availability || 'Available',
@@ -187,8 +189,9 @@ const EditListings = ({ session, onClose, onListingUpdated, initialEditingItem =
         .eq('id', editingItem.id);
 
       // Fallback kapag wala pa ang availability / latitude / longitude columns sa database
-      if (error && (error.code === '42703' || /availability|latitude|longitude|pets_allowed|advance_months|deposit_months|down_payment/i.test(error.message || ''))) {
+      if (error && (error.code === '42703' || /availability|latitude|longitude|pets_allowed|advance_months|deposit_months|down_payment/i.test(error.message || '') || STAY_COLUMN_RE.test(error.message || ''))) {
         const legacyPayload = { ...payload };
+        STAY_COLUMNS.forEach((c) => delete legacyPayload[c]);
         delete legacyPayload.down_payment;
         delete legacyPayload.pets_allowed;
         delete legacyPayload.advance_months;
@@ -388,6 +391,9 @@ const EditListings = ({ session, onClose, onListingUpdated, initialEditingItem =
                   </div>
                 )}
               </div>
+              {/staycation/i.test(editingItem.type || '') && (
+                <StaycationExtras groupClass="edit-form-group" value={editingItem} onChange={(k, v) => handleEditChange(k, v)} />
+              )}
               {needsRoomFee(editingItem.rooms) && (
                 roomFeeStatus === 'approved' ? (
                   <p style={{ margin: '0 0 12px', padding: '10px 12px', borderRadius: 12, background: '#f0fdf4', color: '#166534', fontSize: '0.8rem', fontWeight: 700 }}>Room fee paid and approved for this listing.</p>
