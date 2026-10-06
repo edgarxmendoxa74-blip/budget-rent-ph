@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { X, User, Save, Loader2, CheckCircle, Camera, Phone, MessageCircle, Building2, Globe, BadgeCheck, Check } from 'lucide-react';
+import { ArrowLeft, User, Save, Loader2, CheckCircle, Camera, Phone, MessageCircle, Building2, Globe, BadgeCheck, Check } from 'lucide-react';
 import './ProfileModal.css';
 
 const ProfileModal = ({ session, onClose, isEditingInitial = false, onProfileUpdated, onGetVerified }) => {
@@ -166,7 +166,7 @@ const ProfileModal = ({ session, onClose, isEditingInitial = false, onProfileUpd
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-content profile-modal animate-slide-up" onClick={e => e.stopPropagation()}>
-        <button className="close-btn" onClick={onClose}><X size={24} /></button>
+        <button type="button" className="close-btn" aria-label="Back" onClick={onClose}><ArrowLeft size={22} /></button>
         
         <div className="profile-header">
           <div className="profile-avatar">

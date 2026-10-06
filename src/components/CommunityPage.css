@@ -46,7 +46,8 @@
 .community-about { border-left: 4px solid var(--secondary-gold); }
 .community-highlights h3 { border-left: 4px solid var(--secondary-gold); padding-left: 8px; }
 .community-compose textarea:focus, .community-input:focus, .community-reply-form input:focus { outline: none; border-color: var(--primary); box-shadow: var(--ring); }
-.community-compose button, .community-apply-btn { background: var(--primary-gradient); }
+.community-compose button { background: var(--primary-gradient); }
+.community-apply-btn { background: linear-gradient(135deg, #16a34a, #22c55e); box-shadow: 0 2px 8px rgba(22,163,74,0.4); }
 .community-post, .community-highlight { border: 1px solid var(--border); }
 .community-modal-backdrop { position: fixed; inset: 0; z-index: 5000; display: flex; align-items: center; justify-content: center; padding: 16px; background: rgba(15,23,42,0.7); backdrop-filter: blur(2px); animation: communityFade 0.15s ease-out; }
 @keyframes communityFade { from { opacity: 0; } to { opacity: 1; } }

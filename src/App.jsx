@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef, Suspense, lazy } from 'react';
 import { HeroBudi } from './components/MascotSplash';
-import { Search, MapPin, Bed, Bath, Wifi, Shield, Star, Menu, X, Heart, MessageCircle, Phone, LogOut, Building2, User, Users, Loader2, ClipboardList, Mail, BadgeCheck, Headset, ArrowLeft, Home, Navigation, Globe, Trash2, ChevronLeft, ChevronRight, Bell, FileText, HousePlus, LocateFixed, PawPrint, ScrollText, FileSignature, Info, House, TreePalm, Plus, Lightbulb, Megaphone, CalendarCheck, Inbox, BarChart3, Wallet } from 'lucide-react';
+import { Search, MapPin, Bed, Bath, Wifi, Shield, Star, Menu, X, Heart, MessageCircle, Phone, LogOut, Building2, User, Users, Loader2, ClipboardList, Mail, BadgeCheck, Headset, ArrowLeft, Home, Navigation, Globe, Trash2, ChevronLeft, ChevronRight, Bell, FileText, HousePlus, LocateFixed, PawPrint, ScrollText, FileSignature, Info, House, TreePalm, Plus, Lightbulb, Megaphone, CalendarCheck, Inbox, BarChart3, Wallet, Award } from 'lucide-react';
 import { clearSupabaseSessionStorage, recoverFromJwtError, supabase, validateCurrentSession } from './lib/supabase';
 import { isAdminEmail, isAdminPath } from './lib/admin';
 import { playNotifySound, unlockNotifySound } from './lib/notifySound';
@@ -31,6 +31,7 @@ import { conditionInfo, genderText, roomsInfo } from './components/RentalConditi
 const CustomerSupportPage = lazy(() => import('./components/CustomerSupportPage'));
 const BookingsPage = lazy(() => import('./components/BookingsPage'));
 const PaymentMethods = lazy(() => import('./components/PaymentMethods'));
+const CertificatePage = lazy(() => import('./components/CertificatePage'));
 const InboxPage = lazy(() => import('./components/InboxPage'));
 const WelcomeModal = lazy(() => import('./components/WelcomeModal'));
 const TenantAccountModal = lazy(() => import('./components/TenantAccountModal'));
@@ -1135,6 +1136,9 @@ function App() {
                   <button className={`menu-link${activeTab === 'verified' ? ' active' : ''}`} onClick={() => { setIsMenuOpen(false); setActiveTab('verified'); }}>
                     <div className="icon-container-mini secondary-icon"><BadgeCheck size={18} /></div> Get Verified
                   </button>
+                  <button className={`menu-link${activeTab === 'certificate' ? ' active' : ''}`} onClick={() => { setIsMenuOpen(false); setActiveTab('certificate'); }}>
+                    <div className="icon-container-mini"><Award size={18} /></div> Certificate
+                  </button>
                 </>
               )}
 
@@ -1683,6 +1687,12 @@ function App() {
       {activeTab === 'agreement' && (
         <Suspense fallback={<div className="text-center py-10"><Loader2 className="animate-spin text-primary mx-auto" size={40} /></div>}>
           <AgreementDraft session={session} />
+        </Suspense>
+      )}
+
+      {activeTab === 'certificate' && !isGuest && (
+        <Suspense fallback={<div className="text-center py-10"><Loader2 className="animate-spin text-primary mx-auto" size={40} /></div>}>
+          <CertificatePage session={session} onGetVerified={() => setActiveTab('verified')} />
         </Suspense>
       )}
 

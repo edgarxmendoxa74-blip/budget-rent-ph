@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { supabase } from '../lib/supabase';
-import { ShieldCheck, CheckCircle2, ArrowLeft, Loader2, Zap, AlertCircle, X as XIcon } from 'lucide-react';
+import { ShieldCheck, CheckCircle2, ArrowLeft, Loader2, Zap, AlertCircle, X as XIcon, Copy, Check } from 'lucide-react';
 import { HeroBudi } from './MascotSplash';
 import { PAYMENT_METHODS, fetchPaymentMethods } from '../lib/paymentMethods';
 import { fetchPlans } from '../lib/plans';
@@ -31,6 +31,12 @@ const VerificationPage = ({ onDone, session, mode = 'verify' }) => {
   const [confirmed, setConfirmed] = useState(false); // "tama na lahat ng detalye sa resibo"
 
   const [selectedQR, setSelectedQR] = useState(null);
+  const [copiedNum, setCopiedNum] = useState(null);
+  const copyNumber = async (num) => {
+    try { await navigator.clipboard.writeText(String(num).replace(/s+/g, '')); } catch { return; }
+    setCopiedNum(num);
+    setTimeout(() => setCopiedNum(null), 1500);
+  };
 
   useEffect(() => {
     if (isListings) setPlans([PRO_PLAN]);
@@ -257,7 +263,7 @@ const VerificationPage = ({ onDone, session, mode = 'verify' }) => {
               <ArrowLeft size={20} />
             </button>
             <div>
-              <h4 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800 }}>Scan to Pay</h4>
+              <h4 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, color: '#fff' }}>Scan to Pay</h4>
               <p style={{ margin: 0, fontSize: '0.8rem', opacity: 0.85 }}>Amount: <strong>₱{Number(plan?.price ?? 0).toFixed(2)}</strong></p>
             </div>
           </div>
@@ -289,7 +295,12 @@ const VerificationPage = ({ onDone, session, mode = 'verify' }) => {
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '3px' }}>
                       <span style={{ fontSize: '0.6rem', fontWeight: '900', background: pay.color, color: 'white', padding: '3px 8px', borderRadius: '100px', textTransform: 'uppercase' }}>{pay.method}</span>
                     </div>
-                    <strong style={{ fontSize: '1rem', color: 'var(--primary)', display: 'block', letterSpacing: '0.3px' }}>{pay.number}</strong>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <strong style={{ fontSize: '1rem', color: 'var(--primary)', letterSpacing: '0.3px' }}>{pay.number}</strong>
+                      <button type="button" onClick={() => copyNumber(pay.number)} style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', background: copiedNum === pay.number ? '#dcfce7' : 'white', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '3px 8px', fontSize: '0.65rem', fontWeight: '700', color: copiedNum === pay.number ? '#166534' : 'var(--primary)', cursor: 'pointer' }}>
+                        {copiedNum === pay.number ? <><Check size={11} /> Copied</> : <><Copy size={11} /> Copy</>}
+                      </button>
+                    </div>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '2px' }}>
                       <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: '500' }}>{pay.name}</p>
                       {pay.qr && (

@@ -468,3 +468,74 @@
   .modal-overlay:has(.profile-modal) { padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px)); box-sizing: border-box; }
   .profile-modal { border-radius: 28px !important; max-height: calc(90dvh - 24px); }
 }
+
+/* Certificate ng verified landlord */
+.cert-section { margin-top: 18px; display: flex; flex-direction: column; gap: 12px; }
+.cert-heading { display: flex; align-items: center; gap: 8px; margin: 0; font-size: 1rem; color: #002652; }
+.cert-card {
+  position: relative; text-align: center; padding: 15px 12px; width: 94%; margin: 0 auto; border-radius: 14px;
+  background: #fffbeb; border: 3px double #002652; outline: 2px solid #f59e0b; outline-offset: -9px;
+  color: #002652; overflow: hidden;
+}
+.cert-card.locked > *:not(.cert-lock) { filter: blur(3px); opacity: 0.55; }
+.cert-brand { font-weight: 800; font-size: 0.76rem; letter-spacing: 0.04em; }
+.cert-title { font-weight: 800; font-size: 0.98rem; margin: 4px 0 7px; }
+.cert-sub { font-size: 0.69rem; color: #666; }
+.cert-name { font-weight: 800; font-size: 1.18rem; display: flex; align-items: center; justify-content: center; gap: 6px; margin: 2px 0; }
+.cert-check { color: #fff; fill: #0066ff; }
+.cert-prop { font-size: 0.78rem; }
+.cert-text { font-size: 0.71rem; color: #444; margin: 7px 0; line-height: 1.4; }
+.cert-foot { display: flex; justify-content: space-between; font-size: 0.65rem; font-weight: 700; margin-top: 8px; padding: 0 6px; }
+.cert-lock {
+  position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 6px; font-weight: 700; font-size: 0.85rem; color: #002652; background: rgba(255, 255, 255, 0.35);
+}
+.cert-why { background: #f1f6ff; border-radius: 12px; padding: 12px 14px; font-size: 0.8rem; color: #1e3a5f; }
+.cert-why ul { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.cert-why li { display: flex; gap: 8px; line-height: 1.4; }
+.cert-why li svg { flex-shrink: 0; margin-top: 2px; color: #0066ff; }
+.cert-btn {
+  display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 12px;
+  border: 0; border-radius: 12px; background: #002652; color: #fff; font-weight: 700; font-size: 0.9rem; cursor: pointer;
+}
+.cert-btn:disabled { opacity: 0.7; }
+.cert-hint { display: flex; align-items: center; justify-content: center; gap: 5px; margin: 0; font-size: 0.72rem; color: #666; }
+.cert-budi { width: 90px; margin: 4px auto 0; }
+.cert-budi .budi { width: 100%; }
+.cert-why.frame { background: #fff8e1; color: #6b4a00; }
+.cert-why.frame strong { display: flex; align-items: center; gap: 6px; }
+.cert-why.frame p { margin: 6px 0 0; line-height: 1.5; }
+.cert-btn.alt { background: #fff; color: #002652; border: 2px solid #002652; }
+.cert-logo { position: absolute; top: 11px; left: 11px; width: 34px; height: 34px; object-fit: contain; background: #fff; border-radius: 8px; padding: 2px; }
+.cert-steps { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; font-size: 0.8rem; color: #002652; }
+.cert-steps > strong { grid-column: 1 / -1; }
+.cert-step { display: flex; flex-direction: column; gap: 6px; min-width: 0; background: #fff; border: 1px solid #dbe6f5; border-radius: 14px; padding: 8px; box-shadow: 0 1px 3px rgba(0,38,82,0.06); }
+.cert-step:last-child:nth-child(even) { grid-column: 1 / -1; }
+.cert-step-art { width: 100%; height: 80px; }
+.cert-step-photo { width: 100%; height: 100px; object-fit: cover; border-radius: 10px; }
+.cert-step-text { display: flex; flex-direction: column; gap: 3px; line-height: 1.35; }
+.cert-step-text b { font-size: 0.8rem; }
+.cert-step-text span { color: #444; font-size: 0.74rem; }
+
+/* Account: full page (hindi modal) */
+html body .modal-overlay:has(> .profile-modal) {
+  padding: 0;
+  align-items: stretch;
+  justify-content: stretch;
+  background: #f8fafc;
+  z-index: 3000;
+}
+html body .modal-overlay > .profile-modal {
+  width: 100%;
+  max-width: none;
+  height: 100%;
+  max-height: none;
+  margin: 0;
+  border-radius: 0 !important;
+  box-shadow: none;
+  overflow-y: auto;
+  animation: none;
+}
+.profile-modal .profile-header { padding-top: calc(36px + env(safe-area-inset-top, 0px)); }
+.profile-modal .profile-body { max-width: 560px; margin: 0 auto; }
+.profile-modal .close-btn { top: calc(14px + env(safe-area-inset-top, 0px)); left: 14px; right: auto; }

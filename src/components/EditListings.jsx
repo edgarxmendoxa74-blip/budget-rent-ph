@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Edit3, Trash2, Loader2, Save, MapPin, Camera } from 'lucide-react';
+import { X, ArrowLeft, Edit3, Trash2, Loader2, Save, MapPin, Camera } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import LocationPicker from './LocationPicker';
 import { toCoords } from '../lib/geo';
@@ -295,7 +295,7 @@ const EditListings = ({ session, onClose, onListingUpdated, initialEditingItem =
           <div className="edit-form-content animate-slide-up" onClick={e => e.stopPropagation()}>
             <div className="edit-form-header">
               <h3>Edit Listing</h3>
-              <button onClick={() => initialEditingItem ? onClose() : setEditingItem(null)}><X size={20} /></button>
+              <button type="button" aria-label="Back" onClick={() => initialEditingItem ? onClose() : setEditingItem(null)}><ArrowLeft size={20} /></button>
             </div>
             <div className="edit-form-body">
               <div className="edit-form-image">

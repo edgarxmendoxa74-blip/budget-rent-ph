@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Loader2, Zap, ArrowLeft, AlertCircle } from 'lucide-react';
+import { Loader2, Zap, ArrowLeft, AlertCircle, Copy, Check } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { PAYMENT_METHODS, fetchPaymentMethods } from '../lib/paymentMethods';
 import { ROOM_FEE_PLAN, ROOM_FEE_THRESHOLD } from '../lib/roomFee';
@@ -16,6 +16,13 @@ const RoomFeeForm = ({ session, listing, rooms, onSubmitted }) => {
   const [form, setForm] = useState({ fullName: meta.full_name || '', phone: phone0, paidOn: today, reference: '' });
   const [payMethods, setPayMethods] = useState(PAYMENT_METHODS);
   const [showPay, setShowPay] = useState(false);
+  const [selectedQR, setSelectedQR] = useState(null);
+  const [copiedNum, setCopiedNum] = useState(null);
+  const copyNumber = async (num) => {
+    try { await navigator.clipboard.writeText(String(num).replace(/s+/g, '')); } catch { return; }
+    setCopiedNum(num);
+    setTimeout(() => setCopiedNum(null), 1500);
+  };
   const [confirmed, setConfirmed] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -110,7 +117,7 @@ const RoomFeeForm = ({ session, listing, rooms, onSubmitted }) => {
           <div style={{ background: '#003366', color: 'white', display: 'flex', alignItems: 'center', gap: '12px', padding: 'calc(12px + env(safe-area-inset-top, 0px)) 16px 12px' }}>
             <button type="button" aria-label="Back" onClick={() => setShowPay(false)} style={{ background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: '50%', width: 36, height: 36, cursor: 'pointer', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><ArrowLeft size={20} /></button>
             <div>
-              <h4 style={{ margin: 0, fontSize: '1.1rem' }}>Scan to Pay</h4>
+              <h4 style={{ margin: 0, fontSize: '1.1rem', color: '#fff' }}>Scan to Pay</h4>
               <p style={{ margin: 0, fontSize: '0.8rem', opacity: 0.85 }}>Amount: <strong>₱{ROOM_FEE_PLAN.price.toFixed(2)}</strong></p>
             </div>
           </div>
@@ -119,7 +126,7 @@ const RoomFeeForm = ({ session, listing, rooms, onSubmitted }) => {
               {payMethods.map((pay, i) => (
                 <div key={i} style={{ background: '#fafbfc', padding: '10px 12px', borderRadius: '14px', border: '1px solid #f0f0f0', display: 'flex', alignItems: 'center', gap: '12px' }}>
                   {pay.qr ? (
-                    <img src={pay.qr} alt="QR" style={{ width: 80, height: 80, borderRadius: 10, border: '1px solid #eee', background: 'white', flexShrink: 0, objectFit: 'contain' }} />
+                    <img onClick={() => setSelectedQR(pay)} src={pay.qr} alt="QR" style={{ width: 80, height: 80, borderRadius: 10, border: '1px solid #eee', background: 'white', flexShrink: 0, cursor: 'pointer', objectFit: 'contain' }} />
                   ) : (
                     <div style={{ width: 65, height: 65, borderRadius: 10, background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', fontWeight: 700, color: '#64748b', flexShrink: 0 }}>BANK</div>
                   )}
@@ -127,11 +134,30 @@ const RoomFeeForm = ({ session, listing, rooms, onSubmitted }) => {
                     <span style={{ fontSize: '0.6rem', fontWeight: 900, background: pay.color, color: 'white', padding: '3px 8px', borderRadius: '100px', textTransform: 'uppercase' }}>{pay.method}</span>
                     <strong style={{ display: 'block', fontSize: '0.95rem', color: '#003366', marginTop: 3 }}>{pay.number}</strong>
                     <p style={{ margin: 0, fontSize: '0.75rem', color: '#64748b' }}>{pay.name}</p>
+                    <div style={{ display: 'flex', gap: 6, marginTop: 6 }}>
+                      <button type="button" onClick={() => copyNumber(pay.number)} style={{ display: 'inline-flex', alignItems: 'center', gap: 3, background: 'white', border: '1px solid #e2e8f0', borderRadius: 6, padding: '3px 8px', fontSize: '0.65rem', fontWeight: 700, color: '#003366', cursor: 'pointer', ...(copiedNum === pay.number ? { background: '#dcfce7', color: '#166534' } : {}) }}>
+                        {copiedNum === pay.number ? <><Check size={11} /> Copied</> : <><Copy size={11} /> Copy number</>}
+                      </button>
+                      {pay.qr && <button type="button" onClick={() => setSelectedQR(pay)} style={{ display: 'inline-flex', alignItems: 'center', gap: 3, background: 'white', border: '1px solid #e2e8f0', borderRadius: 6, padding: '3px 8px', fontSize: '0.65rem', fontWeight: 700, color: '#003366', cursor: 'pointer' }}>View QR</button>}
+                    </div>
                   </div>
                 </div>
               ))}
             </div>
             <button type="button" onClick={() => setShowPay(false)} style={{ display: 'block', width: '100%', maxWidth: '480px', margin: '14px auto 0', padding: '12px', borderRadius: '14px', background: '#003366', color: 'white', fontWeight: 800, border: 'none', cursor: 'pointer' }}>Done</button>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {selectedQR && createPortal(
+        <div onClick={() => setSelectedQR(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10000, padding: 24 }}>
+          <div onClick={(e) => e.stopPropagation()} style={{ width: '100%', maxWidth: 300, maxHeight: '90vh', overflowY: 'auto', boxSizing: 'border-box', textAlign: 'center', background: 'white', padding: 20, borderRadius: 28 }}>
+            <span style={{ display: 'inline-block', fontSize: '0.65rem', fontWeight: 900, background: selectedQR.color, color: 'white', padding: '4px 12px', borderRadius: 100, marginBottom: 14, textTransform: 'uppercase' }}>{selectedQR.method}</span>
+            <img src={selectedQR.qr} alt="Large QR" style={{ display: 'block', width: '100%', maxHeight: '55vh', objectFit: 'contain', borderRadius: 16, border: '1px solid #f1f5f9' }} />
+            <strong style={{ display: 'block', marginTop: 14, color: '#003366', fontSize: '1.1rem' }}>{selectedQR.number}</strong>
+            <p style={{ margin: '2px 0 0', color: '#64748b', fontSize: '0.75rem' }}>{selectedQR.name}</p>
+            <button type="button" onClick={() => setSelectedQR(null)} style={{ marginTop: 18, width: '100%', padding: 12, borderRadius: 14, background: '#003366', color: 'white', fontWeight: 800, border: 'none', cursor: 'pointer' }}>Close</button>
           </div>
         </div>,
         document.body

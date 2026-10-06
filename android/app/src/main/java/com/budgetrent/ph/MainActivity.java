@@ -15,6 +15,7 @@ import com.getcapacitor.BridgeActivity;
 
 public class MainActivity extends BridgeActivity {
     private static final int STATUS_BAR_COLOR = Color.parseColor("#002652");
+    private static final int NAV_BAR_COLOR = Color.BLACK;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -36,6 +37,13 @@ public class MainActivity extends BridgeActivity {
         root.addView(strip, new FrameLayout.LayoutParams(
             FrameLayout.LayoutParams.MATCH_PARENT, 0, Gravity.TOP));
 
+        // Same for the bottom system navigation bar (home/back buttons): black with light icons.
+        View bottomStrip = new View(this);
+        bottomStrip.setBackgroundColor(NAV_BAR_COLOR);
+        root.addView(bottomStrip, new FrameLayout.LayoutParams(
+            FrameLayout.LayoutParams.MATCH_PARENT, 0, Gravity.BOTTOM));
+        getWindow().setNavigationBarColor(NAV_BAR_COLOR);
+
         ViewCompat.setOnApplyWindowInsetsListener(decor, (v, insets) -> {
             Insets bars = insets.getInsets(WindowInsetsCompat.Type.statusBars() | WindowInsetsCompat.Type.displayCutout());
             FrameLayout.LayoutParams lp = (FrameLayout.LayoutParams) strip.getLayoutParams();
@@ -44,10 +52,19 @@ public class MainActivity extends BridgeActivity {
                 strip.setLayoutParams(lp);
             }
             strip.bringToFront();
+
+            Insets nav = insets.getInsets(WindowInsetsCompat.Type.navigationBars());
+            FrameLayout.LayoutParams blp = (FrameLayout.LayoutParams) bottomStrip.getLayoutParams();
+            if (blp.height != nav.bottom) {
+                blp.height = nav.bottom;
+                bottomStrip.setLayoutParams(blp);
+            }
+            bottomStrip.bringToFront();
             return ViewCompat.onApplyWindowInsets(v, insets);
         });
 
         WindowCompat.getInsetsController(getWindow(), decor).setAppearanceLightStatusBars(false);
+        WindowCompat.getInsetsController(getWindow(), decor).setAppearanceLightNavigationBars(false);
         ViewCompat.requestApplyInsets(decor);
     }
 }

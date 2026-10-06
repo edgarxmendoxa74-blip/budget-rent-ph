@@ -267,51 +267,57 @@
   transform: scale(1.08);
 }
 
-/* Edit Form Overlay */
+/* Edit Form: full page (hindi modal) */
 .edit-form-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(15, 23, 42, 0.76);
+  background: #f8fafc;
   z-index: 2000;
   display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 20px;
+  flex-direction: column;
 }
 
 .edit-form-content {
-  background: white;
+  background: #f8fafc;
   width: 100%;
-  max-width: 520px;
-  max-height: 88vh;
+  height: 100%;
   overflow-y: auto;
-  border-radius: 28px;
-  box-shadow: 0 20px 60px rgba(0, 38, 82, 0.25);
+  overscroll-behavior: contain;
 }
 
+.edit-form-content > * { max-width: 560px; margin-left: auto; margin-right: auto; }
+
 .edit-form-header {
+  position: sticky;
+  top: 0;
+  z-index: 2;
   display: flex;
-  justify-content: space-between;
+  flex-direction: row-reverse;
+  justify-content: flex-end;
   align-items: center;
-  padding: 24px 24px 0;
+  gap: 12px;
+  max-width: none !important;
+  background: var(--primary);
+  padding: calc(12px + env(safe-area-inset-top, 0px)) 16px 12px;
 }
 
 .edit-form-header h3 {
-  font-size: 1.25rem;
-  color: var(--primary);
+  font-size: 1.15rem;
+  color: #fff;
   font-weight: 800;
+  margin: 0;
 }
 
 .edit-form-header button {
-  background: var(--primary-light);
+  background: rgba(255, 255, 255, 0.15);
   border: none;
-  width: 38px;
-  height: 38px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--primary);
+  color: #fff;
   cursor: pointer;
 }
 
