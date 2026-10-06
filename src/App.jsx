@@ -1926,6 +1926,16 @@ function App() {
                   </span>
                 )}
               </div>
+              {!isStaycation(selectedProperty) && (() => {
+                const r = roomsInfo(selectedProperty);
+                const full = !r.whole && r.free === 0;
+                const text = r.whole ? 'Whole house (rented as one)' : full ? 'Fully occupied' : `${r.free} of ${r.total} room${r.total > 1 ? 's' : ''} available`;
+                return (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, margin: '6px 0 4px', fontSize: '0.85rem', fontWeight: 700, color: full ? '#ef4444' : '#16a34a' }}>
+                    <Bed size={15} /> {text}
+                  </div>
+                );
+              })()}
               <h2>{selectedProperty.name || selectedProperty.title}</h2>
               {isStaycation(selectedProperty) && isOccupied(selectedProperty) && (
                 <p className="stay-reserve-note"><Info size={14} /> Occupied right now, but you can still reserve a slot for other dates.</p>
@@ -2323,7 +2333,7 @@ function App() {
       {/* Public Landlord Profile Modal */}
       {viewingLandlord && (
         <div className="modal-overlay" onClick={() => setViewingLandlord(null)} style={{ zIndex: 2001 }}>
-          <div className="modal-content profile-modal animate-slide-up" onClick={e => e.stopPropagation()}>
+          <div className="modal-content profile-modal landlord-profile-modal animate-slide-up" onClick={e => e.stopPropagation()}>
             <button className="close-btn" onClick={() => setViewingLandlord(null)}><X size={24} /></button>
             
             <div className="profile-header">
@@ -2392,6 +2402,29 @@ function App() {
                   </div>
                 </div>
               )}
+
+              {(() => {
+                const rentals = properties.filter(p => !isStaycation(p) && (viewingLandlord.user_id ? p.user_id === viewingLandlord.user_id : p.email === viewingLandlord.email));
+                if (!rentals.length) return null;
+                return (
+                  <div className="info-group">
+                    <Home size={18} />
+                    <div className="info-content">
+                      <label>Rentals &amp; Available Rooms</label>
+                      {rentals.map(p => {
+                        const r = roomsInfo(p);
+                        const text = r.whole ? 'Whole house' : r.total === 1 ? '' : r.free === 0 ? 'Fully occupied' : `${r.free} of ${r.total} rooms available`;
+                        return (
+                          <p key={p.id} style={{ display: 'flex', justifyContent: 'space-between', gap: '10px' }}>
+                            <span>{p.name || p.title}</span>
+                            {text && <strong style={{ color: !r.whole && r.free === 0 ? '#ef4444' : '#16a34a', whiteSpace: 'nowrap' }}>{text}</strong>}
+                          </p>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
           </div>
         </div>

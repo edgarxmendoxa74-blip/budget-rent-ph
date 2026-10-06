@@ -1354,17 +1354,17 @@
 }
 .near-scroll-arrows button:active { transform: scale(0.92); }
 
-/* Stop Location / Stop GPS / Clear — brand yellow */
+/* Stop Location / Stop GPS / Clear — green */
 .stop-gps-btn.stop-yellow {
-  background: var(--secondary-gradient);
-  border-color: rgba(217, 119, 6, 0.5);
-  color: var(--primary-dark);
-  box-shadow: var(--shadow-gold);
+  background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+  border-color: rgba(21, 128, 61, 0.6);
+  color: #fff;
+  box-shadow: 0 6px 16px -4px rgba(22, 163, 74, 0.5);
 }
 .stop-gps-btn.stop-yellow:hover {
-  background: var(--secondary-gradient);
-  border-color: var(--secondary-dark);
-  color: var(--primary-dark);
+  background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+  border-color: #15803d;
+  color: #fff;
   filter: brightness(1.05);
 }
 
