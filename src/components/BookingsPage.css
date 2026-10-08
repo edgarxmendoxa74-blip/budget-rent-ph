@@ -66,3 +66,6 @@
 .inbox-last span { margin-left: 6px; color: var(--text-muted); font-size: 0.72rem; }
 .inbox-last i { color: var(--text-muted); }
 .inbox-limit { margin: 4px 0 0; font-size: 0.64rem; color: var(--text-muted); text-align: right; }
+
+.bookings-policy { display: flex; gap: 8px; align-items: flex-start; margin: 0 0 12px; padding: 10px 12px; border-radius: 14px; background: #fff8e7; border: 1px solid #ffe2a1; color: #92400e; font-size: 0.74rem; line-height: 1.45; }
+.bookings-policy svg { flex-shrink: 0; margin-top: 1px; }

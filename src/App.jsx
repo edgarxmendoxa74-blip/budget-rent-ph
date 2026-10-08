@@ -1820,7 +1820,7 @@ function App() {
               <div className="terms-icon-box"><MessageCircle size={20} /></div>
               <div className="terms-content">
                 <h3>Inbox and Messages</h3>
-                <p>Your booking requests and the replies of landlords are kept in your Inbox. Tenants can send up to 3 messages per booking, so please make each one clear. Keep the chat about the booking only. Do not send passwords, bank details, or personal IDs, and do not harass or spam. Landlords can see the name and mobile number you used for the booking. We may review or remove messages that break these rules.</p>
+                <p>Your booking requests and the replies of landlords are kept in your Inbox. Tenants can send up to 6 messages per booking, so please make each one clear. Keep the chat about the booking only. Do not send passwords, bank details, or personal IDs, and do not harass or spam. Landlords can see the name and mobile number you used for the booking. We may review or remove messages that break these rules.</p>
               </div>
             </section>
             <section className="terms-card">

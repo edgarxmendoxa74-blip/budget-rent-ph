@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { MessageCircle, Loader2, Trash2 } from 'lucide-react';
+import { MessageCircle, Loader2, Trash2, ShieldAlert } from 'lucide-react';
 import { HeroBudi } from './MascotSplash';
 import { fetchDismissedIds, dismissBooking } from '../lib/bookingDismissals';
 import { supabase } from '../lib/supabase';
@@ -92,6 +92,8 @@ const InboxPage = ({ properties, unread = {}, onChatChanged }) => {
         </div>
       </header>
 
+      <p className="bookings-policy"><ShieldAlert size={16} /> <span><b>Keep all transactions inside the app.</b> Reservations, payments and confirmations must be done here. Do not transact outside the app or move the conversation elsewhere. We can&apos;t protect or help with deals made outside the app.</span></p>
+
       {loading && <p className="bookings-empty"><Loader2 size={18} className="animate-spin" /></p>}
       {!loading && items.length === 0 && <p className="bookings-empty">Your Inbox is empty. Tap "Book Here" on a listing to get started.</p>}
 
@@ -113,7 +115,7 @@ const InboxPage = ({ properties, unread = {}, onChatChanged }) => {
             </p>
 
             <div className="booking-actions">
-              <button type="button" className="chat" onClick={() => setChat({ id: b.id, title: titleOf(b), other: landlordFromProperty(properties.find((x) => x.id === b.property_id)) })}>
+              <button type="button" className="chat" onClick={() => setChat({ id: b.id, booking: b, title: titleOf(b), other: landlordFromProperty(properties.find((x) => x.id === b.property_id)) })}>
                 <MessageCircle size={14} /> {info ? 'Open conversation' : 'Message the owner'}
                 {unread[b.id] > 0 && <span className="chat-unread">{unread[b.id]}</span>}
               </button>
@@ -143,6 +145,7 @@ const InboxPage = ({ properties, unread = {}, onChatChanged }) => {
       {chat && (
         <BookingChat
           bookingId={chat.id}
+          initialBooking={chat.booking}
           role="guest"
           title={chat.title}
           other={chat.other}

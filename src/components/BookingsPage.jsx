@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Phone, Mail, Users, PawPrint, Clock, CheckCircle2, MessageCircle, Trash2 } from 'lucide-react';
+import { Phone, Mail, Users, PawPrint, Clock, CheckCircle2, MessageCircle, Trash2, ShieldAlert } from 'lucide-react';
 import { HeroBudi } from './MascotSplash';
 import BookingChat from './BookingChat';
 import { tenantFromBooking } from '../lib/chatProfiles';
@@ -64,6 +64,8 @@ const BookingsPage = ({ bookings, properties, onSetStatus, onDismiss, unread = {
           <p>Booking requests from guests (staycations and rentals)</p>
         </div>
       </header>
+
+      <p className="bookings-policy"><ShieldAlert size={16} /> <span><b>Keep all transactions inside the app.</b> Reservations, payments and confirmations must be done here. Do not transact outside the app or move the conversation elsewhere. We can&apos;t protect or help with deals made outside the app.</span></p>
 
       <div className="bookings-tabs" role="tablist">
         {FILTERS.map((f) => (

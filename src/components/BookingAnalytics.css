@@ -29,3 +29,6 @@
 .an-row b.ok { color: #15803d; }
 .an-row b.no { color: #b91c1c; }
 .an-empty { margin: 0; font-size: 0.8rem; color: #64748b; }
+
+.an-reset { display: flex; width: fit-content; align-items: center; gap: 4px; margin: 0 0 8px auto; padding: 4px 10px; border: 1px solid #cbd5e1; border-radius: 999px; background: #fff; color: #64748b; font-family: inherit; font-size: 0.68rem; font-weight: 700; cursor: pointer; }
+.an-reset:disabled { opacity: 0.6; cursor: default; }

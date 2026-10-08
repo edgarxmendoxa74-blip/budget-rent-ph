@@ -1,4 +1,4 @@
--- Limit ng mensahe ng tenant/guest sa chat ng isang booking: 3 lang. Owner ay walang limit.
+-- Limit ng mensahe ng tenant/guest sa chat ng isang booking: 6 lang. Owner ay walang limit.
 -- Safe to run more than once.
 
 create or replace function public.send_guest_message(p_booking_id uuid, p_token uuid, p_body text)

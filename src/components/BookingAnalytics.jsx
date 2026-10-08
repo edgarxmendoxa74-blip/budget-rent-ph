@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { CheckCircle2, XCircle, Clock, Percent, Loader2 } from 'lucide-react';
+import { CheckCircle2, XCircle, Clock, Percent, Loader2, RotateCcw } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { HeroBudi } from './MascotSplash';
 import './BookingAnalytics.css';
@@ -11,6 +11,8 @@ const monthKey = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(
 const BookingAnalytics = ({ session, properties }) => {
   const [rows, setRows] = useState(null);
   const [error, setError] = useState('');
+  const [resetAt, setResetAt] = useState(null);
+  const [resetting, setResetting] = useState(false);
 
   const myProps = useMemo(() => properties.filter((p) => p.user_id === session?.user?.id), [properties, session?.user?.id]);
 
@@ -26,14 +28,28 @@ const BookingAnalytics = ({ session, properties }) => {
         if (err) { setError('Could not load analytics. Please try again.'); setRows([]); return; }
         setRows(data || []);
       });
+    supabase.from('analytics_resets').select('reset_at').maybeSingle()
+      .then(({ data }) => { if (alive && data?.reset_at) setResetAt(new Date(data.reset_at)); });
     return () => { alive = false; };
   }, []);
+
+  // Binabawasan lang ang bilang; hindi nabubura ang mga booking
+  const resetData = async () => {
+    if (resetting || !window.confirm('Reset your analytics data? The counts will start again from zero. Your bookings and chats will not be deleted.')) return;
+    setResetting(true);
+    const now = new Date();
+    const { error: err } = await supabase.from('analytics_resets').upsert({ user_id: session.user.id, reset_at: now.toISOString() });
+    setResetting(false);
+    if (err) return alert('Could not reset. Please try again.');
+    setResetAt(now);
+  };
 
   const stats = useMemo(() => {
     const ids = new Set(myProps.map((p) => p.id));
     const mine = (rows || []).filter((r) => ids.has(r.property_id));
-    const successful = mine.filter((r) => r.outcome === 'successful');
-    const cancelled = mine.filter((r) => r.outcome === 'cancelled');
+    const afterReset = (r) => !resetAt || new Date(r.outcome_at || r.created_at) > resetAt;
+    const successful = mine.filter((r) => r.outcome === 'successful' && afterReset(r));
+    const cancelled = mine.filter((r) => r.outcome === 'cancelled' && afterReset(r));
     const open = mine.filter((r) => !r.outcome && r.status !== 'declined');
     const decided = successful.length + cancelled.length;
 
@@ -49,7 +65,7 @@ const BookingAnalytics = ({ session, properties }) => {
     });
 
     const perProperty = myProps.map((p) => {
-      const list = mine.filter((r) => r.property_id === p.id);
+      const list = mine.filter((r) => r.property_id === p.id && (!r.outcome || afterReset(r)));
       return {
         id: p.id,
         name: p.name || p.title || p.location?.split(',')[0] || 'Listing',
@@ -68,7 +84,7 @@ const BookingAnalytics = ({ session, properties }) => {
       peak: Math.max(1, ...months.map((m) => Math.max(m.ok, m.no))),
       perProperty
     };
-  }, [rows, myProps]);
+  }, [rows, myProps, resetAt]);
 
   return (
     <div className="page-section animate-fade-in bookings-page analytics-page">
@@ -86,6 +102,9 @@ const BookingAnalytics = ({ session, properties }) => {
 
       {rows !== null && !error && (
         <>
+          <button type="button" className="an-reset" onClick={resetData} disabled={resetting}>
+            {resetting ? <Loader2 size={11} className="animate-spin" /> : <RotateCcw size={11} />} Reset data
+          </button>
           <div className="an-cards">
             <div className="an-card ok"><CheckCircle2 size={20} /><strong>{stats.successful}</strong><span>Successful bookings</span></div>
             <div className="an-card no"><XCircle size={20} /><strong>{stats.cancelled}</strong><span>Cancelled bookings</span></div>
