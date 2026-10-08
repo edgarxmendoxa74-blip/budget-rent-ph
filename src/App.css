@@ -3402,3 +3402,26 @@ html body .property-detail-modal .modal-actions {
 /* Notification: laging nasa kanan ang delete icon kahit maikli ang text */
 .notif-item .notif-text { flex: 1 1 auto; min-width: 0; }
 .notif-item .notif-delete { margin-left: auto; }
+
+/* Bakit Budget Rent (hero section post slideshow) */
+.why-section { padding: 14px 16px 4px; }
+.why-heading, .category-title { margin: 0 0 10px; font-family: var(--font-heading); font-size: 1.05rem; font-weight: 800; color: #0f172a; }
+.why-slideshow { overflow: hidden; border-radius: 16px; box-shadow: 0 2px 10px rgba(15, 23, 42, 0.1); background: #fff; }
+.why-track { display: flex; transition: transform 0.5s ease; }
+.why-slide { flex: 0 0 100%; min-width: 0; }
+.why-slide img { display: block; width: 100%; aspect-ratio: 16 / 9; height: auto; object-fit: cover; }
+.why-body { padding: 12px 14px 14px; }
+.why-body h4 { margin: 0 0 4px; font-size: 0.95rem; font-weight: 800; color: #0f172a; }
+.why-body p { margin: 0; font-size: 0.82rem; line-height: 1.45; color: #475569; }
+.why-dots { display: flex; justify-content: center; gap: 6px; margin-top: 8px; }
+.why-dots button { width: 7px; height: 7px; padding: 0; border: 0; border-radius: 50%; background: #cbd5e1; transition: width 0.25s, background 0.25s; }
+.why-dots button.active { width: 20px; border-radius: 4px; background: #16a34a; }
+@media (min-width: 768px) {  .why-slideshow { max-width: 720px; } }
+.why-slide img { content-visibility: visible; background: #e2e8f0; }
+.category-title { margin: 14px 16px 0; }
+.category-title { text-align: center; }
+
+/* Staycation: kapareho ng layout ng Rentals search (2 hilera, search button sa kanan) */
+.rent-search .stay-sep { display: none; }
+.rent-search .stay-date { width: 100%; }
+.rent-search .stay-seg select { text-align: left; }

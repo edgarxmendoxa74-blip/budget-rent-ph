@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { updateThumbnail } from '../lib/updates';
 import { fetchPlans } from '../lib/plans';
+import { HERO_SETTINGS_KEY, DEFAULT_HERO, mergeHero, cropHeroImage } from '../lib/heroSection';
 import { PAYMENT_SETTINGS_KEY } from '../lib/paymentMethods';
 import { PRO_PLAN, TENANT_PLAN } from '../lib/listingPlan';
 import { downloadCsv, fmtDate } from '../lib/csv';
@@ -89,7 +90,10 @@ const tenantAge = (iso) => {
 };
 
 const AdminPanel = ({ onLogout }) => {
-  const [activeTab, setActiveTab] = useState('analytics'); 
+  const [activeTab, setActiveTab] = useState('analytics');
+  const [heroForm, setHeroForm] = useState(DEFAULT_HERO);
+  const [heroSaving, setHeroSaving] = useState(false);
+  const [heroUploading, setHeroUploading] = useState(-1);
   const [paymentMethods, setPaymentMethods] = useState(getStoredPaymentMethods);
   // Ang database (app_settings) ang totoong source; ang localStorage ay panimulang laman lang
   useEffect(() => {
@@ -671,6 +675,41 @@ const AdminPanel = ({ onLogout }) => {
     alert(url ? 'Facebook group link saved. Approved members will see it in their notification.' : 'Facebook group link removed.');
   };
 
+  useEffect(() => {
+    supabase.from('app_settings').select('value').eq('key', HERO_SETTINGS_KEY).maybeSingle()
+      .then(({ data }) => { if (data?.value) setHeroForm(mergeHero(data.value)); });
+  }, []);
+
+  const setHeroSlide = (i, patch) => setHeroForm(f => ({ ...f, slides: f.slides.map((sl, j) => (j === i ? { ...sl, ...patch } : sl)) }));
+
+  const uploadHeroImage = async (i, file) => {
+    if (!file) return;
+    if (!file.type.startsWith('image/')) return alert('Image file lang po (JPG, PNG, WebP).');
+    if (file.size > 5 * 1024 * 1024) return alert('Masyadong malaki ang image. Max 5MB.');
+    setHeroUploading(i);
+    try {
+      const blob = await cropHeroImage(file);
+      const path = `hero-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.jpg`;
+      const { error } = await supabase.storage.from('update-images').upload(path, blob, { contentType: 'image/jpeg' });
+      if (error) throw error;
+      const { data: { publicUrl } } = supabase.storage.from('update-images').getPublicUrl(path);
+      setHeroSlide(i, { image: publicUrl });
+    } catch (err) {
+      alert('Hindi na-upload ang image: ' + err.message);
+    } finally {
+      setHeroUploading(-1);
+    }
+  };
+
+  const saveHero = async (e) => {
+    e.preventDefault();
+    setHeroSaving(true);
+    const { error } = await supabase.from('app_settings').upsert({ key: HERO_SETTINGS_KEY, value: heroForm, updated_at: new Date().toISOString() });
+    setHeroSaving(false);
+    if (error) return alert('Error: ' + error.message);
+    alert('Na-save ang Hero Section. Makikita na ito sa home page ng tenant.');
+  };
+
   const decideMember = async (m, status) => {
     if (!window.confirm(`${status === 'approved' ? 'Approve' : 'Reject'} ${m.full_name} in Budget Rent Community?`)) return;
     const decided_at = new Date().toISOString();
@@ -854,6 +893,7 @@ const AdminPanel = ({ onLogout }) => {
           <button className={activeTab === 'announcements' ? 'active' : ''} onClick={() => setActiveTab('announcements')}><Megaphone size={18}/> <span>Notifications</span></button>
           <button className={activeTab === 'community' ? 'active' : ''} onClick={() => setActiveTab('community')}><MessagesSquare size={18}/> <span>Community</span></button>
           <button className={activeTab === 'updates' ? 'active' : ''} onClick={() => setActiveTab('updates')}><Video size={18}/> <span>Updates (Video)</span></button>
+          <button className={activeTab === 'hero' ? 'active' : ''} onClick={() => setActiveTab('hero')}><ImagePlus size={18}/> <span>Hero Section Post</span></button>
         </div>
 
         <div className="sidebar-group">
@@ -877,7 +917,7 @@ const AdminPanel = ({ onLogout }) => {
       <div className="admin-main">
         <header className="admin-header">
           <div>
-            <h2>{({ landlords: 'Verification Request', subscriptions: 'Managed Plans', plans: 'Subscription Plans' }[activeTab] || (activeTab.charAt(0).toUpperCase() + activeTab.slice(1))) + ' Dashboard'}</h2>
+            <h2>{({ hero: 'Hero Section Post', landlords: 'Verification Request', subscriptions: 'Managed Plans', plans: 'Subscription Plans' }[activeTab] || (activeTab.charAt(0).toUpperCase() + activeTab.slice(1))) + ' Dashboard'}</h2>
             <p className="admin-header-sub">Managing live data from Budget Rent PH system</p>
           </div>
           <div className="search-bar">
@@ -928,7 +968,7 @@ const AdminPanel = ({ onLogout }) => {
         )}
 
         <section className="admin-content-view">
-          {activeTab !== 'payments' && activeTab !== 'announcements' && activeTab !== 'updates' && activeTab !== 'community' && (
+          {activeTab !== 'payments' && activeTab !== 'announcements' && activeTab !== 'updates' && activeTab !== 'hero' && activeTab !== 'community' && (
             <div className="admin-toolbar">
               <span>
                 {activeTab === 'analytics' && 'Key numbers for Budget Rent PH'}
@@ -1205,6 +1245,55 @@ const AdminPanel = ({ onLogout }) => {
                   </div>
                 ))}
               </div>
+            </div>
+          )}
+
+          {activeTab === 'hero' && (
+            <div className="ann-wrap">
+              <form className="ann-form" onSubmit={saveHero}>
+                <h4>Hero title at subtitle</h4>
+                <p className="ann-hint">Lalabas sa itaas ng home page ng tenant. Standard size ng slide image: 16:9 (1280x720px). Awtomatikong ica-crop sa gitna ang ina-upload mo.</p>
+                <input type="text" placeholder="Hero title" maxLength={60} value={heroForm.title}
+                  onChange={e => setHeroForm(f => ({ ...f, title: e.target.value }))} required />
+                <input type="text" placeholder="Hero subtitle" maxLength={100} value={heroForm.subtitle}
+                  onChange={e => setHeroForm(f => ({ ...f, subtitle: e.target.value }))} />
+
+                <h4 style={{ marginTop: 12 }}>"Bakit Budget Rent?" (5 cards)</h4>
+                {heroForm.slides.map((sl, i) => (
+                  <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: 10, border: '1px solid #e2e8f0', borderRadius: 10 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <strong>Card {i + 1}</strong>
+                      <label style={{ display: 'inline-flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, fontWeight: 700, color: sl.enabled ? '#16a34a' : '#64748b' }}>
+                        <input type="checkbox" role="switch" checked={sl.enabled} onChange={e => setHeroSlide(i, { enabled: e.target.checked })} style={{ width: 38, height: 20, accentColor: '#16a34a' }} />
+                        {sl.enabled ? 'Ipinapakita (ON)' : 'Nakatago (OFF)'}
+                      </label>
+                    </div>
+                    <input type="text" placeholder="Title" maxLength={50} value={sl.title}
+                      onChange={e => setHeroSlide(i, { title: e.target.value })} required />
+                    <textarea rows={2} placeholder="Description" maxLength={200} value={sl.description}
+                      onChange={e => setHeroSlide(i, { description: e.target.value })} />
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                      <input id={`hero-img-${i}`} type="file" accept="image/*" style={{ display: 'none' }}
+                        onChange={e => { uploadHeroImage(i, e.target.files?.[0]); e.target.value = ''; }} />
+                      <label htmlFor={`hero-img-${i}`} className="ann-cancel" style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                        <ImagePlus size={15} /> {heroUploading === i ? 'Ina-upload...' : 'Mag-upload ng image'}
+                      </label>
+                      {sl.image && (
+                        <>
+                          <img src={sl.image} alt={`Card ${i + 1}`} style={{ width: 125, aspectRatio: '16 / 9', borderRadius: 6, objectFit: 'cover' }} />
+                          <button type="button" className="ann-cancel" onClick={() => setHeroSlide(i, { image: '' })}>Alisin</button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                ))}
+                <div className="ann-actions">
+                  <button type="submit" className="ann-send" disabled={heroSaving}>
+                    <Send size={15} /> {heroSaving ? 'Saving...' : 'I-save'}
+                  </button>
+                  <button type="button" className="ann-cancel" onClick={() => setHeroForm(DEFAULT_HERO)}>I-reset sa default</button>
+                </div>
+              </form>
             </div>
           )}
 

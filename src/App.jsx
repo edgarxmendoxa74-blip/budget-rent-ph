@@ -18,6 +18,8 @@ import { toCoords, distanceKm, formatDistance, inArea } from './lib/geo';
 import './App.css';
 import './components/ProfileModal.css';
 import { ikImage } from './lib/imagekit';
+import { useHeroSection } from './lib/heroSection';
+import HeroSlideshow from './components/HeroSlideshow';
 import { fetchMyPlan, fetchTenantVerifiedUntil, isProActive, listingLimitFor, PRO_PLAN, PRO_LISTING_LIMIT, FREE_LISTING_LIMIT } from './lib/listingPlan';
 
 // Lazy loaded components
@@ -234,6 +236,7 @@ function App() {
   const [reviewsLoading, setReviewsLoading] = useState(true);
   const [loading, setLoading] = useState(true);
   // Tenant = account na may mobile number (walang email). Landlord = may email at verification.
+  const heroText = useHeroSection();
   const isGuest = session?.user?.user_metadata?.user_role === 'tenant';
   // Verified ang landlord kung may listing nilang naka-verify (expired ay na-false na sa itaas)
   const myVerified = properties.some((p) => p.user_id === session?.user?.id && p.is_verified);
@@ -1188,11 +1191,11 @@ function App() {
             )}
             <HeroBudi message="Hello! 👋 I'm Budi. Find a rental or staycation that fits your budget here." />
             <div className="hero-content">
-              <h2>Welcome to <span>BudgetRentPH</span></h2>
-              <p>Affordable. Nearby. Trustworthy.</p>
+              <h2>{heroText.title.split(/(BudgetRentPH)/).map((part, i) => part === 'BudgetRentPH' ? <span key={i}>{part}</span> : part)}</h2>
+              {heroText.subtitle && <p>{heroText.subtitle}</p>}
                 {selectedCategory === 'Staycation' ? (
-                  <div className="staycation-search">
-                    <div className="stay-seg stay-seg-where">
+                  <div className="staycation-search rent-search">
+                    <div className="stay-seg stay-seg-where rent-seg-province">
                       <label htmlFor="stay-where">Where</label>
                       <div className="stay-input-row">
                         <input
@@ -1217,7 +1220,7 @@ function App() {
                       </div>
                     </div>
                     <span className="stay-sep" />
-                    <div className="stay-seg" onClick={openStayPicker}>
+                    <div className="stay-seg rent-seg-town" onClick={openStayPicker}>
                       <label htmlFor="stay-when">When</label>
                       <div className="stay-date">
                         <input
@@ -1232,7 +1235,7 @@ function App() {
                       </div>
                     </div>
                     <span className="stay-sep" />
-                    <div className="stay-seg" onClick={openStayPicker}>
+                    <div className="stay-seg rent-seg-brgy" onClick={openStayPicker}>
                       <label htmlFor="stay-who">Who</label>
                       <select
                         id="stay-who"
@@ -1252,7 +1255,7 @@ function App() {
                       </select>
                     </div>
                     <span className="stay-sep" />
-                    <div className="stay-seg stay-seg-budget">
+                    <div className="stay-seg stay-seg-budget rent-seg-budget">
                       <label htmlFor="stay-budget">Budget</label>
                       <div className="stay-input-row">
                         <input
@@ -1409,6 +1412,10 @@ function App() {
                 </div>
             </div>
           </header>
+
+          <HeroSlideshow slides={heroText.slides} />
+
+          <h3 className="category-title">What are you looking for?</h3>
 
           <div className="category-section" style={{ position: 'relative' }}>
             <div className="category-scroll" id="main-category-scroll">
