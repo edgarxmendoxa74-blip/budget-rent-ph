@@ -410,3 +410,10 @@ html body .act-overlay:not(.full) { align-items: center; padding: 16px; box-sizi
 html body .act-overlay:not(.full) .act-sheet { border-radius: 24px; max-height: calc(100dvh - 32px); box-shadow: 0 24px 60px rgba(0, 34, 74, 0.4); }
 
 .act-form textarea { width: 100%; min-width: 0; box-sizing: border-box; resize: none; line-height: 1.4; }
+
+/* Payment method: mga box na magkatabi */
+.act-pay { display: flex; flex-direction: column; gap: 4px; }
+.act-pay-label { font-size: 0.75rem; font-weight: 700; color: var(--primary-dark); }
+.act-pay-boxes { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.act-pay-boxes button { min-width: 0; padding: 9px 4px; border: 1.5px solid #cfdcee; border-radius: 8px; background: #fff; color: var(--primary-dark); font-family: inherit; font-size: 0.74rem; font-weight: 700; line-height: 1.2; cursor: pointer; }
+.act-pay-boxes button.active { background: var(--primary); border-color: var(--primary); color: #fff; }

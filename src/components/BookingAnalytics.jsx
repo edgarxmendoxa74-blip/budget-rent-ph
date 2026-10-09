@@ -13,6 +13,8 @@ const BookingAnalytics = ({ session, properties }) => {
   const [error, setError] = useState('');
   const [resetAt, setResetAt] = useState(null);
   const [resetting, setResetting] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [kind, setKind] = useState('staycation');
 
   const myProps = useMemo(() => properties.filter((p) => p.user_id === session?.user?.id), [properties, session?.user?.id]);
 
@@ -35,18 +37,19 @@ const BookingAnalytics = ({ session, properties }) => {
 
   // Binabawasan lang ang bilang; hindi nabubura ang mga booking
   const resetData = async () => {
-    if (resetting || !window.confirm('Reset your analytics data? The counts will start again from zero. Your bookings and chats will not be deleted.')) return;
+    if (resetting) return;
     setResetting(true);
     const now = new Date();
     const { error: err } = await supabase.from('analytics_resets').upsert({ user_id: session.user.id, reset_at: now.toISOString() });
     setResetting(false);
+    setConfirmOpen(false);
     if (err) return alert('Could not reset. Please try again.');
     setResetAt(now);
   };
 
   const stats = useMemo(() => {
     const ids = new Set(myProps.map((p) => p.id));
-    const mine = (rows || []).filter((r) => ids.has(r.property_id));
+    const mine = (rows || []).filter((r) => ids.has(r.property_id) && (r.kind || 'staycation') === kind);
     const afterReset = (r) => !resetAt || new Date(r.outcome_at || r.created_at) > resetAt;
     const successful = mine.filter((r) => r.outcome === 'successful' && afterReset(r));
     const cancelled = mine.filter((r) => r.outcome === 'cancelled' && afterReset(r));
@@ -84,11 +87,16 @@ const BookingAnalytics = ({ session, properties }) => {
       peak: Math.max(1, ...months.map((m) => Math.max(m.ok, m.no))),
       perProperty
     };
-  }, [rows, myProps, resetAt]);
+  }, [rows, myProps, resetAt, kind]);
 
   return (
     <div className="page-section animate-fade-in bookings-page analytics-page">
-      <header className="hero branding-hero">
+      <header className="hero branding-hero an-hero">
+        {rows !== null && !error && (
+          <button type="button" className="an-reset" onClick={() => setConfirmOpen(true)} disabled={resetting}>
+            {resetting ? <Loader2 size={11} className="animate-spin" /> : <RotateCcw size={11} />} Reset data
+          </button>
+        )}
         <HeroBudi message={stats.successful > 0 ? `${stats.successful} successful booking${stats.successful > 1 ? 's' : ''} so far! 🎉` : 'Your booking results will show up here. 📊'} />
         <div className="hero-content">
           <span className="branding-kicker">Landlord</span>
@@ -102,17 +110,19 @@ const BookingAnalytics = ({ session, properties }) => {
 
       {rows !== null && !error && (
         <>
-          <button type="button" className="an-reset" onClick={resetData} disabled={resetting}>
-            {resetting ? <Loader2 size={11} className="animate-spin" /> : <RotateCcw size={11} />} Reset data
-          </button>
+          <div className="an-tabs" role="tablist">
+            <button type="button" role="tab" data-kind="staycation" aria-selected={kind === 'staycation'} className={kind === 'staycation' ? 'active' : ''} onClick={() => setKind('staycation')}>Staycation</button>
+            <button type="button" role="tab" data-kind="rent" aria-selected={kind === 'rent'} className={kind === 'rent' ? 'active' : ''} onClick={() => setKind('rent')}>Find Rent</button>
+          </div>
+
           <div className="an-cards">
             <div className="an-card ok"><CheckCircle2 size={20} /><strong>{stats.successful}</strong><span>Successful bookings</span></div>
             <div className="an-card no"><XCircle size={20} /><strong>{stats.cancelled}</strong><span>Cancelled bookings</span></div>
-            <div className="an-card"><Percent size={20} /><strong>{stats.rate === null ? '—' : `${stats.rate}%`}</strong><span>Success rate</span></div>
+            <div className="an-card"><Percent size={20} /><strong>{stats.rate === null ? '—' : stats.rate}</strong><span>Success rate</span></div>
             <div className="an-card"><Clock size={20} /><strong>{stats.open}</strong><span>Still open</span></div>
           </div>
 
-          {stats.value > 0 && <p className="an-value">Total value of successful staycation bookings: <strong>{peso(stats.value)}</strong></p>}
+          {stats.value > 0 && <p className="an-value">Total value of successful {kind === 'rent' ? 'rent' : 'staycation'} bookings: <strong>{peso(stats.value)}</strong></p>}
 
           <section className="an-section">
             <h3>Last 6 months</h3>
@@ -133,7 +143,7 @@ const BookingAnalytics = ({ session, properties }) => {
 
           <section className="an-section">
             <h3>By listing</h3>
-            {stats.perProperty.length === 0 && <p className="an-empty">No finished bookings yet. Tap “Successful booking” or “Cancelled booking” inside a booking chat.</p>}
+            {stats.perProperty.length === 0 && <p className="an-empty">No finished bookings yet. Tap “Successful booking” or “Cancelled booking” inside a {kind === 'rent' ? 'rent' : 'staycation'} booking chat.</p>}
             {stats.perProperty.map((p) => (
               <div key={p.id} className="an-row">
                 <span>{p.name}</span>
@@ -143,6 +153,21 @@ const BookingAnalytics = ({ session, properties }) => {
             ))}
           </section>
         </>
+      )}
+      {confirmOpen && (
+        <div className="modal-overlay centered" style={{ zIndex: 3000 }} onClick={() => !resetting && setConfirmOpen(false)}>
+          <div className="an-confirm animate-fade-in" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
+            <span className="an-confirm-icon"><RotateCcw size={22} /></span>
+            <h3>Reset analytics?</h3>
+            <p>Counts will start again from zero. Your bookings and chats will not be deleted.</p>
+            <div className="an-confirm-actions">
+              <button type="button" className="cancel" onClick={() => setConfirmOpen(false)} disabled={resetting}>Cancel</button>
+              <button type="button" className="danger" onClick={resetData} disabled={resetting}>
+                {resetting ? <Loader2 size={14} className="animate-spin" /> : 'Reset'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

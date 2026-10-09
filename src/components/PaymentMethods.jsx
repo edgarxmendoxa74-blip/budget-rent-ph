@@ -1,5 +1,6 @@
+import { createPortal } from 'react-dom';
 import { useCallback, useEffect, useState } from 'react';
-import { Plus, Trash2, Loader2, Info, ImagePlus } from 'lucide-react';
+import { Plus, Trash2, Loader2, Info, ImagePlus, Pencil } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { ikImage } from '../lib/imagekit';
 import { HeroBudi } from './MascotSplash';
@@ -20,6 +21,10 @@ const PaymentMethods = ({ session }) => {
   const [form, setForm] = useState(EMPTY_FORM);
   const [qrFile, setQrFile] = useState(null);
   const [qrPreview, setQrPreview] = useState('');
+  const [editing, setEditing] = useState(null); // { id, provider, otherName, account_name, account_number, qr_url }
+  const [editQr, setEditQr] = useState(null); // bagong File
+  const [editSaving, setEditSaving] = useState(false);
+  const [editError, setEditError] = useState('');
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
   const full = items.length >= MAX_METHODS;
 
@@ -83,6 +88,50 @@ const PaymentMethods = ({ session }) => {
   const remove = async (id) => {
     if (!window.confirm('Remove this payment method?')) return;
     await supabase.from('payment_methods').delete().eq('id', id);
+    load();
+  };
+
+  const startEdit = (it) => {
+    const known = PROVIDERS.includes(it.provider) && it.provider !== 'Other';
+    setEditing({ id: it.id, provider: known ? it.provider : 'Other', otherName: known ? '' : it.provider, account_name: it.account_name, account_number: it.account_number, qr_url: it.qr_url || null });
+    setEditQr(null);
+    setEditError('');
+  };
+  const setE = (k, v) => setEditing((f) => ({ ...f, [k]: v }));
+  const pickEditQr = (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    if (!file.type.startsWith('image/')) return setEditError('Please choose an image file.');
+    if (file.size > MAX_QR_BYTES) return setEditError('QR image must be 5MB or smaller.');
+    setEditError('');
+    setEditQr(file);
+  };
+  const editQrSrc = editQr ? URL.createObjectURL(editQr) : editing?.qr_url ? ikImage(editing.qr_url, 240) : '';
+
+  const saveEdit = async (e) => {
+    e.preventDefault();
+    const provider = editing.provider === 'Other' ? editing.otherName.trim() : editing.provider;
+    const account_name = editing.account_name.trim();
+    const account_number = editing.account_number.trim();
+    if (!provider || !account_name || !account_number) return setEditError('Fill in the provider, account name and number.');
+    setEditSaving(true);
+    setEditError('');
+    let qr_url = editing.qr_url;
+    if (editQr) {
+      const ext = (editQr.name.split('.').pop() || 'png').toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 5) || 'png';
+      const path = `payment-qr/${userId}-${Date.now()}.${ext}`;
+      const { error: upErr } = await supabase.storage.from('avatars').upload(path, editQr, { contentType: editQr.type });
+      if (upErr) { setEditSaving(false); return setEditError('Could not upload the QR image. Please try again.'); }
+      qr_url = supabase.storage.from('avatars').getPublicUrl(path).data.publicUrl;
+    }
+    const { error: err } = await supabase.from('payment_methods').update({
+      provider: provider.slice(0, 40), account_name: account_name.slice(0, 80), account_number: account_number.slice(0, 40), qr_url
+    }).eq('id', editing.id);
+    setEditSaving(false);
+    if (err) return setEditError('Could not save. Please try again.');
+    setEditing(null);
+    setEditQr(null);
     load();
   };
 
@@ -151,18 +200,69 @@ const PaymentMethods = ({ session }) => {
         <ul className="pm-list">
           {items.map((it) => (
             <li key={it.id}>
-              <div>
+              <div className="pm-item-head">
                 <strong>{it.provider}</strong>
+                <div className="pm-item-actions">
+                  <button type="button" className="pm-edit" aria-label="Edit" onClick={() => startEdit(it)}><Pencil size={14} /></button>
+                  <button type="button" aria-label="Remove" onClick={() => remove(it.id)}><Trash2 size={14} /></button>
+                </div>
+              </div>
+              <div className="pm-item-body">
                 <span>{it.account_name}</span>
                 <b>{it.account_number}</b>
-                {it.qr_url && <img className="pm-qr-thumb" src={ikImage(it.qr_url, 240)} alt={`${it.provider} QR`} />}
               </div>
-              <button type="button" aria-label="Remove" onClick={() => remove(it.id)}><Trash2 size={16} /></button>
+              {it.qr_url && <img className="pm-qr-thumb" src={ikImage(it.qr_url, 240)} alt={`${it.provider} QR`} />}
             </li>
           ))}
         </ul>
       )}
     </div>
+    {editing && createPortal(
+      <div className="modal-overlay centered" style={{ zIndex: 3000 }} onClick={() => !editSaving && setEditing(null)}>
+        <form className="pm-card pm-edit-modal animate-fade-in" onSubmit={saveEdit} onClick={(e) => e.stopPropagation()}>
+          <h3>Edit payment method</h3>
+          <label>
+            Provider
+            <select value={editing.provider} onChange={(e) => setE('provider', e.target.value)}>
+              {PROVIDERS.map((p) => <option key={p} value={p}>{p}</option>)}
+            </select>
+          </label>
+          {editing.provider === 'Other' && (
+            <label>
+              Provider name
+              <input type="text" maxLength={40} value={editing.otherName} onChange={(e) => setE('otherName', e.target.value)} />
+            </label>
+          )}
+          <label>
+            Account name
+            <input type="text" maxLength={80} value={editing.account_name} onChange={(e) => setE('account_name', e.target.value)} />
+          </label>
+          <label>
+            Number / account no.
+            <input type="text" inputMode="numeric" maxLength={40} value={editing.account_number} onChange={(e) => setE('account_number', e.target.value)} />
+          </label>
+          <div className="pm-qr">
+            <span>QR code (optional)</span>
+            {editQrSrc ? (
+              <div className="pm-qr-preview">
+                <img src={editQrSrc} alt="QR preview" />
+                <button type="button" onClick={() => { setEditQr(null); setE('qr_url', null); }}><Trash2 size={14} /> Remove</button>
+              </div>
+            ) : null}
+            <label className="pm-qr-pick">
+              <ImagePlus size={18} /> {editQrSrc ? 'Change QR image' : 'Upload QR image'}
+              <input type="file" accept="image/*" onChange={pickEditQr} hidden />
+            </label>
+          </div>
+          {editError && <p className="pm-error"><Info size={14} /> {editError}</p>}
+          <div className="pm-edit-actions">
+            <button type="button" className="cancel" onClick={() => setEditing(null)} disabled={editSaving}>Cancel</button>
+            <button type="submit" className="pm-add" disabled={editSaving}>{editSaving ? <Loader2 size={16} className="animate-spin" /> : 'Save'}</button>
+          </div>
+        </form>
+      </div>,
+      document.body
+    )}
     </div>
   );
 };

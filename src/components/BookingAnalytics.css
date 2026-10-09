@@ -30,5 +30,24 @@
 .an-row b.no { color: #b91c1c; }
 .an-empty { margin: 0; font-size: 0.8rem; color: #64748b; }
 
-.an-reset { display: flex; width: fit-content; align-items: center; gap: 4px; margin: 0 0 8px auto; padding: 4px 10px; border: 1px solid #cbd5e1; border-radius: 999px; background: #fff; color: #64748b; font-family: inherit; font-size: 0.68rem; font-weight: 700; cursor: pointer; }
+.an-hero { position: relative; }
+.an-reset { position: absolute; top: 10px; right: 12px; z-index: 2; display: flex; align-items: center; gap: 4px; padding: 5px 11px; border: none; border-radius: 999px; background: #dc2626; color: #fff; font-family: inherit; font-size: 0.7rem; font-weight: 700; cursor: pointer; box-shadow: 0 2px 6px rgba(220, 38, 38, 0.35); }
 .an-reset:disabled { opacity: 0.6; cursor: default; }
+
+.an-tabs { display: flex; gap: 4px; margin: 12px 0; padding: 4px; background: #f1f5f9; border-radius: 999px; }
+.an-tabs button { flex: 1; padding: 8px 12px; border: none; border-radius: 999px; background: transparent; color: #64748b; font-family: inherit; font-size: 0.82rem; font-weight: 700; cursor: pointer; }
+.an-tabs button.active { background: #fff; color: var(--primary); box-shadow: 0 1px 4px rgba(0,0,0,0.12); }
+.an-tabs button[data-kind="staycation"] { color: #a16207; background: #fef9c3; }
+.an-tabs button[data-kind="rent"] { color: #1d4ed8; background: #dbeafe; }
+.an-tabs button[data-kind="staycation"].active { background: #facc15; color: #422006; box-shadow: 0 2px 6px rgba(250, 204, 21, 0.5); }
+.an-tabs button[data-kind="rent"].active { background: #2563eb; color: #fff; box-shadow: 0 2px 6px rgba(37, 99, 235, 0.4); }
+
+.an-confirm { width: min(300px, calc(100vw - 48px)); padding: 22px 20px 18px; background: #fff; border-radius: 22px; text-align: center; box-shadow: 0 16px 40px rgba(0,0,0,0.25); }
+.an-confirm-icon { display: inline-flex; align-items: center; justify-content: center; width: 46px; height: 46px; margin-bottom: 10px; border-radius: 50%; background: #fee2e2; color: #dc2626; }
+.an-confirm h3 { margin: 0 0 6px; font-size: 1.05rem; color: var(--primary); }
+.an-confirm p { margin: 0 0 16px; font-size: 0.82rem; line-height: 1.4; color: var(--text-muted); }
+.an-confirm-actions { display: flex; gap: 8px; }
+.an-confirm-actions button { flex: 1; display: flex; align-items: center; justify-content: center; padding: 10px; border-radius: 999px; font-family: inherit; font-size: 0.85rem; font-weight: 700; cursor: pointer; }
+.an-confirm-actions .cancel { border: 1px solid var(--border); background: #fff; color: var(--text-main); }
+.an-confirm-actions .danger { border: none; background: #dc2626; color: #fff; }
+.an-confirm-actions button:disabled { opacity: 0.6; cursor: default; }

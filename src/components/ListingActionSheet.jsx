@@ -304,13 +304,14 @@ const ListingActionSheet = ({ item, kind, onClose, onViewDetails, fullPage }) =>
                   </select>
                 </label>
                 {downPayment > 0 && (
-                  <label>
-                    Pay down payment via
-                    <select value={payMethod} onChange={(e) => setPayMethod(e.target.value)}>
-                      <option value="">Not sure yet</option>
-                      {PAY_METHODS.map((t) => <option key={t} value={t}>{t}</option>)}
-                    </select>
-                  </label>
+                  <div className="wide act-pay" role="group" aria-label="Pay down payment via">
+                    <span className="act-pay-label">Pay down payment via</span>
+                    <div className="act-pay-boxes">
+                      {PAY_METHODS.map((t) => (
+                        <button key={t} type="button" className={payMethod === t ? 'active' : ''} aria-pressed={payMethod === t} onClick={() => setPayMethod(payMethod === t ? '' : t)}>{t}</button>
+                      ))}
+                    </div>
+                  </div>
                 )}
                 <label>
                   Emergency contact (optional)
@@ -349,7 +350,7 @@ const ListingActionSheet = ({ item, kind, onClose, onViewDetails, fullPage }) =>
             </>
           )}
 
-          {onViewDetails && <button type="button" className="act-details" onClick={() => { onClose(); onViewDetails(item); }}>View full details</button>}
+          {onViewDetails && !sent && <button type="button" className="act-details" onClick={() => { onClose(); onViewDetails(item); }}>View full details</button>}
         </div>
         {callGateOpen && <CallGateModal phone={phone} propertyId={item?.id} ownerEmail={email} onClose={() => setCallGateOpen(false)} />}
         {chatOpen && placed && <BookingChat bookingId={placed.id} token={placed.token} role="guest" title={name} other={landlordFromProperty(item)} meName={custName} onClose={() => setChatOpen(false)} />}
@@ -417,7 +418,7 @@ const ListingActionSheet = ({ item, kind, onClose, onViewDetails, fullPage }) =>
           </>
         )}
 
-        {onViewDetails && <button type="button" className="act-details" onClick={() => { onClose(); onViewDetails(item); }}>View full details</button>}
+        {onViewDetails && !sent && <button type="button" className="act-details" onClick={() => { onClose(); onViewDetails(item); }}>View full details</button>}
       </div>
       {callGateOpen && <CallGateModal phone={phone} propertyId={item?.id} ownerEmail={email} onClose={() => setCallGateOpen(false)} />}
       {chatOpen && placed && <BookingChat bookingId={placed.id} token={placed.token} role="guest" title={name} other={landlordFromProperty(item)} meName={custName} onClose={() => setChatOpen(false)} />}

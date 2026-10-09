@@ -70,7 +70,7 @@ const BookingsPage = ({ bookings, properties, onSetStatus, onDismiss, unread = {
       <div className="bookings-tabs" role="tablist">
         {FILTERS.map((f) => (
           <button key={f.key} type="button" role="tab" aria-selected={filter === f.key}
-            className={filter === f.key ? 'active' : ''} onClick={() => setFilter(f.key)}>
+            data-filter={f.key} className={filter === f.key ? 'active' : ''} onClick={() => setFilter(f.key)}>
             {f.label} <span>{counts[f.key]}</span>
           </button>
         ))}
@@ -80,13 +80,13 @@ const BookingsPage = ({ bookings, properties, onSetStatus, onDismiss, unread = {
 
       <div className="bookings-list">
         {list.map((b) => (
-          <article key={b.id} className={`booking-card ${b.status}`}>
+          <article key={b.id} className={`booking-card ${b.outcome === 'successful' ? 'successful' : b.status}`}>
             <div className="booking-top">
               <div>
                 <strong>{b.customer_name}</strong>
                 <span>{nameOf(b.property_id)} • {b.kind === 'rent' ? 'Rental' : 'Staycation'}</span>
               </div>
-              <em className={`booking-status ${b.status}`}>{b.status === 'pending' ? 'Pending' : b.status === 'confirmed' ? 'Confirmed' : 'Cancelled'}</em>
+              <em className={`booking-status ${b.outcome === 'successful' ? 'successful' : b.status}`}>{b.outcome === 'successful' ? 'Successful' : b.status === 'pending' ? 'Pending' : b.status === 'confirmed' ? 'Confirmed' : 'Cancelled'}</em>
             </div>
 
             <div className="booking-dates">

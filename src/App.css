@@ -1433,9 +1433,9 @@
   margin: 6px 0 4px;
   padding: 7px 10px;
   border-radius: 12px;
-  background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
-  border: 1px solid rgba(5, 150, 105, 0.22);
-  box-shadow: inset 3px 0 0 #10b981;
+  background: none;
+  border: none;
+  box-shadow: none;
 }
 
 .price-tag {

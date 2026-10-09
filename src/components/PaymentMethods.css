@@ -24,3 +24,44 @@
 .pm-qr-preview img { width: 96px; height: 96px; object-fit: contain; border-radius: 12px; border: 1.5px solid #dbe6f5; background: #fff; }
 .pm-qr-preview button { display: inline-flex; align-items: center; gap: 4px; padding: 7px 12px; border: none; border-radius: 999px; background: #fee2e2; color: #b91c1c; font-family: inherit; font-size: 0.75rem; font-weight: 800; cursor: pointer; }
 .pm-qr-thumb { width: 84px; height: 84px; margin-top: 6px; object-fit: contain; border-radius: 10px; border: 1.5px solid #dbe6f5; background: #fff; }
+
+/* Payment methods: bawat card ay box, magkatabi (2 columns) */
+.pm-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.pm-list li { position: relative; align-items: flex-start; padding: 12px; border-radius: 8px; min-width: 0; }
+.pm-list li div { padding-right: 30px; }
+.pm-list li button { position: absolute; top: 8px; right: 8px; width: 28px; height: 28px; }
+.pm-list b { font-size: 0.9rem; }
+.pm-qr-thumb { width: 100%; max-width: 84px; height: auto; aspect-ratio: 1; }
+
+/* Branding: puting card, navy text, gold na accent sa itaas */
+.pm-list li { background: #fff; border: 1.5px solid #dbe6f5; border-top: 4px solid #FFC107; box-shadow: 0 6px 16px -10px rgba(0, 34, 74, 0.45); }
+.pm-list strong { color: var(--primary); font-size: 1rem; font-weight: 800; }
+.pm-list span { color: var(--text-muted); }
+.pm-list b { color: var(--primary-dark); }
+.pm-qr-thumb { border: 1.5px solid #FFC107; background: #fff; }
+.pm-list li button { background: #fee2e2; color: #dc2626; }
+
+.pm-list li .pm-edit { right: 42px; background: #dbeafe; color: #1d4ed8; }
+.pm-edit-modal { width: min(340px, calc(100vw - 32px)); max-height: 86dvh; overflow-y: auto; border-radius: 16px; }
+.pm-edit-modal h3 { margin: 0; color: var(--primary); font-size: 1.05rem; }
+.pm-edit-actions { display: flex; gap: 8px; }
+.pm-edit-actions button { flex: 1; }
+.pm-edit-actions .cancel { padding: 10px; border: 1px solid #dbe6f5; border-radius: 12px; background: #fff; color: var(--primary-dark); font-family: inherit; font-weight: 700; cursor: pointer; }
+
+/* Ayos ng card: provider + buttons sa taas, detalye sa gitna, QR sa baba */
+.pm-list li { flex-direction: column; justify-content: flex-start; align-items: stretch; gap: 8px; padding: 10px 12px 12px; }
+.pm-list li .pm-item-head { display: flex; flex-direction: row; align-items: center; justify-content: space-between; gap: 6px; padding: 0; }
+.pm-list li .pm-item-head strong { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pm-list li .pm-item-actions { display: flex; flex-direction: row; gap: 4px; padding: 0; flex-shrink: 0; }
+.pm-list li .pm-item-actions button, .pm-list li .pm-edit { position: static; width: 28px; height: 28px; }
+.pm-list li .pm-item-body { display: flex; flex-direction: column; gap: 2px; padding: 0; }
+.pm-list li .pm-item-body span { font-size: 0.78rem; overflow-wrap: anywhere; }
+.pm-list li .pm-item-body b { font-size: 0.9rem; }
+.pm-list li .pm-qr-thumb { align-self: center; width: 100%; max-width: 110px; margin: 2px 0 0; }
+
+/* Edit modal */
+.pm-edit-modal { gap: 12px; padding: 18px 16px 16px; border-radius: 22px; background: #fff; border: none; border-top: 5px solid #FFC107; box-shadow: 0 20px 44px rgba(0, 20, 50, 0.35); box-sizing: border-box; }
+.pm-edit-modal h3 { text-align: center; font-weight: 800; }
+.pm-edit-modal .pm-qr-preview { flex-direction: column; align-items: center; gap: 8px; }
+.pm-edit-modal .pm-qr-preview img { width: 120px; height: 120px; }
+.pm-edit-actions .cancel, .pm-edit-actions .pm-add { min-height: 44px; border-radius: 999px; font-size: 0.9rem; }

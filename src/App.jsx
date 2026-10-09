@@ -1413,8 +1413,6 @@ function App() {
             </div>
           </header>
 
-          <HeroSlideshow slides={heroText.slides} />
-
           <h3 className="category-title">What are you looking for?</h3>
 
           <div className="category-section" style={{ position: 'relative' }}>
@@ -1431,6 +1429,8 @@ function App() {
               ))}
             </div>
           </div>
+
+          <HeroSlideshow slides={heroText.slides} />
 
           <main className="listings">
             <div className="section-header">
@@ -2279,7 +2279,12 @@ function App() {
                 onClick={() => setActiveTab('home')}
                 aria-current={activeTab === 'home' ? 'page' : undefined}
               >
-                <span className="nav-icon-box"><Home size={22} /></span>
+                <span className="nav-icon-box">
+                  <svg viewBox="0 0 24 24" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <path d="M3 10a2 2 0 0 1 .709-1.528l7-6a2 2 0 0 1 2.582 0l7 6A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" fill="#1d4ed8" stroke="#1d4ed8" />
+                    <path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8z" fill="#FFC107" stroke="#FFC107" />
+                  </svg>
+                </span>
                 <span className="nav-label">Home</span>
               </button>
               <button
