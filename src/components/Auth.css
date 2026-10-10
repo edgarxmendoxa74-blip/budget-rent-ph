@@ -628,3 +628,6 @@
   font-weight: 700;
   color: var(--text-muted);
 }
+
+/* BudgetRentPH wordmark: Budget (navy) + Rent (gold) + PH (navy), same as the app header */
+.auth-header h2.auth-brand span { color: var(--secondary); }

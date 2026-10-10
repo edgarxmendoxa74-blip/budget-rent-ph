@@ -227,7 +227,7 @@ const Auth = ({ onAuthSuccess }) => {
             <div className="auth-logo">
               <img src="/logo.png" alt="BudgetRentPH" />
             </div>
-            <h2>BudgetRentPH</h2>
+            <h2 className="auth-brand">Budget<span>Rent</span>PH</h2>
             <p className="auth-tagline">Affordable. Nearby. Trustworthy.</p>
             <p className="auth-sub">Find affordable boarding houses, bedspaces, and apartments near you.</p>
           </div>

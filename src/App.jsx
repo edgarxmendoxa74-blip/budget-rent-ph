@@ -229,6 +229,24 @@ const openStayPicker = (e) => {
   } catch { /* hindi suportado ng browser: gagana pa rin ang normal na click */ }
 };
 
+// Nagbabago ang booking dahil sa kabilang panig (owner <-> tenant)? Ibalik ang mensahe para sa tunog/notification
+const snapBooking = (r) => ({ status: r.status, outcome: r.outcome || null, by: r.outcome_by || null, refund: r.refund_status || null });
+const bookingUpdateNotice = (prev, r, role) => {
+  if (!prev) return null;
+  const now = snapBooking(r);
+  const other = role === 'owner' ? 'tenant' : 'owner';
+  if (now.outcome && now.outcome !== prev.outcome && now.by === other) return role === 'owner' ? 'A tenant updated a booking.' : 'The owner updated your booking.';
+  if (now.refund && now.refund !== prev.refund) {
+    if (role === 'owner' && now.refund === 'requested') return 'You have a new refund request.';
+    if (role === 'guest' && now.refund !== 'requested') return `Your refund request was ${now.refund}.`;
+  }
+  if (now.status !== prev.status && !now.outcome) {
+    if (role === 'guest' && now.status === 'confirmed') return 'Your booking was confirmed by the owner!';
+    if (role === 'owner' && now.status === 'declined') return 'A booking was cancelled.';
+  }
+  return null;
+};
+
 function App() {
   const [session, setSession] = useState(null);
   const [properties, setProperties] = useState([]); // Dynamic properties state
@@ -713,8 +731,18 @@ function App() {
   const reloadOwnerRef = useRef(null);
   const reloadGuestRef = useRef(null);
   const seenInquiryIds = useRef(null);
+  const [ownerUpdates, setOwnerUpdates] = useState(0); // bilang ng booking updates na hindi pa nakikita
+  const [guestUpdates, setGuestUpdates] = useState(0);
+  const activeTabRef = useRef(activeTab);
   useEffect(() => {
-    if (!session?.user || isGuest) { setInquiries([]); setBookings([]); setOwnerUnread({}); seenInquiryIds.current = null; reloadOwnerRef.current = null; return; }
+    activeTabRef.current = activeTab;
+    if (activeTab === 'bookings') setOwnerUpdates(0);
+    if (activeTab === 'inbox') setGuestUpdates(0);
+  }, [activeTab]);
+  const ownerSnaps = useRef(null);
+  const guestSnaps = useRef(null);
+  useEffect(() => {
+    if (!session?.user || isGuest) { setInquiries([]); setBookings([]); setOwnerUnread({}); seenInquiryIds.current = null; ownerSnaps.current = null; reloadOwnerRef.current = null; return; }
     const myId = session.user.id;
     const myEmail = String(session.user.email || '').toLowerCase();
     const load = async () => {
@@ -735,6 +763,11 @@ function App() {
         playNotifySound();
         showSystemNotification('BudgetRentPH', 'You have a new booking request or message.');
       }
+      // Pagbabago sa booking na galing sa tenant (cancel, refund request, atbp.)
+      let updateMsg = null;
+      if (ownerSnaps.current) bList.forEach(r => { updateMsg = updateMsg || bookingUpdateNotice(ownerSnaps.current[r.id], r, 'owner'); });
+      ownerSnaps.current = Object.fromEntries(bList.map(r => [r.id, snapBooking(r)]));
+      if (updateMsg) { playNotifySound(); showSystemNotification('BudgetRentPH', updateMsg); if (activeTabRef.current !== 'bookings') setOwnerUpdates(n => n + 1); }
       seenInquiryIds.current = new Set(ids);
       setInquiries(list);
       setBookings(bList);
@@ -747,13 +780,14 @@ function App() {
     const channel = supabase.channel('owner-bookings')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'booking_messages' }, () => load())
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'booking_requests' }, () => load())
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'booking_requests' }, () => load())
       .subscribe();
     return () => { clearInterval(t); supabase.removeChannel(channel); };
   }, [session, isGuest]);
 
   // Tenant: hindi pa nababasang sagot ng owner (RLS: sarili niyang bookings lang)
   useEffect(() => {
-    if (!isGuest || !session?.user?.id) { setGuestUnread({}); reloadGuestRef.current = null; return undefined; }
+    if (!isGuest || !session?.user?.id) { setGuestUnread({}); reloadGuestRef.current = null; guestSnaps.current = null; return undefined; }
     let first = true;
     let prevTotal = 0;
     const load = async () => {
@@ -766,6 +800,17 @@ function App() {
       if (!first && total > prevTotal) {
         playNotifySound();
         showSystemNotification('BudgetRentPH', 'The owner replied to your booking chat.');
+      }
+      // Pagbabago sa booking mula sa owner (confirmed, refund approved/declined, atbp.)
+      const { data: bData } = await supabase.from('booking_requests').select('id, status, outcome, outcome_by, refund_status');
+      if (bData) {
+        let updateMsg = null;
+        if (guestSnaps.current) bData.forEach(r => { updateMsg = updateMsg || bookingUpdateNotice(guestSnaps.current[r.id], r, 'guest'); });
+        guestSnaps.current = Object.fromEntries(bData.map(r => [r.id, snapBooking(r)]));
+        if (updateMsg) {
+          if (!(!first && total > prevTotal)) { playNotifySound(); showSystemNotification('BudgetRentPH', updateMsg); }
+          if (activeTabRef.current !== 'inbox') setGuestUpdates(n => n + 1);
+        }
       }
       first = false;
       prevTotal = total;
@@ -826,8 +871,8 @@ function App() {
   })).filter(n => !deletedNotifs.includes(n.id)), [inquiries, deletedNotifs]);
 
   const ownerUnreadTotal = Object.values(ownerUnread).reduce((a, b) => a + b, 0);
-  const guestUnreadTotal = Object.values(guestUnread).reduce((a, b) => a + b, 0);
-  const pendingBookings = bookings.filter(r => r.status === 'pending').length + ownerUnreadTotal;
+  const guestUnreadTotal = Object.values(guestUnread).reduce((a, b) => a + b, 0) + guestUpdates;
+  const pendingBookings = bookings.filter(r => r.status === 'pending').length + ownerUnreadTotal + ownerUpdates;
   const setBookingStatus = async (bookingId, status) => {
     const { error } = await supabase.from('booking_requests').update({ status }).eq('id', bookingId);
     if (error) { alert(error.message || 'Could not update the booking.'); return; }

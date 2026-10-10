@@ -370,3 +370,32 @@
   border-radius: 100px;
   font-weight: 700;
 }
+
+/* List your Property: buong page (hindi na popup) */
+html body .modal-overlay:has(> .property-modal:not(.success-modal)) {
+  background: var(--bg, #f5f7fb);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  align-items: flex-start;
+  overflow-y: auto;
+  z-index: 2000;
+  padding: 0;
+}
+html body .modal-overlay > .property-modal:not(.success-modal) {
+  width: 100%;
+  max-width: 680px !important;
+  min-height: 100%;
+  max-height: none;
+  overflow: visible;
+  border-radius: 0 !important;
+  box-shadow: none;
+  margin: 0 auto;
+  padding: calc(64px + env(safe-area-inset-top, 0px)) 20px calc(32px + env(safe-area-inset-bottom, 0px)) !important;
+  box-sizing: border-box;
+}
+html body .property-modal:not(.success-modal) > .close-btn {
+  position: fixed;
+  top: calc(12px + env(safe-area-inset-top, 0px));
+  left: 14px;
+  right: auto;
+}
