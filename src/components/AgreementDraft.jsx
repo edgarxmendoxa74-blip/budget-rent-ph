@@ -39,6 +39,14 @@ const AgreementDraft = ({ session }) => {
     return list;
   }, [form]);
 
+  // Logo bilang data URL para magamit sa PDF (walang logo = tuloy lang)
+  const loadLogo = async () => {
+    try {
+      const blob = await (await fetch('/logo.png')).blob();
+      return await new Promise((res, rej) => { const fr = new FileReader(); fr.onload = () => res(fr.result); fr.onerror = rej; fr.readAsDataURL(blob); });
+    } catch { return null; }
+  };
+
   const generatePDF = async () => {
     setGenerating(true);
     try {
@@ -78,21 +86,30 @@ const AgreementDraft = ({ session }) => {
       doc.rect(0, 0, PW, 86, 'F');
       doc.setFillColor(...gold);
       doc.rect(0, 86, PW, 4, 'F');
+      // Logo (puting rounded box para kita sa navy na header)
+      const logoData = await loadLogo();
+      const LOGO = 56;
+      const logoY = (86 - LOGO) / 2;
+      doc.setFillColor(255, 255, 255);
+      doc.roundedRect(M, logoY, LOGO, LOGO, 8, 8, 'F');
+      if (logoData) doc.addImage(logoData, 'PNG', M + 4, logoY + 4, LOGO - 8, LOGO - 8);
+      const tx = M + LOGO + 14;
       doc.setFont('helvetica', 'bold');
-      doc.setFontSize(26);
+      doc.setFontSize(24);
       doc.setTextColor(255, 255, 255);
-      doc.text('Budget', M, 50);
+      doc.text('Budget', tx, 46);
       const w1 = doc.getTextWidth('Budget');
       doc.setTextColor(...gold);
-      doc.text('Rent', M + w1, 50);
+      doc.text('Rent', tx + w1, 46);
       const w2 = doc.getTextWidth('Rent');
       doc.setTextColor(255, 255, 255);
-      doc.text('PH', M + w1 + w2, 50);
+      doc.text('PH', tx + w1 + w2, 46);
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(9.5);
-      doc.text('Affordable rentals, honest deals.', M, 68);
+      doc.text('Affordable rentals, honest deals.', tx, 63);
       doc.setFont('helvetica', 'bold');
-      doc.text(new Date().toLocaleDateString('en-PH', { year: 'numeric', month: 'long', day: 'numeric' }), PW - M, 50, { align: 'right' });
+      doc.setFontSize(10);
+      doc.text(new Date().toLocaleDateString('en-PH', { year: 'numeric', month: 'long', day: 'numeric' }), PW - M, 46, { align: 'right' });
 
       // Title
       y = 130;
@@ -149,13 +166,16 @@ const AgreementDraft = ({ session }) => {
       doc.setFontSize(10.5);
       doc.setTextColor(51, 65, 85);
       clauses.forEach((c, i) => {
-        const lines = doc.splitTextToSize(t(`${i + 1}. ${c}`), innerW - 8);
+        // Hanging indent: nasa kaliwa ang numero, naka-align sa isang column ang buong text
+        const numW = 20;
+        const lines = doc.splitTextToSize(t(c), innerW - numW);
         lines.forEach((line, li) => {
           ensure(16);
-          doc.text(line, M + (li ? 12 : 0), y);
+          if (li === 0) doc.text(`${i + 1}.`, M, y);
+          doc.text(line, M + numW, y);
           y += 15;
         });
-        y += 4;
+        y += 5;
       });
 
       // Note
@@ -170,25 +190,25 @@ const AgreementDraft = ({ session }) => {
       doc.setFontSize(9.5);
       doc.setTextColor(...navy);
       doc.text(noteLines, M + 14, y + 17);
-      y += noteH + 36;
+      y += noteH + 26;
 
       // Signatures
-      ensure(110);
+      ensure(92);
       const colW = (innerW - 50) / 2;
       [['Tenant Signature', form.tenantName], ['Landlord Signature', form.landlordName]].forEach(([label, name], i) => {
         const x = M + i * (colW + 50);
         doc.setDrawColor(148, 163, 184);
         doc.setLineWidth(1);
-        doc.line(x, y + 36, x + colW, y + 36);
+        doc.line(x, y + 28, x + colW, y + 28);
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(10);
         doc.setTextColor(...navy);
-        doc.text(label, x, y + 52);
+        doc.text(label, x, y + 43);
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(9.5);
         doc.setTextColor(...gray);
-        doc.text(doc.splitTextToSize(t(name || '________________'), colW), x, y + 66);
-        doc.text('Date: ____________', x, y + 80);
+        doc.text(doc.splitTextToSize(t(name || '________________'), colW), x, y + 56);
+        doc.text('Date: ____________', x, y + 69);
       });
 
       drawFooter();
@@ -307,7 +327,7 @@ const AgreementDraft = ({ session }) => {
             </div>
             <div className="agr-paper">
               <div className="agr-paper-head">
-                <span className="agr-brand">Budget<span>Rent</span>PH</span>
+                <span className="agr-brand"><img src="/logo.png" alt="" className="agr-logo" />Budget<span>Rent</span>PH</span>
                 <span className="agr-date">{today}</span>
               </div>
               <div className="agr-gold-bar" />

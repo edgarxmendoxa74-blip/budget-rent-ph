@@ -39,10 +39,15 @@ const LandlordCertificate = ({ userId, fullName, propertyName, isVerified, onGet
         const saved = await Filesystem.writeFile({ path: fileName, data: canvas.toDataURL('image/png').split(',')[1], directory: Directory.Cache });
         await Share.share({ title: 'BudgetRentPH Wall Frame', url: saved.uri, dialogTitle: 'Save or share image' });
       } else {
+        const blob = await new Promise((res, rej) => canvas.toBlob((b) => (b ? res(b) : rej(new Error('toBlob failed'))), 'image/png'));
+        const href = URL.createObjectURL(blob);
         const a = document.createElement('a');
-        a.href = canvas.toDataURL('image/png');
+        a.href = href;
         a.download = fileName;
+        document.body.appendChild(a);
         a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(href), 4000);
       }
     } catch (err) {
       console.error('Poster save failed:', err);

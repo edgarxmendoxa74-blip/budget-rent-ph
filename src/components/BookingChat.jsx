@@ -108,6 +108,65 @@ const BookingChat = ({ bookingId, title, role, token, other, meName, initialBook
     load();
   };
 
+  // "Send refund" form (landlord lang, pagkatapos ma-approve ang refund): proof image + detalye
+  const emptyRefundForm = { amount: '', name: '', phone: '', reference: '', method: '' };
+  const [sendOpen, setSendOpen] = useState(false);
+  const [sendForm, setSendForm] = useState(emptyRefundForm);
+  const [sendProof, setSendProof] = useState(null);
+  const [sendPreview, setSendPreview] = useState('');
+  const [sendBusy, setSendBusy] = useState(false);
+  const [sendError, setSendError] = useState('');
+  const setSendField = (k) => (e) => setSendForm((f) => ({ ...f, [k]: e.target.value }));
+  const resetSendProof = () => {
+    if (sendPreview) URL.revokeObjectURL(sendPreview);
+    setSendProof(null);
+    setSendPreview('');
+  };
+  const openSendRefund = () => {
+    setSendForm({ ...emptyRefundForm, name: me.name && me.name !== 'You' ? me.name : '' });
+    setSendError('');
+    setSendOpen(true);
+  };
+  const closeSendRefund = () => {
+    if (sendBusy) return;
+    setSendOpen(false);
+    resetSendProof();
+  };
+  const pickSendProof = (e) => {
+    const f = e.target.files?.[0];
+    e.target.value = '';
+    if (!f) return;
+    if (!/^image\/(jpeg|png|webp)$/.test(f.type)) return setSendError('Only JPG, PNG or WEBP images are allowed.');
+    if (f.size > 5 * 1024 * 1024) return setSendError('Image is too large (max 5MB).');
+    setSendError('');
+    if (sendPreview) URL.revokeObjectURL(sendPreview);
+    setSendProof(f);
+    setSendPreview(URL.createObjectURL(f));
+  };
+  const submitSendRefund = async (e) => {
+    e.preventDefault();
+    if (sendBusy) return;
+    if (!sendProof) return setSendError('Please upload your proof of refund.');
+    if (!sendForm.amount.trim() || !sendForm.name.trim() || !sendForm.phone.trim() || !sendForm.reference.trim() || !sendForm.method.trim()) return setSendError('Please fill in all fields.');
+    setSendBusy(true);
+    setSendError('');
+    const ext = (sendProof.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '');
+    const path = `${bookingId}/refund-${crypto.randomUUID()}.${ext}`;
+    const { error: upErr } = await supabase.storage.from('booking-payments').upload(path, sendProof, { contentType: sendProof.type });
+    if (upErr) { setSendBusy(false); return setSendError('Upload failed. Check your connection and try again.'); }
+    const imageUrl = supabase.storage.from('booking-payments').getPublicUrl(path).data.publicUrl;
+    const { data, error: err } = await supabase.rpc('send_booking_refund', {
+      p_booking_id: bookingId, p_name: sendForm.name, p_phone: sendForm.phone, p_reference: sendForm.reference,
+      p_method: sendForm.method, p_amount: sendForm.amount, p_image_url: imageUrl,
+    });
+    setSendBusy(false);
+    if (err) return setSendError('Could not send the refund details. Please try again.');
+    if (data) setBooking((prev) => ({ ...(prev || {}), ...data }));
+    setSendOpen(false);
+    resetSendProof();
+    load();
+  };
+
   // Payment methods ng landlord (tenant lang ang may button)
   const [payOpen, setPayOpen] = useState(false);
   const [payLoading, setPayLoading] = useState(false);
@@ -309,7 +368,11 @@ const BookingChat = ({ bookingId, title, role, token, other, meName, initialBook
           <div className="bchat-refund">
             {booking.refund_status === 'requested' && <p><Undo2 size={14} /> {role === 'owner' ? 'Refund requested. See the message below.' : `Refund requested. Waiting for the ${otherProfile.host ? 'host' : 'landlord'}.`}</p>}
             {booking.refund_status === 'approved' && <p className="approved"><CheckCircle2 size={14} /> Refund confirmed{role === 'owner' ? ' — please send the money back to the tenant.' : ' — the landlord will send your refund.'}</p>}
+            {booking.refund_status === 'sent' && <p className="approved"><CheckCircle2 size={14} /> {role === 'owner' ? 'Refund sent to the tenant.' : 'Refund sent. Please check your account.'}</p>}
             {booking.refund_status === 'declined' && <p className="declined"><XCircle size={14} /> Refund declined</p>}
+            {role === 'owner' && booking.refund_status === 'approved' && (
+              <button type="button" className="bchat-ready-btn" onClick={openSendRefund}><Undo2 size={16} /> Send refund</button>
+            )}
           </div>
         )}
 
@@ -329,8 +392,8 @@ const BookingChat = ({ bookingId, title, role, token, other, meName, initialBook
                   <button type="button" className="bchat-confirm-btn" disabled={refundBusy} onClick={() => resolveRefund(true)}>{refundBusy ? <Loader2 size={13} className="animate-spin" /> : <CheckCircle2 size={13} />} Confirm refund</button>
                   <button type="button" className="bchat-decline-btn" disabled={refundBusy} onClick={() => resolveRefund(false)}>Decline</button>
                 </div>
-              )) : booking?.refund_status === 'approved' && <em className="bchat-received"><CheckCircle2 size={13} /> Refund confirmed</em>)}
-              {m.image_url && !m.deleted_at && (m.confirmed_at ? (
+              )) : (booking?.refund_status === 'approved' || booking?.refund_status === 'sent') && <em className="bchat-received"><CheckCircle2 size={13} /> Refund confirmed</em>)}
+              {m.image_url && !m.deleted_at && !m.body.startsWith('REFUND SENT') && (m.confirmed_at ? (
                 <em className="bchat-received"><CheckCircle2 size={13} /> Payment received</em>
               ) : role === 'owner' && (
                 <button type="button" className="bchat-confirm-btn" disabled={confirmingId === m.id} onClick={() => confirmReceived(m.id)}>
@@ -417,6 +480,30 @@ const BookingChat = ({ bookingId, title, role, token, other, meName, initialBook
             <div className="bchat-confirm-actions">
               <button type="button" className="keep" onClick={() => setRefundOpen(false)} disabled={refundBusy}>Cancel</button>
               <button type="submit" className="go successful" disabled={refundBusy}>{refundBusy ? <Loader2 size={15} className="animate-spin" /> : null} Send request</button>
+            </div>
+          </form>
+        </div>
+      )}
+      {sendOpen && (
+        <div className="bchat-confirm-overlay" onClick={closeSendRefund}>
+          <form className="bchat-confirm bchat-pay bchat-payform animate-slide-up" role="dialog" aria-modal="true" onSubmit={submitSendRefund} onClick={(e) => e.stopPropagation()}>
+            <div className="bchat-pay-head">
+              <span className="bchat-pay-icon"><Undo2 size={20} /></span>
+              <h3>Send refund</h3>
+            </div>
+            <label className="bchat-proof-pick">
+              {sendPreview ? <img src={sendPreview} alt="Refund proof preview" /> : <span><ImagePlus size={26} /> Upload proof of refund</span>}
+              <input type="file" accept="image/jpeg,image/png,image/webp" onChange={pickSendProof} hidden />
+            </label>
+            <label>Amount refunded<input type="text" inputMode="decimal" value={sendForm.amount} maxLength={20} onChange={setSendField('amount')} placeholder="e.g. 1500" /></label>
+            <label>Reference number<input type="text" value={sendForm.reference} maxLength={60} onChange={setSendField('reference')} placeholder="e.g. 1234 567 890" /></label>
+            <label>Name<input type="text" value={sendForm.name} maxLength={80} onChange={setSendField('name')} placeholder="Name of sender" /></label>
+            <label>Phone number<input type="tel" inputMode="tel" value={sendForm.phone} maxLength={20} onChange={setSendField('phone')} placeholder="09XX XXX XXXX" /></label>
+            <label>Mode of payment<input type="text" value={sendForm.method} maxLength={40} onChange={setSendField('method')} placeholder="GCash, Maya, Bank transfer..." /></label>
+            {sendError && <p className="bchat-error" style={{ padding: '0 0 8px' }}>{sendError}</p>}
+            <div className="bchat-confirm-actions">
+              <button type="button" className="keep" onClick={closeSendRefund} disabled={sendBusy}>Cancel</button>
+              <button type="submit" className="go successful" disabled={sendBusy}>{sendBusy ? <Loader2 size={15} className="animate-spin" /> : null} Submit</button>
             </div>
           </form>
         </div>

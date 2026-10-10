@@ -1,22 +1,3 @@
-import { renderToStaticMarkup } from 'react-dom/server';
-import { createElement } from 'react';
-import { Budi } from './MascotSplash';
-
-// Budi bilang static SVG image: tinatanggal ang mga bahaging itinatago lang ng CSS (thought bubble, bulb, star eyes, atbp.)
-const budiSvgUrl = () => {
-  const raw = renderToStaticMarkup(createElement(Budi, { phase: 'hop' }));
-  const doc = new DOMParser().parseFromString(raw, 'image/svg+xml');
-  const svg = doc.documentElement;
-  ['budi-thought', 'budi-bulb', 'budi-star-eyes', 'budi-mouth-hmm', 'budi-mouth-open', 'budi-brow'].forEach((c) =>
-    svg.querySelectorAll(`.${c}`).forEach((n) => n.remove())
-  );
-  svg.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
-  svg.setAttribute('viewBox', '0 -5 200 245');
-  svg.setAttribute('width', '800');
-  svg.setAttribute('height', '980');
-  return URL.createObjectURL(new Blob([new XMLSerializer().serializeToString(svg)], { type: 'image/svg+xml' }));
-};
-
 const loadImage = (src) => new Promise((resolve, reject) => {
   const img = new Image();
   img.onload = () => resolve(img);
@@ -52,25 +33,20 @@ export async function buildCertificatePoster({ holder, certNo, issued }) {
   grad.addColorStop(1, '#001b40');
   ctx.fillStyle = grad;
   ctx.fillRect(0, 0, W, 330);
-  ctx.fillStyle = '#ffb800';
+  // Branding: "Budget" at "PH" puti, "Rent" ginto
   ctx.font = '800 54px Arial, sans-serif';
-  ctx.fillText('BudgetRentPH', W / 2, 120);
+  const parts = [['Budget', '#ffffff'], ['Rent', '#ffb800'], ['PH', '#ffffff']];
+  const total = parts.reduce((n, [t]) => n + ctx.measureText(t).width, 0);
+  let bx = (W - total) / 2;
+  ctx.textAlign = 'left';
+  parts.forEach(([t, color]) => { ctx.fillStyle = color; ctx.fillText(t, bx, 120); bx += ctx.measureText(t).width; });
+  ctx.textAlign = 'center';
   ctx.fillStyle = '#fff';
-  ctx.font = '800 76px Arial, sans-serif';
+  ctx.font = '800 64px Arial, sans-serif';
   ctx.fillText('VERIFIED LANDLORD', W / 2, 225);
   ctx.font = '400 30px Arial, sans-serif';
   ctx.fillStyle = '#cfe0ff';
   ctx.fillText('Certificate of Verification', W / 2, 280);
-
-  // Logo sa top left
-  try {
-    const logo = await loadImage('/logo.png');
-    ctx.fillStyle = '#fff';
-    ctx.beginPath();
-    ctx.roundRect(90, 90, 150, 150, 22);
-    ctx.fill();
-    ctx.drawImage(logo, 100, 100, 130, 130);
-  } catch { /* walang logo: tuloy lang */ }
 
   // Borders
   ctx.strokeStyle = '#002652';
@@ -80,13 +56,16 @@ export async function buildCertificatePoster({ holder, certNo, issued }) {
   ctx.lineWidth = 4;
   ctx.strokeRect(62, 62, W - 124, H - 124);
 
-  // Budi
-  const url = budiSvgUrl();
+  // Malaking logo sa gitna
   try {
-    const img = await loadImage(url);
-    ctx.drawImage(img, W / 2 - 220, 360, 440, 540);
-  } finally {
-    URL.revokeObjectURL(url);
+    const logo = await loadImage('/logo.png');
+    const size = 520;
+    const ratio = logo.naturalWidth / logo.naturalHeight || 1;
+    const w = ratio >= 1 ? size : size * ratio;
+    const h = ratio >= 1 ? size / ratio : size;
+    ctx.drawImage(logo, (W - w) / 2, 355 + (size - h) / 2, w, h);
+  } catch (err) {
+    console.warn('Logo skipped:', err);
   }
 
   // Name

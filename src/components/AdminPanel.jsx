@@ -119,6 +119,8 @@ const AdminPanel = ({ onLogout }) => {
   const [landlords, setLandlords] = useState([]);
   const [tenants, setTenants] = useState([]);
   const [tenantsError, setTenantsError] = useState('');
+  const [tenantVerif, setTenantVerif] = useState({}); // user_id -> verified_until
+  const [roleView, setRoleView] = useState({ landlords: 'landlord', subscriptions: 'landlord' }); // Verification Request / Managed Plans: landlord | tenant
   const [verificationRequests, setVerificationRequests] = useState([]);
   const [allProperties, setAllProperties] = useState([]);
   const [reviews, setReviews] = useState([]);
@@ -536,6 +538,8 @@ const AdminPanel = ({ onLogout }) => {
       const { data: tData, error: tError } = await supabase.rpc('admin_list_tenants');
       setTenants(tError ? [] : (tData || []));
       setTenantsError(tError ? (tError.message || 'Hindi mabasa ang tenants.') : '');
+      const { data: tvData } = await supabase.from('tenant_verifications').select('user_id, verified_until');
+      setTenantVerif(Object.fromEntries((tvData || []).map(v => [v.user_id, v.verified_until])));
 
       setLandlords(checkedLandlords);
       setVerificationRequests(vData || []);
@@ -615,6 +619,21 @@ const AdminPanel = ({ onLogout }) => {
   const pendingPayments = useMemo(
     () => verificationRequests.filter(r => r.status === 'pending' && /Receipt Code|Proof of Payment/i.test(r.message || '')),
     [verificationRequests]
+  );
+  const pendingLandlordPayments = useMemo(() => pendingPayments.filter(r => !parseRequest(r).isTenant), [pendingPayments]);
+  const pendingTenantPayments = useMemo(() => pendingPayments.filter(r => parseRequest(r).isTenant), [pendingPayments]);
+  const verifiedTenants = useMemo(() => filteredTenants.filter(t => tenantVerif[t.id]), [filteredTenants, tenantVerif]);
+  const setRole = (tab, role) => setRoleView(v => ({ ...v, [tab]: role }));
+  const roleSwitch = (tab, counts) => (
+    <div className="listing-cats">
+      <div className="listing-filter">
+        {[['landlord', 'Landlords'], ['tenant', 'Tenants']].map(([key, label]) => (
+          <button key={key} type="button" className={roleView[tab] === key ? 'active' : ''} onClick={() => setRole(tab, key)}>
+            {label} <span>{counts[key]}</span>
+          </button>
+        ))}
+      </div>
+    </div>
   );
 
   // Pro Listings: +2 buwan (idinaragdag sa natitirang araw kung aktibo pa)
@@ -898,6 +917,7 @@ const AdminPanel = ({ onLogout }) => {
 
         <div className="sidebar-group">
           <label>Data</label>
+          <button className={activeTab === 'landlordAccounts' ? 'active' : ''} onClick={() => setActiveTab('landlordAccounts')}><Users size={18}/> <span>Landlords</span></button>
           <button className={activeTab === 'listings' ? 'active' : ''} onClick={() => setActiveTab('listings')}><Home size={18}/> <span>Listings</span></button>
           <button className={activeTab === 'tenants' ? 'active' : ''} onClick={() => setActiveTab('tenants')}><User size={18}/> <span>Tenants</span></button>
         </div>
@@ -917,7 +937,7 @@ const AdminPanel = ({ onLogout }) => {
       <div className="admin-main">
         <header className="admin-header">
           <div>
-            <h2>{({ hero: 'Hero Section Post', landlords: 'Verification Request', subscriptions: 'Managed Plans', plans: 'Subscription Plans' }[activeTab] || (activeTab.charAt(0).toUpperCase() + activeTab.slice(1))) + ' Dashboard'}</h2>
+            <h2>{({ hero: 'Hero Section Post', landlords: 'Verification Request', subscriptions: 'Managed Plans', landlordAccounts: 'Landlord Accounts', plans: 'Subscription Plans' }[activeTab] || (activeTab.charAt(0).toUpperCase() + activeTab.slice(1))) + ' Dashboard'}</h2>
             <p className="admin-header-sub">Managing live data from Budget Rent PH system</p>
           </div>
           <div className="search-bar">
@@ -972,8 +992,9 @@ const AdminPanel = ({ onLogout }) => {
             <div className="admin-toolbar">
               <span>
                 {activeTab === 'analytics' && 'Key numbers for Budget Rent PH'}
-                {activeTab === 'landlords' && `${requestLandlords.length} waiting for verification`}
-                {activeTab === 'subscriptions' && `${planLandlords.length} plan(s)`}
+                {activeTab === 'landlords' && (roleView.landlords === 'tenant' ? `${pendingTenantPayments.length} tenant(s) waiting for verification` : `${requestLandlords.length} landlord(s) waiting for verification`)}
+                {activeTab === 'subscriptions' && (roleView.subscriptions === 'tenant' ? `${verifiedTenants.length} verified tenant(s)` : `${planLandlords.length} landlord plan(s)`)}
+                {activeTab === 'landlordAccounts' && `${filteredLandlords.length} landlord account(s)`}
                 {activeTab === 'listings' && `${shownProperties.length} listing(s)`}
                 {activeTab === 'tenants' && `${filteredTenants.length} tenant account(s)`}
               </span>
@@ -982,6 +1003,7 @@ const AdminPanel = ({ onLogout }) => {
                 onClick={{
                   analytics: exportSummary,
                   landlords: exportLandlords,
+                  landlordAccounts: exportLandlords,
                   subscriptions: exportSubscriptions,
                   listings: exportListings,
                   tenants: exportTenants
@@ -1078,6 +1100,34 @@ const AdminPanel = ({ onLogout }) => {
                     })}
                   </div>
                 </details>
+              ))}
+            </div>
+          )}
+
+          {activeTab === 'landlordAccounts' && (
+            <div className="admin-list">
+              <div className="admin-list-head landlord-row">
+                <span>Landlord</span><span>Status</span><span>Listings</span><span>Badge</span><span>Actions</span>
+              </div>
+              {filteredLandlords.length === 0 && <div className="admin-empty">No landlord accounts yet.</div>}
+              {filteredLandlords.map(l => (
+                <div key={l.email} className="admin-list-row landlord-row">
+                  <div className="row-user">
+                    <div className="row-avatar">
+                      {l.owner_avatar ? <img src={ikImage(l.owner_avatar, 80)} alt="" /> : l.owner_name?.charAt(0)}
+                    </div>
+                    <div className="row-user-info">
+                      <strong>{l.owner_name} {l.is_verified && <Award size={13} color="#007dfe" />}</strong>
+                      <small>{l.email}</small>
+                    </div>
+                  </div>
+                  <span className={`status-pill ${l.is_verified ? 'active' : 'inactive'}`}>{l.subscription_status || (l.is_verified ? 'Active' : 'Regular')}</span>
+                  <span className="row-count">{visibleProperties.filter(p => p.email === l.email).length}</span>
+                  <span className={`badge-toggle ${l.is_verified ? 'on' : 'off'}`}>{l.is_verified ? 'ON' : 'OFF'}</span>
+                  <div className="row-actions">
+                    <button className="manage-btn" onClick={() => viewLandlordListings(l.email)}>Properties</button>
+                  </div>
+                </div>
               ))}
             </div>
           )}
@@ -1299,10 +1349,11 @@ const AdminPanel = ({ onLogout }) => {
 
           {activeTab === 'landlords' && (
             <div className="admin-list">
-              {pendingPayments.length > 0 && (
+              {roleSwitch('landlords', { landlord: requestLandlords.length + pendingLandlordPayments.length, tenant: pendingTenantPayments.length })}
+              {(roleView.landlords === 'tenant' ? pendingTenantPayments : pendingLandlordPayments).length > 0 && (
                 <div className="pay-requests">
-                  <h4>Payments waiting for approval ({pendingPayments.length})</h4>
-                  {pendingPayments.map(r => {
+                  <h4>Payments waiting for approval ({(roleView.landlords === 'tenant' ? pendingTenantPayments : pendingLandlordPayments).length})</h4>
+                  {(roleView.landlords === 'tenant' ? pendingTenantPayments : pendingLandlordPayments).map(r => {
                     const { planLabel, proof, isPro } = parseRequest(r);
                     const link = payProofs[r.id];
                     return (
@@ -1325,11 +1376,12 @@ const AdminPanel = ({ onLogout }) => {
                   })}
                 </div>
               )}
-              <div className="admin-list-head landlord-row">
+              {roleView.landlords === 'tenant' && pendingTenantPayments.length === 0 && <div className="admin-empty">No tenants waiting for verification.</div>}
+              {roleView.landlords === 'landlord' && <div className="admin-list-head landlord-row">
                 <span>Landlord</span><span>Status</span><span>Listings</span><span>Badge</span><span>Actions</span>
-              </div>
-              {requestLandlords.length === 0 && <div className="admin-empty">No landlords waiting for verification.</div>}
-              {requestLandlords.map(l => (
+              </div>}
+              {roleView.landlords === 'landlord' && requestLandlords.length === 0 && <div className="admin-empty">No landlords waiting for verification.</div>}
+              {roleView.landlords === 'landlord' && requestLandlords.map(l => (
                 <div key={l.email} className="admin-list-row landlord-row">
                   <div className="row-user">
                     <div className="row-avatar">
@@ -1375,11 +1427,32 @@ const AdminPanel = ({ onLogout }) => {
                   </a>
                 )}
               </div>
-              <div className="admin-list-head sub-row">
+              {roleSwitch('subscriptions', { landlord: planLandlords.length, tenant: verifiedTenants.length })}
+              {roleView.subscriptions === 'tenant' && (
+                <>
+                  <div className="admin-list-head tenant-row">
+                    <span>Tenant</span><span>Mobile</span><span>Status</span><span>Verified until</span>
+                  </div>
+                  {verifiedTenants.length === 0 && <div className="admin-empty">No verified tenants yet.</div>}
+                  {verifiedTenants.map(t => {
+                    const until = tenantVerif[t.id];
+                    const expired = new Date(until) < new Date();
+                    return (
+                      <div key={t.id} className="admin-list-row tenant-row">
+                        <div className="row-user"><div className="row-user-info"><strong>{t.full_name || '—'}</strong></div></div>
+                        <span className="row-date">{tenantPhone(t.phone) || '—'}</span>
+                        <span className={`status-pill ${expired ? 'inactive' : 'active'}`}>{expired ? 'Expired' : 'Active'}</span>
+                        <span className={`row-date ${expired ? 'expired' : ''}`}>{new Date(until).toLocaleDateString()}</span>
+                      </div>
+                    );
+                  })}
+                </>
+              )}
+              {roleView.subscriptions === 'landlord' && <div className="admin-list-head sub-row">
                 <span>Landlord</span><span>Plan</span><span>Availed</span><span>Expiry</span><span>Action</span>
-              </div>
-              {planLandlords.length === 0 && <div className="admin-empty">No plans yet. Verified landlords will appear here.</div>}
-              {planLandlords.map(l => (
+              </div>}
+              {roleView.subscriptions === 'landlord' && planLandlords.length === 0 && <div className="admin-empty">No plans yet. Verified landlords will appear here.</div>}
+              {roleView.subscriptions === 'landlord' && planLandlords.map(l => (
                 <div key={l.email} className="admin-list-row sub-row">
                   <div className="row-user" onClick={() => setPlanOwner(l)} style={{ cursor: 'pointer' }} title="View properties">
                     <div className="row-avatar">

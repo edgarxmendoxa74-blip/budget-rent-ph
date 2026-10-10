@@ -376,3 +376,15 @@ html body .notif-body { margin: 0; font-size: 0.66rem; line-height: 1.35; overfl
 html body .notif-time { font-size: 0.56rem; line-height: 1.2; margin-top: 1px; }
 html body .notif-delete { width: 26px; height: 26px; }
 html body .notif-empty { font-size: 0.74rem; }
+
+/* Switching Rentals / Staycation: keep the page height steady so the screen doesn't jump */
+html body .listings { min-height: 80vh; }
+html body { overflow-anchor: none; }
+
+/* Rent and Staycation search boxes must be exactly the same height, so the page doesn't bounce when switching */
+html body .rent-search .stay-seg { min-height: 54px; box-sizing: border-box; justify-content: center; }
+html body .rent-search .stay-seg input,
+html body .rent-search .stay-seg select,
+html body .rent-search .stay-date,
+html body .rent-search .stay-input-row { height: 20px; min-height: 20px; line-height: 20px; box-sizing: border-box; }
+html body .rent-search .stay-date input[type="date"] { height: 20px; }

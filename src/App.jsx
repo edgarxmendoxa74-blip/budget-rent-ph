@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef, Suspense, lazy } from 'react';
 import { HeroBudi } from './components/MascotSplash';
-import { Search, MapPin, Bed, Bath, Wifi, Shield, Star, Menu, X, Heart, MessageCircle, Phone, LogOut, Building2, User, Users, Loader2, ClipboardList, Mail, BadgeCheck, Headset, ArrowLeft, Home, Navigation, Globe, Trash2, ChevronLeft, ChevronRight, Bell, FileText, HousePlus, LocateFixed, PawPrint, ScrollText, FileSignature, Info, House, TreePalm, Plus, Lightbulb, Megaphone, CalendarCheck, Inbox, BarChart3, Wallet, Award } from 'lucide-react';
+import { Search, MapPin, Bed, Bath, Wifi, Shield, Star, Menu, X, Heart, MessageCircle, Phone, LogOut, Building2, User, Users, Loader2, ClipboardList, Mail, BadgeCheck, Headset, ArrowLeft, Home, Navigation, Globe, Trash2, ChevronLeft, ChevronRight, Bell, FileText, HousePlus, LocateFixed, PawPrint, ScrollText, FileSignature, Info, House, TreePalm, Lightbulb, Megaphone, CalendarCheck, Inbox, BarChart3, Wallet, Award } from 'lucide-react';
 import { clearSupabaseSessionStorage, recoverFromJwtError, supabase, validateCurrentSession } from './lib/supabase';
 import { isAdminEmail, isAdminPath } from './lib/admin';
 import { playNotifySound, unlockNotifySound } from './lib/notifySound';
@@ -162,7 +162,7 @@ const getMoveInBreakdown = (item) => {
 function ListingCard({ item, isFav, onToggleFavorite, onOpen, stats, distanceLabel }) {
   return (
     <div
-      className="listing-card animate-slide-up"
+      className="listing-card"
       onClick={() => onOpen(item)}
     >
       <div className="image-container">
@@ -2226,7 +2226,7 @@ function App() {
                 <span className="nav-icon-box" style={{ position: 'relative' }}><Megaphone size={22} />{newUpdates > 0 && <span className="notif-badge">{newUpdates}</span>}</span>
                 <span className="nav-label">Updates</span>
               </button>
-              <button className="nav-item circle-plus" onClick={() => setIsPropertyFormOpen(true)} aria-label="List your property" title="List your property"><Plus size={34} strokeWidth={3.2} /></button>
+              <button className="nav-item circle-plus" onClick={() => setIsPropertyFormOpen(true)} aria-label="List your property" title="List your property"><HousePlus size={32} strokeWidth={2.6} /></button>
               <button
                 className={`nav-item ico-account ${isProfileModalOpen ? 'active' : ''}`}
                 onClick={() => { setIsProfileEditing(false); setIsProfileModalOpen(true); }}

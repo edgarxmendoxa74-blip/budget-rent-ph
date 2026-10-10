@@ -436,3 +436,16 @@
     margin-top: 20px;
   }
 }
+
+.agr-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0;
+}
+
+.agr-logo {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+  margin-right: 8px;
+}
