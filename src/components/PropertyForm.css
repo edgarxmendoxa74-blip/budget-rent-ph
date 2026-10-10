@@ -235,8 +235,6 @@
   }
 
   .submit-listing-btn {
-    position: sticky;
-    bottom: 0;
     padding: 14px;
   }
 }
@@ -399,3 +397,16 @@ html body .property-modal:not(.success-modal) > .close-btn {
   left: 14px;
   right: auto;
 }
+
+/* Submit Listing: buong lapad, nasa gitna, at nasa dulo ng form (hindi sumusunod sa scroll) */
+html body .property-listing-form .submit-listing-btn {
+  position: static;
+  align-self: stretch;
+  width: 100%;
+  box-sizing: border-box;
+  margin: 12px 0 0;
+  padding: 15px 18px;
+  text-align: center;
+  line-height: 1.2;
+}
+html body .property-listing-form .submit-listing-btn svg { flex: none; }

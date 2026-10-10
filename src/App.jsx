@@ -981,7 +981,7 @@ function App() {
       <nav className="navbar glass">
         <div className="nav-content">
           <div className="logo-section">
-            <img src="/logo.png" alt="Logo" className="logo-img" />
+            <img src="/logo-clear.png" alt="Logo" className="logo-img" />
             <div 
               className="brand-name" 
               style={{ cursor: 'pointer', userSelect: 'none' }}
@@ -1126,7 +1126,7 @@ function App() {
           <div className="mobile-menu-content animate-slide-left" onClick={e => e.stopPropagation()}>
             <div className="menu-header">
               <div className="logo-section">
-                <span className="menu-logo-chip"><img src="/logo.png" alt="Logo" className="logo-img" /></span>
+                <span className="menu-logo-chip"><img src="/logo-clear.png" alt="Logo" className="logo-img" /></span>
                 <div className="menu-brand-text">
                   <h1 className="brand-name">Budget<span>Rent</span>PH</h1>
                   <p>Affordable. Nearby. Trustworthy.</p>
