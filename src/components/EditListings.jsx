@@ -5,6 +5,7 @@ import LocationPicker from './LocationPicker';
 import { toCoords } from '../lib/geo';
 import './EditListings.css';
 import { ikImage } from '../lib/imagekit';
+import { compressImage } from '../lib/compressImage';
 import RoomFeeForm from './RoomFeeForm';
 import StaycationExtras, { StayFeaturesSelect, MaxChildrenInput, stayPayload, STAY_COLUMNS, STAY_COLUMN_RE } from './StaycationExtras';
 import { ConditionSelect, ConditionNotes, GenderSelect, genderPayload, RoomsFields, roomsPayload, conditionPayload, CONDITION_COLUMNS, CONDITION_COLUMN_RE } from './RentalCondition';
@@ -117,8 +118,9 @@ const EditListings = ({ session, onClose, onListingUpdated, initialEditingItem =
   const handleImageUpload = async (e) => {
     try {
       setUploading(true);
-      const file = e.target.files[0];
-      if (!file) return;
+      const picked = e.target.files[0];
+      if (!picked) return;
+      const file = await compressImage(picked);
       const fileExt = file.name.split('.').pop();
       const fileName = `${Math.random()}-${Date.now()}.${fileExt}`;
       const filePath = `properties/${fileName}`;

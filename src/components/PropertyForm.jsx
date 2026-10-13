@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Send, CheckCircle, Home, MapPin, Tag, Info, Shield, Zap, TrendingUp, Camera, Loader2, Image as ImageIcon } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { compressImage } from '../lib/compressImage';
 import LocationPicker from './LocationPicker';
 import StaycationExtras, { StayFeaturesSelect, MaxChildrenInput, stayPayload, STAY_COLUMNS, STAY_COLUMN_RE } from './StaycationExtras';
 import { ConditionSelect, ConditionNotes, GenderSelect, genderPayload, RoomsFields, roomsPayload, conditionPayload, CONDITION_COLUMNS, CONDITION_COLUMN_RE } from './RentalCondition';
@@ -117,9 +118,10 @@ const PropertyForm = ({ onClose, session, onListingAdded, onUpgrade }) => {
   const handleImageUpload = async (e) => {
     try {
       setUploading(true);
-      const file = e.target.files[0];
-      if (!file) return;
-      
+      const picked = e.target.files[0];
+      if (!picked) return;
+      const file = await compressImage(picked);
+
       const fileExt = file.name.split('.').pop();
       const fileName = `${Math.random()}-${Date.now()}.${fileExt}`;
       const filePath = `properties/${fileName}`;
